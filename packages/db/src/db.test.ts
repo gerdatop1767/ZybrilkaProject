@@ -1,29 +1,26 @@
-import { PGlite } from '@electric-sql/pglite';
 import { eq } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/pglite';
-import { migrate } from 'drizzle-orm/pglite/migrator';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { pingDb } from './client.js';
-import { migrationsFolder } from './migrate.js';
 import * as schema from './schema.js';
+import { createTestDb } from './testing.js';
 
 describe('database', () => {
-  const client = new PGlite();
-  const db = drizzle(client, { schema });
+  let testDb: Awaited<ReturnType<typeof createTestDb>>;
 
   beforeAll(async () => {
-    await migrate(db, { migrationsFolder });
+    testDb = await createTestDb();
   });
 
   afterAll(async () => {
-    await client.close();
+    await testDb.close();
   });
 
   it('answers a ping', async () => {
-    await expect(pingDb(db)).resolves.toBeUndefined();
+    await expect(pingDb(testDb.db)).resolves.toBeUndefined();
   });
 
   it('stores and reads app settings', async () => {
+    const { db } = testDb;
     await db.insert(schema.appSettings).values({ key: 'maintenance', value: { enabled: false } });
     const [row] = await db
       .select()
