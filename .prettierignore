@@ -1,0 +1,6 @@
+pnpm-lock.yaml
+dist/
+coverage/
+packages/db/migrations/
+CLAUDE.md
+*.md
