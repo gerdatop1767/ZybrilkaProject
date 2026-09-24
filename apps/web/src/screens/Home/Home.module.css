@@ -1,0 +1,127 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wordmark {
+  color: var(--color-accent-primary);
+}
+
+.streakChip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-chip);
+  background: var(--color-bg-elevated);
+  color: var(--color-accent-primary);
+}
+
+.greeting {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.greetingText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.subjectRow {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-bottom: var(--space-1);
+  /* Hide the scrollbar on WebKit while keeping the row swipeable — a
+     mobile-first content row, not a desktop-style scroll area. */
+  scrollbar-width: none;
+}
+
+.subjectRow::-webkit-scrollbar {
+  display: none;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.link {
+  border: none;
+  background: transparent;
+  color: var(--color-accent-secondary);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-semibold);
+  padding: 0;
+  min-height: auto;
+}
+
+.activityRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.activityIcon {
+  flex-shrink: 0;
+  display: flex;
+}
+
+.activityIconCorrect {
+  color: var(--color-success);
+}
+
+.activityIconIncorrect {
+  color: var(--color-error);
+}
+
+.activityText {
+  flex: 1;
+  min-width: 0;
+}
+
+.achievementRow {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.achievementBadge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+
+.achievementIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: var(--color-bg-elevated);
+  color: var(--color-accent-primary);
+}
+
+.achievementLocked .achievementIcon {
+  color: var(--color-text-disabled);
+  opacity: 0.6;
+}
+
+.achievementLabel {
+  text-align: center;
+  color: var(--color-text-secondary);
+}

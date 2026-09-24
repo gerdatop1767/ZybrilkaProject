@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App.js';
+import { NavigationProvider } from './lib/navigation.js';
 import { ToastProvider } from './ui/Toast/ToastProvider.js';
 import './index.css';
 
@@ -11,8 +12,10 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <ToastProvider>
-      <App />
-    </ToastProvider>
+    <NavigationProvider>
+      <ToastProvider>
+        <App />
+      </ToastProvider>
+    </NavigationProvider>
   </StrictMode>,
 );

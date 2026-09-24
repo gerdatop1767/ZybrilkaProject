@@ -95,6 +95,19 @@ a,
   line-height: var(--line-height-body-sm);
 }
 
+/* The task statement is the single most-read block in the product —
+   its own larger, higher-contrast style (Design Spec Section 2). */
+.text-task {
+  font-size: var(--font-size-task);
+  line-height: var(--line-height-task);
+  font-weight: var(--font-weight-regular);
+}
+
+.text-explanation {
+  font-size: var(--font-size-explanation);
+  line-height: var(--line-height-explanation);
+}
+
 .text-label {
   font-size: var(--font-size-label);
   line-height: var(--line-height-label);

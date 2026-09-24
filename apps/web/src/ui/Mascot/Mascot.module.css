@@ -1,0 +1,14 @@
+.mascot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--color-bg-elevated);
+  box-shadow: inset 0 0 0 1.5px var(--color-border-subtle);
+  color: var(--color-accent-primary);
+}
+
+.glyph {
+  font-weight: var(--font-weight-bold);
+}

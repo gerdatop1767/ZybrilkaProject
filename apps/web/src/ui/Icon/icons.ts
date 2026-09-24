@@ -18,6 +18,13 @@ import {
   TriangleAlert,
   Info,
   Loader2,
+  ArrowLeft,
+  BookOpen,
+  RotateCcw,
+  Sparkles,
+  FileText,
+  PenLine,
+  Lightbulb,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -49,6 +56,13 @@ export const icons = {
   warning: TriangleAlert,
   info: Info,
   spinner: Loader2,
+  back: ArrowLeft,
+  topic: BookOpen,
+  mistakes: RotateCcw,
+  smart: Sparkles,
+  variant: FileText,
+  scratchboard: PenLine,
+  hint: Lightbulb,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof icons;

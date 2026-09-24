@@ -1,0 +1,93 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.identityText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.statsRow {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.achievementRow {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.achievementBadge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+
+.achievementIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: var(--color-bg-elevated);
+  color: var(--color-accent-primary);
+}
+
+.achievementLocked .achievementIcon {
+  color: var(--color-text-disabled);
+  opacity: 0.6;
+}
+
+.achievementLabel {
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.settingsRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  padding: var(--space-3) 0;
+  text-align: left;
+}
+
+.settingsIcon {
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.settingsLabel {
+  flex: 1;
+  min-width: 0;
+}
+
+.settingsInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  color: var(--color-text-secondary);
+}

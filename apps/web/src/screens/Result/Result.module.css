@@ -1,0 +1,39 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.mascotRow {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-2) 0;
+}
+
+.xpRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.xpValue {
+  color: var(--color-accent-primary);
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
