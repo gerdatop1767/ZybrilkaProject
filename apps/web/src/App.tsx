@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { useNavigation, type MainTabId } from './lib/navigation.js';
 import { MobileShell } from './ui/MobileShell/MobileShell.js';
 import { BottomNav } from './ui/BottomNav/BottomNav.js';
 import { defaultBottomNavItems } from './ui/BottomNav/defaultItems.js';
+import { useToast } from './ui/Toast/ToastProvider.js';
 import { Home } from './screens/Home/Home.js';
 import { Training } from './screens/Training/Training.js';
 import { Task } from './screens/Task/Task.js';
@@ -20,6 +22,14 @@ import { BattlesComingSoon } from './screens/Battles/BattlesComingSoon.js';
  */
 export function App() {
   const { tab, overlay, navigate } = useNavigation();
+  const { clear } = useToast();
+
+  // A toast from the previous screen renders in the same top-of-screen
+  // spot as an overlay's back button — never let it survive a
+  // navigation and cover the new screen's controls.
+  useEffect(() => {
+    clear();
+  }, [tab, overlay, clear]);
 
   if (overlay) {
     return (

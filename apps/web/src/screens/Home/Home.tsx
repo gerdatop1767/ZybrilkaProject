@@ -9,6 +9,8 @@ import { Icon } from '../../ui/Icon/Icon.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { SectionHeader } from '../../ui/SectionHeader/SectionHeader.js';
 import { clsx } from '../../lib/clsx.js';
+import { useCountUp } from '../../lib/useCountUp.js';
+import { useToast } from '../../ui/Toast/ToastProvider.js';
 import { FadeIn, SlideUp } from '../../ui/motion/motion.js';
 import styles from './Home.module.css';
 
@@ -21,6 +23,12 @@ import styles from './Home.module.css';
  */
 export function Home() {
   const { navigate } = useNavigation();
+  const { show } = useToast();
+  const xp = useCountUp(userStats.xp);
+
+  function previewAchievement(label: string) {
+    show({ variant: 'success', message: `Достижение получено: ${label}` });
+  }
 
   return (
     <SlideUp className={styles.stack}>
@@ -63,9 +71,9 @@ export function Home() {
         />
         <Card>
           <p className="text-stat">
-            {userStats.xp} / {userStats.xpToNextLevel} XP
+            {Math.round(xp)} / {userStats.xpToNextLevel} XP
           </p>
-          <ProgressBar value={(userStats.xp / userStats.xpToNextLevel) * 100} label="Опыт" />
+          <ProgressBar value={(xp / userStats.xpToNextLevel) * 100} label="Опыт" />
         </Card>
       </div>
 
@@ -96,22 +104,35 @@ export function Home() {
         />
         <Card>
           <div className={styles.achievementRow}>
-            {achievementPreview.map((achievement) => (
-              <div
-                key={achievement.id}
-                className={clsx(
-                  styles.achievementBadge,
-                  achievement.unlocked ? styles.achievementUnlocked : styles.achievementLocked,
-                )}
-              >
-                <span className={styles.achievementIcon}>
-                  <Icon name={achievement.unlocked ? 'achievements' : 'lock'} size={20} />
-                </span>
-                <span className={clsx('text-label', styles.achievementLabel)}>
-                  {achievement.label}
-                </span>
-              </div>
-            ))}
+            {achievementPreview.map((achievement) =>
+              achievement.unlocked ? (
+                <button
+                  key={achievement.id}
+                  type="button"
+                  className={clsx(styles.achievementBadge, styles.achievementUnlocked)}
+                  onClick={() => previewAchievement(achievement.label)}
+                >
+                  <span className={styles.achievementIcon}>
+                    <Icon name="achievements" size={20} />
+                  </span>
+                  <span className={clsx('text-label', styles.achievementLabel)}>
+                    {achievement.label}
+                  </span>
+                </button>
+              ) : (
+                <div
+                  key={achievement.id}
+                  className={clsx(styles.achievementBadge, styles.achievementLocked)}
+                >
+                  <span className={styles.achievementIcon}>
+                    <Icon name="lock" size={20} />
+                  </span>
+                  <span className={clsx('text-label', styles.achievementLabel)}>
+                    {achievement.label}
+                  </span>
+                </div>
+              ),
+            )}
           </div>
         </Card>
       </FadeIn>

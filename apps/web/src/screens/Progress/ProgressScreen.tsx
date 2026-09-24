@@ -12,6 +12,7 @@ import { CircularProgress } from '../../ui/Progress/CircularProgress.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { SectionHeader } from '../../ui/SectionHeader/SectionHeader.js';
 import { clsx } from '../../lib/clsx.js';
+import { useCountUp } from '../../lib/useCountUp.js';
 import { SlideUp } from '../../ui/motion/motion.js';
 import styles from './ProgressScreen.module.css';
 
@@ -23,14 +24,16 @@ const maxWeeklyActivity = Math.max(...weeklyActivity);
  * activity bar row — no new chart dependency, per instructions.
  */
 export function ProgressScreen() {
+  const accuracy = useCountUp(userStats.accuracy);
+
   return (
     <SlideUp className={styles.stack}>
       <h1 className="text-h1">Прогресс</h1>
 
       <Card elevated className={styles.statsRow}>
         <div className={styles.statCard}>
-          <CircularProgress value={userStats.accuracy} label="Точность">
-            <span className="text-h3">{userStats.accuracy}%</span>
+          <CircularProgress value={accuracy} label="Точность">
+            <span className="text-h3">{Math.round(accuracy)}%</span>
           </CircularProgress>
           <span className="text-body-sm text-secondary">Точность</span>
         </div>

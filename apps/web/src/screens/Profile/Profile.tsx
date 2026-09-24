@@ -6,6 +6,8 @@ import { CircularProgress } from '../../ui/Progress/CircularProgress.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { SectionHeader } from '../../ui/SectionHeader/SectionHeader.js';
 import { clsx } from '../../lib/clsx.js';
+import { useCountUp } from '../../lib/useCountUp.js';
+import { useToast } from '../../ui/Toast/ToastProvider.js';
 import { SlideUp } from '../../ui/motion/motion.js';
 import styles from './Profile.module.css';
 
@@ -15,13 +17,20 @@ import styles from './Profile.module.css';
  */
 export function Profile() {
   const { navigate } = useNavigation();
+  const { show } = useToast();
+  const xp = useCountUp(userStats.xp);
+  const xpPercent = (xp / userStats.xpToNextLevel) * 100;
+
+  function previewAchievement(label: string) {
+    show({ variant: 'success', message: `Достижение получено: ${label}` });
+  }
 
   return (
     <SlideUp className={styles.stack}>
       <h1 className="text-h1">Профиль</h1>
 
       <Card elevated className={styles.identity}>
-        <CircularProgress value={(userStats.xp / userStats.xpToNextLevel) * 100} label="Уровень">
+        <CircularProgress value={xpPercent} label="Уровень">
           <span className="text-h3">{userStats.level}</span>
         </CircularProgress>
         <div className={styles.identityText}>
@@ -33,7 +42,7 @@ export function Profile() {
       <Card>
         <div className={styles.statsRow}>
           <div className={styles.stat}>
-            <span className="text-stat">{userStats.xp}</span>
+            <span className="text-stat">{Math.round(xp)}</span>
             <span className="text-body-sm text-secondary">XP</span>
           </div>
           <div className={styles.stat}>
@@ -41,32 +50,42 @@ export function Profile() {
             <span className="text-body-sm text-secondary">Дней подряд</span>
           </div>
         </div>
-        <ProgressBar
-          value={(userStats.xp / userStats.xpToNextLevel) * 100}
-          label="Опыт до следующего уровня"
-        />
+        <ProgressBar value={xpPercent} label="Опыт до следующего уровня" />
       </Card>
 
       <div>
         <SectionHeader title="Достижения" />
         <Card>
           <div className={styles.achievementRow}>
-            {achievementPreview.map((achievement) => (
-              <div
-                key={achievement.id}
-                className={clsx(
-                  styles.achievementBadge,
-                  achievement.unlocked ? styles.achievementUnlocked : styles.achievementLocked,
-                )}
-              >
-                <span className={styles.achievementIcon}>
-                  <Icon name={achievement.unlocked ? 'achievements' : 'lock'} size={20} />
-                </span>
-                <span className={clsx('text-label', styles.achievementLabel)}>
-                  {achievement.label}
-                </span>
-              </div>
-            ))}
+            {achievementPreview.map((achievement) =>
+              achievement.unlocked ? (
+                <button
+                  key={achievement.id}
+                  type="button"
+                  className={clsx(styles.achievementBadge, styles.achievementUnlocked)}
+                  onClick={() => previewAchievement(achievement.label)}
+                >
+                  <span className={styles.achievementIcon}>
+                    <Icon name="achievements" size={20} />
+                  </span>
+                  <span className={clsx('text-label', styles.achievementLabel)}>
+                    {achievement.label}
+                  </span>
+                </button>
+              ) : (
+                <div
+                  key={achievement.id}
+                  className={clsx(styles.achievementBadge, styles.achievementLocked)}
+                >
+                  <span className={styles.achievementIcon}>
+                    <Icon name="lock" size={20} />
+                  </span>
+                  <span className={clsx('text-label', styles.achievementLabel)}>
+                    {achievement.label}
+                  </span>
+                </div>
+              ),
+            )}
           </div>
         </Card>
       </div>

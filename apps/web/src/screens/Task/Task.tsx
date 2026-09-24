@@ -22,19 +22,27 @@ export interface TaskProps {
  * so a different subject's task renders through the same layout.
  * Seeded for now with one profile-math Part 1 item.
  */
+// Brief "checking" state before the result appears — long enough to
+// read as deliberate feedback, short enough to never feel slow.
+const CHECKING_DELAY_MS = 450;
+
 export function Task({ taskId }: TaskProps) {
   const { navigate, back } = useNavigation();
   const task = getTaskById(taskId);
   const subjectAccent = subjects.find((subject) => subject.id === task.subjectId)?.color;
   const [answer, setAnswer] = useState('');
   const [scratchOpen, setScratchOpen] = useState(false);
+  const [checking, setChecking] = useState(false);
 
-  const canSubmit = answer.trim().length > 0;
+  const canSubmit = answer.trim().length > 0 && !checking;
 
   function handleSubmit() {
     if (!canSubmit) return;
+    setChecking(true);
     const correct = answer.trim() === task.correctAnswer;
-    navigate({ screen: 'result', taskId: task.id, correct });
+    setTimeout(() => {
+      navigate({ screen: 'result', taskId: task.id, correct });
+    }, CHECKING_DELAY_MS);
   }
 
   return (
@@ -83,6 +91,7 @@ export function Task({ taskId }: TaskProps) {
           onChange={(event) => setAnswer(event.target.value)}
           wrapperClassName={styles.answerInput}
           inputMode="decimal"
+          disabled={checking}
         />
       </div>
 
@@ -91,7 +100,13 @@ export function Task({ taskId }: TaskProps) {
         Расширить поле
       </button>
 
-      <Button variant="primary" fullWidth disabled={!canSubmit} onClick={handleSubmit}>
+      <Button
+        variant="primary"
+        fullWidth
+        disabled={!canSubmit}
+        loading={checking}
+        onClick={handleSubmit}
+      >
         Проверить
       </Button>
 

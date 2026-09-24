@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Task } from './Task.js';
 import { sampleTask } from '../../data/sampleTask.js';
@@ -37,12 +37,27 @@ describe('Task', () => {
     expect(submit).toBeEnabled();
   });
 
+  it('shows a brief checking state before revealing the result', async () => {
+    const user = userEvent.setup();
+    renderTask();
+    await user.type(screen.getByLabelText('Ответ'), sampleTask.correctAnswer);
+    const submit = screen.getByRole('button', { name: 'Проверить' });
+    await user.click(submit);
+    expect(submit).toBeDisabled();
+    expect(submit).toHaveAttribute('aria-busy', 'true');
+    await waitFor(() => {
+      expect(screen.getByTestId('overlay')).toHaveTextContent('result:correct');
+    });
+  });
+
   it('navigates to a correct Result for the right answer', async () => {
     const user = userEvent.setup();
     renderTask();
     await user.type(screen.getByLabelText('Ответ'), sampleTask.correctAnswer);
     await user.click(screen.getByRole('button', { name: 'Проверить' }));
-    expect(screen.getByTestId('overlay')).toHaveTextContent('result:correct');
+    await waitFor(() => {
+      expect(screen.getByTestId('overlay')).toHaveTextContent('result:correct');
+    });
   });
 
   it('navigates to an incorrect Result for the wrong answer', async () => {
@@ -50,7 +65,9 @@ describe('Task', () => {
     renderTask();
     await user.type(screen.getByLabelText('Ответ'), '999999');
     await user.click(screen.getByRole('button', { name: 'Проверить' }));
-    expect(screen.getByTestId('overlay')).toHaveTextContent('result:incorrect');
+    await waitFor(() => {
+      expect(screen.getByTestId('overlay')).toHaveTextContent('result:incorrect');
+    });
   });
 
   it('opens the scratchboard entry point', async () => {

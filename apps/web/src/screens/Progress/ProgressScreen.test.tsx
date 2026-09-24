@@ -1,14 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { ProgressScreen } from './ProgressScreen.js';
 import { userStats, topicMastery } from '../../data/sampleProgress.js';
 
 describe('ProgressScreen', () => {
-  it('renders overall accuracy, solved count and streak', () => {
+  it('renders overall accuracy, solved count and streak', async () => {
     render(<ProgressScreen />);
-    expect(screen.getByRole('progressbar', { name: 'Точность' })).toHaveAttribute(
-      'aria-valuenow',
-      String(userStats.accuracy),
+    await waitFor(
+      () => {
+        expect(screen.getByRole('progressbar', { name: 'Точность' })).toHaveAttribute(
+          'aria-valuenow',
+          String(userStats.accuracy),
+        );
+      },
+      { timeout: 3000 },
     );
     expect(screen.getByText(String(userStats.solvedTotal))).toBeInTheDocument();
     expect(screen.getByText(String(userStats.streakDays))).toBeInTheDocument();

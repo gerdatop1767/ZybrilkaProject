@@ -5,7 +5,9 @@
 }
 
 /* Reserved for streak/achievement moments only (Design Spec Section 2:
-   "Glow accent ... never a hard neon outline") — not applied broadly. */
+   "Glow accent ... never a hard neon outline") — not applied broadly.
+   A single settle-in animation communicates "this is a live streak",
+   not a static badge — a one-shot pulse on mount, never a loop. */
 .streakChip {
   display: flex;
   align-items: center;
@@ -15,6 +17,27 @@
   background: var(--color-bg-elevated);
   color: var(--color-accent-primary);
   box-shadow: var(--shadow-glow-accent);
+  animation: streakSettle var(--duration-celebrate) var(--easing-standard) both;
+}
+
+@keyframes streakSettle {
+  0% {
+    transform: scale(0.9);
+    box-shadow: none;
+  }
+  60% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: var(--shadow-glow-accent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streakChip {
+    animation-duration: 1ms;
+  }
 }
 
 /* Hero panel: a warm gradient surface instead of a flat gray card,
@@ -104,6 +127,19 @@
   gap: var(--space-1);
   flex: 1;
   min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+}
+
+button.achievementBadge {
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--easing-standard);
+}
+
+button.achievementBadge:active {
+  transform: scale(0.96);
 }
 
 .achievementIcon {
@@ -129,6 +165,11 @@
 }
 
 .achievementLabel {
+  /* `align-items: center` on the flex column parent sizes children to
+     their own content by default, so without an explicit width this
+     span never actually reaches the point where it needs to wrap —
+     it just overflows into the next badge instead. */
+  width: 100%;
   text-align: center;
   color: var(--color-text-secondary);
   /* A long single word (e.g. "Диагностика") must wrap inside its own

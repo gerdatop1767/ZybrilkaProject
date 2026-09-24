@@ -19,6 +19,11 @@ export interface ShowToastInput {
 interface ToastContextValue {
   show: (input: ShowToastInput) => string;
   dismiss: (id: string) => void;
+  /** Drops the whole queue immediately — a screen change should never
+   * leave a toast from the previous screen covering the new one's
+   * controls (e.g. an overlay's back button sits right where the
+   * toast renders). */
+  clear: () => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -43,8 +48,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setQueue((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
+  const clear = useCallback(() => {
+    setQueue([]);
+  }, []);
+
   return (
-    <ToastContext.Provider value={{ show, dismiss }}>
+    <ToastContext.Provider value={{ show, dismiss, clear }}>
       {children}
       {current &&
         createPortal(

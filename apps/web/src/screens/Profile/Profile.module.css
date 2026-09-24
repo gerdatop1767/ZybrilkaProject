@@ -39,6 +39,19 @@
   gap: var(--space-1);
   flex: 1;
   min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+}
+
+button.achievementBadge {
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--easing-standard);
+}
+
+button.achievementBadge:active {
+  transform: scale(0.96);
 }
 
 .achievementIcon {
@@ -64,6 +77,11 @@
 }
 
 .achievementLabel {
+  /* `align-items: center` on the flex column parent sizes children to
+     their own content by default, so without an explicit width this
+     span never actually reaches the point where it needs to wrap —
+     it just overflows into the next badge instead. */
+  width: 100%;
   text-align: center;
   color: var(--color-text-secondary);
   /* A long single word (e.g. "Диагностика") must wrap inside its own

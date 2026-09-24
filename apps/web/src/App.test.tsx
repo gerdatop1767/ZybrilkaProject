@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App.js';
 import { NavigationProvider } from './lib/navigation.js';
@@ -43,8 +43,20 @@ describe('App', () => {
 
     await user.type(screen.getByLabelText('Ответ'), sampleTask.correctAnswer);
     await user.click(screen.getByRole('button', { name: 'Проверить' }));
-    expect(screen.getByText('Правильно!')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Правильно!')).toBeInTheDocument();
+    });
     expect(screen.queryByRole('button', { name: /Главная/ })).not.toBeInTheDocument();
+  });
+
+  it("clears a toast from the previous screen so it never covers the new screen's back button", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getByRole('button', { name: /7 дней подряд/ }));
+    expect(await screen.findByRole('status')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Продолжить тренировку' }));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('renders a coming-soon placeholder for the Battles tab', async () => {

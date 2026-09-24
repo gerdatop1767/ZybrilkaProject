@@ -23,6 +23,48 @@
   display: flex;
 }
 
+/* Success settles in with a small spring-like overshoot — satisfying
+   but restrained, never a bounce or confetti (Design Spec Section 6). */
+.success .icon {
+  animation: iconPop var(--duration-reveal) var(--easing-standard) both;
+  animation-delay: 60ms;
+}
+
+@keyframes iconPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Error gets a single soft horizontal displacement — never a shake
+   loop or anything that reads as alarming. */
+.error .icon {
+  animation: iconSettle var(--duration-reveal) var(--easing-standard) both;
+  animation-delay: 60ms;
+}
+
+@keyframes iconSettle {
+  0% {
+    opacity: 0;
+    transform: translateX(-3px);
+  }
+  50% {
+    transform: translateX(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 .content {
   display: flex;
   flex-direction: column;
@@ -64,7 +106,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .feedback {
+  .feedback,
+  .success .icon,
+  .error .icon {
     animation-duration: 1ms;
+    animation-delay: 0ms;
   }
 }
