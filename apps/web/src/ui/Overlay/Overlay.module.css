@@ -1,0 +1,18 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  background: var(--color-bg-overlay);
+  opacity: 0;
+  transition: opacity var(--duration-page) var(--easing-standard);
+}
+
+.backdropOpen {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop {
+    transition-duration: 1ms;
+  }
+}

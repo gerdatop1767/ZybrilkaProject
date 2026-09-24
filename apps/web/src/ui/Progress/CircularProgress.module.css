@@ -1,0 +1,47 @@
+.svg {
+  transform: rotate(-90deg);
+}
+
+.track {
+  stroke: var(--color-bg-elevated);
+  fill: none;
+}
+
+.fill {
+  fill: none;
+  stroke: var(--color-accent-primary);
+  stroke-linecap: round;
+  transition: stroke-dashoffset var(--duration-base) var(--easing-standard);
+}
+
+.success .fill {
+  stroke: var(--color-success);
+}
+
+.error .fill {
+  stroke: var(--color-error);
+}
+
+.indeterminate {
+  animation: spin 1.1s linear infinite;
+}
+
+.indeterminate .fill {
+  transition: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(270deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition-duration: 1ms;
+  }
+
+  .indeterminate {
+    animation-duration: 2.2s;
+  }
+}

@@ -1,0 +1,51 @@
+.track {
+  position: relative;
+  width: 100%;
+  height: 0.5rem;
+  border-radius: var(--radius-chip);
+  background: var(--color-bg-elevated);
+  overflow: hidden;
+}
+
+.large {
+  height: 0.75rem;
+}
+
+.fill {
+  height: 100%;
+  border-radius: var(--radius-chip);
+  background: var(--color-accent-primary);
+  transition: width var(--duration-base) var(--easing-standard);
+}
+
+.success .fill {
+  background: var(--color-success);
+}
+
+.error .fill {
+  background: var(--color-error);
+}
+
+.indeterminate .fill {
+  width: 40% !important;
+  animation: indeterminate 1.4s ease-in-out infinite;
+}
+
+@keyframes indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition-duration: 1ms;
+  }
+
+  .indeterminate .fill {
+    animation-duration: 2.8s;
+  }
+}

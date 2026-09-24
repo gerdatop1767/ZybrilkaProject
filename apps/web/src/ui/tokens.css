@@ -110,6 +110,11 @@
   --bottom-nav-height: 4rem; /* 64px */
   --layout-max-width: 30rem; /* 480px, phone-proportioned column on wider screens */
   --touch-target-min: 2.75rem; /* 44px */
+
+  /* ---- Elevation stacking (overlays render above the nav/content) ---- */
+  --z-overlay: 100;
+  --z-modal: 110;
+  --z-toast: 120;
 }
 
 @media (prefers-reduced-motion: reduce) {

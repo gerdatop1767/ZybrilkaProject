@@ -1,0 +1,70 @@
+.feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  animation: settle var(--duration-base) var(--easing-standard);
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.icon {
+  flex-shrink: 0;
+  display: flex;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.success {
+  background: color-mix(in srgb, var(--color-success) 15%, var(--color-bg-surface));
+}
+
+.success .icon {
+  color: var(--color-success);
+}
+
+.error {
+  /* Softer than success on purpose — an incorrect answer should never
+     read as alarming (Design Spec Section 6: "never feel humiliating"). */
+  background: color-mix(in srgb, var(--color-error) 10%, var(--color-bg-surface));
+}
+
+.error .icon {
+  color: var(--color-error);
+}
+
+.warning {
+  background: color-mix(in srgb, var(--color-warning) 12%, var(--color-bg-surface));
+}
+
+.warning .icon {
+  color: var(--color-warning);
+}
+
+.info {
+  background: color-mix(in srgb, var(--color-accent-secondary) 12%, var(--color-bg-surface));
+}
+
+.info .icon {
+  color: var(--color-accent-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feedback {
+    animation-duration: 1ms;
+  }
+}

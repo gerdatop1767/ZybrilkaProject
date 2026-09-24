@@ -12,6 +12,12 @@ import {
   Lock,
   Target,
   Zap,
+  ChevronDown,
+  CircleCheck,
+  CircleX,
+  TriangleAlert,
+  Info,
+  Loader2,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -36,6 +42,13 @@ export const icons = {
   lock: Lock,
   target: Target,
   xp: Zap,
+  chevronDown: ChevronDown,
+  close: X,
+  success: CircleCheck,
+  errorCircle: CircleX,
+  warning: TriangleAlert,
+  info: Info,
+  spinner: Loader2,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof icons;
