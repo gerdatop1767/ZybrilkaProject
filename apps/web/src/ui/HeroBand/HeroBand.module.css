@@ -1,0 +1,43 @@
+.band {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  /* More generous than Card's --space-4 — this surface carries the
+     screen's one hero moment, not a list of rows. */
+  padding: var(--space-6) var(--space-5) var(--space-5);
+  box-shadow: var(--shadow-e1);
+}
+
+/* Same layered-gradient technique across all three tones — one motif,
+   reused deliberately, not a different gradient invented per screen. */
+.brand {
+  background:
+    radial-gradient(
+      120% 100% at 100% 0%,
+      color-mix(in srgb, var(--color-accent-primary) 16%, transparent) 0%,
+      transparent 60%
+    ),
+    var(--color-bg-surface);
+}
+
+.success {
+  background:
+    radial-gradient(
+      120% 100% at 0% 0%,
+      color-mix(in srgb, var(--color-success) 18%, transparent) 0%,
+      transparent 65%
+    ),
+    var(--color-bg-surface);
+}
+
+/* Softer than success on purpose — an incorrect answer's hero must
+   still feel calm and constructive, never alarming. */
+.error {
+  background:
+    radial-gradient(
+      120% 100% at 0% 0%,
+      color-mix(in srgb, var(--color-error) 9%, transparent) 0%,
+      transparent 65%
+    ),
+    var(--color-bg-surface);
+}

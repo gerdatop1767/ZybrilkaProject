@@ -26,13 +26,15 @@ describe('Home', () => {
   it('renders the greeting and streak', () => {
     renderHome();
     expect(screen.getByText(/Привет,/)).toBeInTheDocument();
-    expect(screen.getByText('12')).toBeInTheDocument();
+    // The streak count appears both in the hero and in the progress StatRow.
+    expect(screen.getAllByText('12').length).toBeGreaterThanOrEqual(2);
   });
 
-  it('renders subject chips and recent activity', () => {
+  it('renders subject mastery and recent activity', () => {
     renderHome();
-    expect(screen.getByText(/Математика/)).toBeInTheDocument();
-    expect(screen.getByText('Недавняя активность')).toBeInTheDocument();
+    expect(screen.getByText('Математика')).toBeInTheDocument();
+    expect(screen.getByText('Логарифмы')).toBeInTheDocument();
+    expect(screen.getByText('Весь прогресс')).toBeInTheDocument();
   });
 
   it('does not render a mascot placeholder', () => {
@@ -52,7 +54,7 @@ describe('Home', () => {
     renderHome();
     await waitFor(
       () => {
-        expect(screen.getByText('642 / 1000 XP')).toBeInTheDocument();
+        expect(screen.getByText('642')).toBeInTheDocument();
       },
       { timeout: 3000 },
     );

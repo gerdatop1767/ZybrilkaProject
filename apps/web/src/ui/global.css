@@ -123,6 +123,17 @@ a,
   font-variant-numeric: tabular-nums;
 }
 
+/* The one hero-scale figure per screen (Design Spec redesign, S1 Block
+   5) — HeroBand's headline number/statement. Never used more than once
+   on a screen; that restraint is what makes it read as a focal point. */
+.text-hero {
+  font-size: var(--font-size-hero);
+  line-height: var(--line-height-hero);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
 .text-secondary {
   color: var(--color-text-secondary);
 }

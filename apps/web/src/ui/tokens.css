@@ -58,6 +58,12 @@
   --font-size-stat: 1.5rem; /* 24px */
   --line-height-stat: 1.75rem; /* 28px */
 
+  /* The single largest number/statement on a screen — HeroBand's
+     headline figure (XP-to-level, accuracy, level, result state).
+     Used at most once per screen (Design Spec redesign, S1 Block 5). */
+  --font-size-hero: 2.5rem; /* 40px */
+  --line-height-hero: 2.75rem; /* 44px */
+
   /* Task statement gets its own larger, more readable style */
   --font-size-task: 1.125rem; /* 18px */
   --line-height-task: 1.75rem; /* 28px */

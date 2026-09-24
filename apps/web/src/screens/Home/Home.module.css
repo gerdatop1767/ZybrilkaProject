@@ -40,24 +40,6 @@
   }
 }
 
-/* Hero panel: a warm gradient surface instead of a flat gray card,
-   matching the approved reference mockups' greeting treatment. Built
-   entirely from existing tokens — no new colors introduced. */
-.hero {
-  position: relative;
-  overflow: hidden;
-  border-radius: var(--radius-card);
-  padding: var(--space-5) var(--space-4) var(--space-4);
-  background:
-    radial-gradient(
-      120% 100% at 100% 0%,
-      color-mix(in srgb, var(--color-accent-primary) 16%, transparent) 0%,
-      transparent 60%
-    ),
-    var(--color-bg-surface);
-  box-shadow: var(--shadow-e1);
-}
-
 .greeting {
   display: flex;
   align-items: flex-start;
@@ -71,9 +53,12 @@
   gap: var(--space-1);
 }
 
+/* Plain text + dot, not individually-boxed chips — the HeroBand
+   surface already provides the container, so each subject only needs
+   to read as a labeled value inside it. */
 .subjectRow {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-4);
   overflow-x: auto;
   margin-top: var(--space-4);
   padding-bottom: var(--space-1);
@@ -84,6 +69,46 @@
 
 .subjectRow::-webkit-scrollbar {
   display: none;
+}
+
+.subjectItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.subjectDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* The one deliberately asymmetric moment on the screen: the primary
+   CTA overlaps the HeroBand's lower edge instead of sitting below it
+   with its own equal gap — this is what "dominant CTA" means
+   physically, not just width/color. */
+.cta {
+  margin-top: calc(var(--space-6) * -1);
+  box-shadow: var(--shadow-e2);
+  position: relative;
+  z-index: 1;
+}
+
+/* One continuous inline group — header, two stat numbers, the XP bar
+   and a couple of recent-activity rows — instead of three separate
+   cards for what is really one "today" story. */
+.progressGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.activityList {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-2);
 }
 
 .activityRow {
@@ -113,6 +138,20 @@
 .activityText {
   flex: 1;
   min-width: 0;
+}
+
+.progressLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  align-self: center;
+  border: none;
+  background: transparent;
+  color: var(--color-accent-secondary);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-medium);
+  padding: var(--space-2);
 }
 
 .achievementRow {
