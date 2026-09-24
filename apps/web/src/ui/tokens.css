@@ -112,6 +112,7 @@
   --touch-target-min: 2.75rem; /* 44px */
 
   /* ---- Elevation stacking (overlays render above the nav/content) ---- */
+  --z-nav: 10;
   --z-overlay: 100;
   --z-modal: 110;
   --z-toast: 120;

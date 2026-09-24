@@ -10,6 +10,7 @@ import { Card } from '../../ui/Card/Card.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { CircularProgress } from '../../ui/Progress/CircularProgress.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
+import { SectionHeader } from '../../ui/SectionHeader/SectionHeader.js';
 import { clsx } from '../../lib/clsx.js';
 import { SlideUp } from '../../ui/motion/motion.js';
 import styles from './ProgressScreen.module.css';
@@ -26,7 +27,7 @@ export function ProgressScreen() {
     <SlideUp className={styles.stack}>
       <h1 className="text-h1">Прогресс</h1>
 
-      <Card className={styles.statsRow}>
+      <Card elevated className={styles.statsRow}>
         <div className={styles.statCard}>
           <CircularProgress value={userStats.accuracy} label="Точность">
             <span className="text-h3">{userStats.accuracy}%</span>
@@ -43,58 +44,66 @@ export function ProgressScreen() {
         </div>
       </Card>
 
-      <Card>
-        <p className="text-h3">Активность за неделю</p>
-        <div className={styles.weekRow}>
-          {weeklyActivity.map((count, i) => (
-            <div key={weekdayLabels[i]} className={styles.weekBarColumn}>
-              <div
-                className={styles.weekBar}
-                style={{ height: `${(count / maxWeeklyActivity) * 100}%` }}
-                aria-hidden="true"
+      <div>
+        <SectionHeader title="Активность за неделю" />
+        <Card>
+          <div className={styles.weekRow}>
+            {weeklyActivity.map((count, i) => (
+              <div key={weekdayLabels[i]} className={styles.weekBarColumn}>
+                <div
+                  className={styles.weekBar}
+                  style={{ height: `${(count / maxWeeklyActivity) * 100}%` }}
+                  aria-hidden="true"
+                />
+                <span className="text-label">{weekdayLabels[i]}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <div>
+        <SectionHeader title="Прогресс по предметам" />
+        <Card>
+          {subjects.map((subject) => (
+            <div key={subject.id} className={styles.subjectRow}>
+              <span className={clsx('text-body-sm', styles.subjectName)}>{subject.shortName}</span>
+              <ProgressBar
+                value={subject.mastery}
+                label={subject.shortName}
+                className={styles.subjectBar}
               />
-              <span className="text-label">{weekdayLabels[i]}</span>
+              <span className={clsx('text-body-sm', styles.subjectValue)}>{subject.mastery}%</span>
             </div>
           ))}
-        </div>
-      </Card>
+        </Card>
+      </div>
 
-      <Card>
-        <p className="text-h3">Прогресс по предметам</p>
-        {subjects.map((subject) => (
-          <div key={subject.id} className={styles.subjectRow}>
-            <span className={clsx('text-body-sm', styles.subjectName)}>{subject.shortName}</span>
-            <ProgressBar
-              value={subject.mastery}
-              label={subject.shortName}
-              className={styles.subjectBar}
-            />
-            <span className={clsx('text-body-sm', styles.subjectValue)}>{subject.mastery}%</span>
-          </div>
-        ))}
-      </Card>
+      <div>
+        <SectionHeader title="Темы по математике" />
+        <Card>
+          {topicMastery.map((topic) => (
+            <div key={topic.topic} className={styles.topicRow}>
+              {topic.weak && <span className={styles.weakDot} aria-label="Слабая тема" />}
+              <span className={clsx('text-body-sm', styles.topicName)}>{topic.topic}</span>
+              <span className="text-body-sm text-secondary">{topic.mastery}%</span>
+            </div>
+          ))}
+        </Card>
+      </div>
 
-      <Card>
-        <p className="text-h3">Темы по математике</p>
-        {topicMastery.map((topic) => (
-          <div key={topic.topic} className={styles.topicRow}>
-            {topic.weak && <span className={styles.weakDot} aria-label="Слабая тема" />}
-            <span className={clsx('text-body-sm', styles.topicName)}>{topic.topic}</span>
-            <span className="text-body-sm text-secondary">{topic.mastery}%</span>
-          </div>
-        ))}
-      </Card>
-
-      <Card>
-        <p className="text-h3">Недавняя активность</p>
-        {recentActivity.map((entry) => (
-          <div key={entry.id} className={styles.activityRow}>
-            <Icon name={entry.correct ? 'success' : 'errorCircle'} size={18} />
-            <span className={clsx('text-body-sm', styles.activityText)}>{entry.topic}</span>
-            <span className="text-body-sm text-secondary">{entry.date}</span>
-          </div>
-        ))}
-      </Card>
+      <div>
+        <SectionHeader title="Недавняя активность" />
+        <Card>
+          {recentActivity.map((entry) => (
+            <div key={entry.id} className={styles.activityRow}>
+              <Icon name={entry.correct ? 'success' : 'errorCircle'} size={18} />
+              <span className={clsx('text-body-sm', styles.activityText)}>{entry.topic}</span>
+              <span className="text-body-sm text-secondary">{entry.date}</span>
+            </div>
+          ))}
+        </Card>
+      </div>
     </SlideUp>
   );
 }

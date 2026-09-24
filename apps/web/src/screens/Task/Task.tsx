@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import { getTaskById } from '../../data/sampleTask.js';
+import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
+import { Card } from '../../ui/Card/Card.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { Input } from '../../ui/Input/Input.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
@@ -23,6 +25,7 @@ export interface TaskProps {
 export function Task({ taskId }: TaskProps) {
   const { navigate, back } = useNavigation();
   const task = getTaskById(taskId);
+  const subjectAccent = subjects.find((subject) => subject.id === task.subjectId)?.color;
   const [answer, setAnswer] = useState('');
   const [scratchOpen, setScratchOpen] = useState(false);
 
@@ -65,7 +68,12 @@ export function Task({ taskId }: TaskProps) {
         label={`Задание ${task.number} из ${task.totalInSession}`}
       />
 
-      <p className={clsx('text-task', styles.condition)}>{task.condition}</p>
+      <Card
+        className={styles.conditionCard}
+        style={subjectAccent ? { ['--subject-accent' as string]: subjectAccent } : undefined}
+      >
+        <p className={clsx('text-task', styles.condition)}>{task.condition}</p>
+      </Card>
 
       <div className={styles.answerRow}>
         <Input

@@ -5,6 +5,7 @@ import { Icon } from '../../ui/Icon/Icon.js';
 import { Mascot } from '../../ui/Mascot/Mascot.js';
 import { CircularProgress } from '../../ui/Progress/CircularProgress.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
+import { SectionHeader } from '../../ui/SectionHeader/SectionHeader.js';
 import { clsx } from '../../lib/clsx.js';
 import { SlideUp } from '../../ui/motion/motion.js';
 import styles from './Profile.module.css';
@@ -20,7 +21,7 @@ export function Profile() {
     <SlideUp className={styles.stack}>
       <h1 className="text-h1">Профиль</h1>
 
-      <Card className={styles.identity}>
+      <Card elevated className={styles.identity}>
         <CircularProgress value={(userStats.xp / userStats.xpToNextLevel) * 100} label="Уровень">
           <Mascot pose="idle" size={40} />
         </CircularProgress>
@@ -47,47 +48,51 @@ export function Profile() {
         />
       </Card>
 
-      <Card>
-        <p className="text-h3">Достижения</p>
-        <div className={styles.achievementRow}>
-          {achievementPreview.map((achievement) => (
-            <div
-              key={achievement.id}
-              className={clsx(
-                styles.achievementBadge,
-                !achievement.unlocked && styles.achievementLocked,
-              )}
-            >
-              <span className={styles.achievementIcon}>
-                <Icon name={achievement.unlocked ? 'achievements' : 'lock'} size={20} />
-              </span>
-              <span className={clsx('text-label', styles.achievementLabel)}>
-                {achievement.label}
-              </span>
-            </div>
-          ))}
-        </div>
-      </Card>
+      <div>
+        <SectionHeader title="Достижения" />
+        <Card>
+          <div className={styles.achievementRow}>
+            {achievementPreview.map((achievement) => (
+              <div
+                key={achievement.id}
+                className={clsx(
+                  styles.achievementBadge,
+                  achievement.unlocked ? styles.achievementUnlocked : styles.achievementLocked,
+                )}
+              >
+                <span className={styles.achievementIcon}>
+                  <Icon name={achievement.unlocked ? 'achievements' : 'lock'} size={20} />
+                </span>
+                <span className={clsx('text-label', styles.achievementLabel)}>
+                  {achievement.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
 
-      <Card>
-        <p className="text-h3">Настройки</p>
-        <button
-          type="button"
-          className={styles.settingsRow}
-          onClick={() => navigate({ screen: 'onboarding' })}
-        >
-          <span className={styles.settingsIcon}>
-            <Icon name="smart" size={18} />
-          </span>
-          <span className={styles.settingsLabel}>Пройти диагностику заново</span>
-        </button>
-        <div className={styles.settingsInfo}>
-          <Icon name="info" size={18} />
-          <span className="text-body-sm">
-            Анимации следуют системной настройке «Уменьшить движение»
-          </span>
-        </div>
-      </Card>
+      <div>
+        <SectionHeader title="Настройки" />
+        <Card>
+          <button
+            type="button"
+            className={styles.settingsRow}
+            onClick={() => navigate({ screen: 'onboarding' })}
+          >
+            <span className={styles.settingsIcon}>
+              <Icon name="smart" size={18} />
+            </span>
+            <span className={styles.settingsLabel}>Пройти диагностику заново</span>
+          </button>
+          <div className={styles.settingsInfo}>
+            <Icon name="info" size={18} />
+            <span className="text-body-sm">
+              Анимации следуют системной настройке «Уменьшить движение»
+            </span>
+          </div>
+        </Card>
+      </div>
     </SlideUp>
   );
 }

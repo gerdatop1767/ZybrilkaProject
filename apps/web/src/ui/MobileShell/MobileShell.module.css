@@ -1,8 +1,15 @@
 .shell {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  min-height: 100dvh; /* Telegram WebView resizes the viewport; dvh tracks it */
+  /* height, not min-height: the shell must be CAPPED at the viewport
+     so its flex child (.content) is forced to shrink and scroll
+     internally. min-height would let the shell grow taller than the
+     viewport on long content instead, and .content's overflow-y:auto
+     would never actually engage — the whole page would scroll past a
+     fixed BottomNav instead of stopping at it, letting content paint
+     over the nav. */
+  height: 100vh;
+  height: 100dvh; /* Telegram WebView resizes the viewport; dvh tracks it */
   max-width: var(--layout-max-width);
   margin: 0 auto;
   background: var(--color-bg-base);
@@ -17,12 +24,27 @@
 .content {
   flex: 1;
   overflow-y: auto;
+  /* -webkit-overflow-scrolling once mattered for momentum scroll in
+     older iOS Safari; harmless to omit on current engines, kept out
+     to avoid a stylelint deprecation warning if one is ever added. */
   padding: var(--space-4) var(--space-screen-margin);
-  padding-bottom: calc(var(--bottom-nav-height) + var(--space-4));
+  /* Every screen's last element must clear the iOS home-indicator
+     safe area, whether or not BottomNav is showing. */
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0));
+}
+
+/* Screens with BottomNav additionally reserve its full rendered height
+   (nav content + its own safe-area padding) so the fixed bar can never
+   cover the last card/button, on any content length. */
+.contentWithNav {
+  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0) + var(--space-4));
 }
 
 @media (min-width: 768px) {
-  .content {
+  .content,
+  .contentWithNav {
+    /* The rail (see .nav below) isn't fixed/bottom-anchored at this
+       breakpoint, so no extra reservation is needed here either way. */
     padding-bottom: var(--space-4);
   }
 }
@@ -32,6 +54,7 @@
   bottom: 0;
   left: 0;
   right: 0;
+  z-index: var(--z-nav);
   max-width: var(--layout-max-width);
   margin: 0 auto;
 }

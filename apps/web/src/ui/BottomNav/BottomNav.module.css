@@ -2,7 +2,11 @@
   display: flex;
   align-items: stretch;
   justify-content: space-around;
-  height: var(--bottom-nav-height);
+  /* min-height, not height: with box-sizing:border-box a fixed height
+     would be shared between the icons/labels and the safe-area padding
+     below, squeezing (and on some devices overflowing) the content
+     instead of growing to fit both. */
+  min-height: var(--bottom-nav-height);
   background: var(--color-bg-surface);
   border-top: 1px solid var(--color-border-subtle);
   /* Telegram WebView / iOS: keep items clear of the home indicator. */

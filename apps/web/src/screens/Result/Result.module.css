@@ -20,10 +20,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* An XP reward is a small celebration moment (Design Spec Section 2). */
+  box-shadow: var(--shadow-e1), var(--shadow-glow-accent);
 }
 
 .xpValue {
   color: var(--color-accent-primary);
+  font-weight: var(--font-weight-bold);
 }
 
 .metaRow {

@@ -8,6 +8,7 @@ import { Chip } from '../../ui/Chip/Chip.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { Mascot } from '../../ui/Mascot/Mascot.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
+import { SectionHeader } from '../../ui/SectionHeader/SectionHeader.js';
 import { clsx } from '../../lib/clsx.js';
 import { FadeIn, SlideUp } from '../../ui/motion/motion.js';
 import styles from './Home.module.css';
@@ -29,22 +30,24 @@ export function Home() {
         </div>
       </header>
 
-      <div className={styles.greeting}>
-        <Mascot pose="greeting" size={64} />
-        <div className={styles.greetingText}>
-          <p className="text-h2">Привет, {userStats.name}!</p>
-          <p className="text-body-sm text-secondary">
-            Сегодня ты ближе к своей цели, чем вчера. Продолжаем!
-          </p>
+      <div className={styles.hero}>
+        <div className={styles.greeting}>
+          <Mascot pose="greeting" size={64} />
+          <div className={styles.greetingText}>
+            <p className="text-h2">Привет, {userStats.name}!</p>
+            <p className="text-body-sm text-secondary">
+              Сегодня ты ближе к своей цели, чем вчера. Продолжаем!
+            </p>
+          </div>
         </div>
-      </div>
 
-      <div className={styles.subjectRow}>
-        {subjects.map((subject) => (
-          <Chip key={subject.id} accentColor={subject.color}>
-            {subject.shortName} {subject.mastery}%
-          </Chip>
-        ))}
+        <div className={styles.subjectRow}>
+          {subjects.map((subject) => (
+            <Chip key={subject.id} accentColor={subject.color}>
+              {subject.shortName} {subject.mastery}%
+            </Chip>
+          ))}
+        </div>
       </div>
 
       <Button
@@ -55,62 +58,53 @@ export function Home() {
         Продолжить тренировку
       </Button>
 
-      <Card>
-        <div className={styles.sectionHeader}>
-          <p className="text-h3">Твой прогресс</p>
-          <button
-            type="button"
-            className={styles.link}
-            onClick={() => navigate({ screen: 'progress' })}
-          >
-            Подробнее →
-          </button>
-        </div>
-        <p className="text-stat">
-          {userStats.xp} / {userStats.xpToNextLevel} XP
-        </p>
-        <ProgressBar value={(userStats.xp / userStats.xpToNextLevel) * 100} label="Опыт" />
-      </Card>
+      <div>
+        <SectionHeader
+          eyebrow="Сегодня"
+          title="Твой прогресс"
+          action={{ label: 'Подробнее', onClick: () => navigate({ screen: 'progress' }) }}
+        />
+        <Card>
+          <p className="text-stat">
+            {userStats.xp} / {userStats.xpToNextLevel} XP
+          </p>
+          <ProgressBar value={(userStats.xp / userStats.xpToNextLevel) * 100} label="Опыт" />
+        </Card>
+      </div>
 
-      <Card>
-        <div className={styles.sectionHeader}>
-          <p className="text-h3">Недавняя активность</p>
-        </div>
-        {recentActivity.slice(0, 3).map((entry) => (
-          <div key={entry.id} className={styles.activityRow}>
-            <span
-              className={clsx(
-                styles.activityIcon,
-                entry.correct ? styles.activityIconCorrect : styles.activityIconIncorrect,
-              )}
-            >
-              <Icon name={entry.correct ? 'success' : 'errorCircle'} size={18} />
-            </span>
-            <p className={clsx('text-body-sm', styles.activityText)}>{entry.topic}</p>
-            <span className="text-body-sm text-secondary">{entry.date}</span>
-          </div>
-        ))}
-      </Card>
+      <div>
+        <SectionHeader title="Недавняя активность" />
+        <Card>
+          {recentActivity.slice(0, 3).map((entry) => (
+            <div key={entry.id} className={styles.activityRow}>
+              <span
+                className={clsx(
+                  styles.activityIcon,
+                  entry.correct ? styles.activityIconCorrect : styles.activityIconIncorrect,
+                )}
+              >
+                <Icon name={entry.correct ? 'success' : 'errorCircle'} size={18} />
+              </span>
+              <p className={clsx('text-body-sm', styles.activityText)}>{entry.topic}</p>
+              <span className="text-body-sm text-secondary">{entry.date}</span>
+            </div>
+          ))}
+        </Card>
+      </div>
 
       <FadeIn>
+        <SectionHeader
+          title="Достижения"
+          action={{ label: 'Все', onClick: () => navigate({ screen: 'profile' }) }}
+        />
         <Card>
-          <div className={styles.sectionHeader}>
-            <p className="text-h3">Достижения</p>
-            <button
-              type="button"
-              className={styles.link}
-              onClick={() => navigate({ screen: 'profile' })}
-            >
-              Все →
-            </button>
-          </div>
           <div className={styles.achievementRow}>
             {achievementPreview.map((achievement) => (
               <div
                 key={achievement.id}
                 className={clsx(
                   styles.achievementBadge,
-                  !achievement.unlocked && styles.achievementLocked,
+                  achievement.unlocked ? styles.achievementUnlocked : styles.achievementLocked,
                 )}
               >
                 <span className={styles.achievementIcon}>

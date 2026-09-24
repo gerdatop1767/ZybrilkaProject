@@ -8,6 +8,7 @@ import { Chip } from '../../ui/Chip/Chip.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import type { IconName } from '../../ui/Icon/icons.js';
 import { Select } from '../../ui/Select/Select.js';
+import { SectionHeader } from '../../ui/SectionHeader/SectionHeader.js';
 import { clsx } from '../../lib/clsx.js';
 import { SlideUp } from '../../ui/motion/motion.js';
 import styles from './Training.module.css';
@@ -17,6 +18,8 @@ interface TrainingMode {
   icon: IconName;
   label: string;
   description: string;
+  /** One of the existing status/accent tokens — never a new color. */
+  accent: string;
 }
 
 const trainingModes: readonly TrainingMode[] = [
@@ -25,21 +28,36 @@ const trainingModes: readonly TrainingMode[] = [
     icon: 'topic',
     label: 'По теме',
     description: 'Выбери конкретную тему для практики',
+    accent: 'var(--color-accent-primary)',
   },
   {
     id: 'mistakes',
     icon: 'mistakes',
     label: 'Мои ошибки',
     description: 'Разбери задания, где были ошибки',
+    accent: 'var(--color-error)',
   },
-  { id: 'review', icon: 'star', label: 'Повторение', description: 'Закрепи то, что уже решал' },
+  {
+    id: 'review',
+    icon: 'star',
+    label: 'Повторение',
+    description: 'Закрепи то, что уже решал',
+    accent: 'var(--color-warning)',
+  },
   {
     id: 'smart',
     icon: 'smart',
     label: 'Умная тренировка',
     description: 'Подбор заданий под твой прогресс',
+    accent: 'var(--color-success)',
   },
-  { id: 'variant', icon: 'variant', label: 'Вариант', description: 'Полный вариант ЕГЭ на время' },
+  {
+    id: 'variant',
+    icon: 'variant',
+    label: 'Вариант',
+    description: 'Полный вариант ЕГЭ на время',
+    accent: 'var(--color-accent-secondary)',
+  },
 ];
 
 const difficultyOptions = [
@@ -78,7 +96,7 @@ export function Training() {
       />
 
       <div>
-        <p className={clsx('text-label', styles.sectionLabel)}>Режим тренировки</p>
+        <SectionHeader title="Режим тренировки" />
         <div className={styles.modeGrid}>
           {trainingModes.map((mode) => {
             const selected = mode.id === modeId;
@@ -90,7 +108,10 @@ export function Training() {
                 aria-pressed={selected}
                 onClick={() => setModeId(mode.id)}
               >
-                <span className={styles.modeIcon}>
+                <span
+                  className={styles.modeIcon}
+                  style={{ ['--mode-accent' as string]: mode.accent }}
+                >
                   <Icon name={mode.icon} size={20} />
                 </span>
                 <span className={styles.modeText}>
@@ -109,7 +130,7 @@ export function Training() {
       </div>
 
       <div>
-        <p className={clsx('text-label', styles.sectionLabel)}>Сложность</p>
+        <SectionHeader title="Сложность" />
         <div className={styles.chipRow}>
           {difficultyOptions.map((option) => (
             <Chip
@@ -124,7 +145,7 @@ export function Training() {
       </div>
 
       <div>
-        <p className={clsx('text-label', styles.sectionLabel)}>Количество заданий</p>
+        <SectionHeader title="Количество заданий" />
         <div className={styles.chipRow}>
           {quantityOptions.map((option) => (
             <Chip key={option} selected={option === quantity} onClick={() => setQuantity(option)}>

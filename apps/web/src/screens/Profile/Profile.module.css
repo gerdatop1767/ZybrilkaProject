@@ -52,6 +52,12 @@
   color: var(--color-accent-primary);
 }
 
+/* Restrained glow reserved for unlocked achievements (Design Spec
+   Section 2), matching the same treatment used on Home. */
+.achievementUnlocked .achievementIcon {
+  box-shadow: var(--shadow-glow-accent);
+}
+
 .achievementLocked .achievementIcon {
   color: var(--color-text-disabled);
   opacity: 0.6;
@@ -60,6 +66,10 @@
 .achievementLabel {
   text-align: center;
   color: var(--color-text-secondary);
+  /* A long single word (e.g. "Диагностика") must wrap inside its own
+     narrow column instead of overflowing into the next badge. */
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 .settingsRow {

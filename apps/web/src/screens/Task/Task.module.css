@@ -54,6 +54,13 @@
   background: var(--color-accent-primary);
 }
 
+/* Task card (Design Spec Section 3: "subject-colored left accent
+   bar"). A border, not a padding override, so it composes cleanly
+   with the shared Card component instead of fighting its own padding. */
+.conditionCard {
+  border-left: 0.25rem solid var(--subject-accent, var(--color-accent-primary));
+}
+
 .condition {
   color: var(--color-text-primary);
 }
