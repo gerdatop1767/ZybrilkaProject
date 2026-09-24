@@ -29,7 +29,7 @@ Browser / Telegram WebView
 
 | Layer | Choice | Why |
 |---|---|---|
-| Language | **TypeScript** throughout | Shared types and validation between frontend and backend |
+| Language | **TypeScript 6.0** throughout | Shared types and validation between frontend and backend. Not 7.x yet: typescript-eslint supports `<6.1` |
 | Monorepo | **pnpm workspaces** | Simple and fast, no extra tooling (Nx/Turbo) |
 | Frontend | **React + Vite**, TanStack Router + Query, CSS Modules + CSS variables for design tokens | Small static SPA, fast in Telegram WebView and Safari, CDN-cacheable, per-route code splitting |
 | UI extras | KaTeX (formulas), lightweight charts (uPlot or Recharts, lazy-loaded), Canvas + Pointer Events for the scratchboard | Small bundle |
@@ -38,7 +38,7 @@ Browser / Telegram WebView
 | Database | **PostgreSQL 16** | Reliable relational data, JSONB where flexible, strong analytics queries |
 | ORM / migrations | **Drizzle ORM + drizzle-kit** | Typed, SQL-like, plain reviewable SQL migrations |
 | Local/test DB | **PGlite** (Postgres in WASM) or Docker Postgres | Same dialect → test-to-production is only a connection-string change |
-| Job queue | **pg-boss** (on Postgres) | No Redis. Imports, rollups, bot notifications |
+| Job queue | **pg-boss** (on Postgres) | No Redis. Imports, rollups, bot notifications. Added with the first real job |
 | Telegram | **grammY** | Typed. Mini App bot and support/admin bot |
 | Tests | Vitest (unit, API), Playwright (e2e, mobile viewports) | |
 | CI | GitHub Actions: lint, typecheck, test, build | |
@@ -123,6 +123,8 @@ events(id BIGSERIAL, user_id, anon_id, name, props JSONB, platform[web|tg], crea
 daily_stats(date, metric, dimension, value)   -- precomputed rollups for the admin dashboard
 ```
 
+**Foundation (S0):** the first migration creates only `app_settings` (runtime key/value settings). Each product table above is added by the stage that uses it.
+
 **Rules**
 - The correct answer and explanation are **never sent to the client before the attempt is recorded on the server.**
 - Every schema change goes through a migration.
@@ -130,6 +132,7 @@ daily_stats(date, metric, dimension, value)   -- precomputed rollups for the adm
 ## 5. API structure
 
 Base path `/api/v1`, JSON, all input validated with Zod.
+`GET /health` is served outside `/api` for container/uptime probes: version, uptime, DB status; `503` when the DB is down.
 
 ```
 Auth
@@ -187,7 +190,7 @@ Zybrilka/
 │   ├── api/            Fastify: src/{modules/<domain>/{routes,service,repo}.ts, plugins/{auth,rateLimit,security}}
 │   └── worker/         pg-boss jobs: import pipeline, rollups, achievements, bots
 ├── packages/
-│   ├── db/             Drizzle schema, migrations/, seed/
+│   ├── db/             Drizzle schema, migrations/, seed/; `@zybrilka/db/testing` (PGlite for tests)
 │   ├── shared/         Zod schemas, API types, answer normalization/checking, constants
 │   └── adaptive/       pure functions: priority scoring, mastery updates, spaced repetition
 ├── design/             5 concept prototypes → chosen design tokens
@@ -196,6 +199,8 @@ Zybrilka/
 ├── .github/workflows/  ci.yml
 └── CLAUDE.md
 ```
+
+Workspace packages export compiled `dist/` by default and their TypeScript source under the custom `@zybrilka/source` export condition. Dev tools (Vite, Vitest, tsx, `tsc --noEmit`) use the source condition, so development and tests never depend on a prior build; production runs the compiled output.
 
 ## 7. Telegram Mini App
 
