@@ -1,0 +1,56 @@
+.nav {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  height: var(--bottom-nav-height);
+  background: var(--color-bg-surface);
+  border-top: 1px solid var(--color-border-subtle);
+  /* Telegram WebView / iOS: keep items clear of the home indicator. */
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  min-height: var(--touch-target-min);
+  transition: color var(--duration-fast) var(--easing-standard);
+}
+
+.item[aria-current='page'] {
+  color: var(--color-accent-primary);
+}
+
+.label {
+  font-size: 0.6875rem; /* 11px, small enough for 5 labels to fit */
+  line-height: 1rem;
+  font-weight: var(--font-weight-medium);
+}
+
+/* Desktop/tablet: collapse into a left rail (Design Spec Section 3). */
+@media (min-width: 768px) {
+  .nav {
+    position: sticky;
+    top: 0;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    width: 6rem;
+    height: 100vh;
+    border-top: none;
+    border-right: 1px solid var(--color-border-subtle);
+    padding-top: var(--space-6);
+    padding-bottom: 0;
+    gap: var(--space-2);
+  }
+
+  .item {
+    flex: none;
+  }
+}

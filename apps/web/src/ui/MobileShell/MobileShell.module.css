@@ -1,0 +1,45 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh; /* Telegram WebView resizes the viewport; dvh tracks it */
+  max-width: var(--layout-max-width);
+  margin: 0 auto;
+  background: var(--color-bg-base);
+}
+
+@media (min-width: 768px) {
+  .shell {
+    flex-direction: row;
+  }
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-screen-margin);
+  padding-bottom: calc(var(--bottom-nav-height) + var(--space-4));
+}
+
+@media (min-width: 768px) {
+  .content {
+    padding-bottom: var(--space-4);
+  }
+}
+
+.nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: var(--layout-max-width);
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .nav {
+    position: sticky;
+    top: 0;
+    max-width: none;
+  }
+}

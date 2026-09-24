@@ -1,0 +1,123 @@
+/**
+ * Zybrilka design tokens.
+ * Source of truth: the approved "Zybrilka Design Specification"
+ * (Sections 2, 6 & 12). Every color, spacing, radius, shadow and motion
+ * value used in the app should come from one of these custom
+ * properties — never a raw hex/px value in a component file.
+ */
+
+:root {
+  /* ---- Colors: backgrounds & surfaces ---- */
+  --color-bg-base: #0b1220;
+  --color-bg-surface: #131c2e;
+  --color-bg-elevated: #1c2740;
+  --color-bg-overlay: rgba(6, 10, 20, 0.72);
+
+  /* ---- Colors: accents ---- */
+  --color-accent-primary: #f5a623;
+  --color-accent-primary-hover: #ffb84d;
+  --color-accent-secondary: #4da3ff;
+
+  /* ---- Colors: status ---- */
+  --color-success: #34c77b;
+  --color-error: #ff5c5c;
+  --color-warning: #ffc94d;
+
+  /* ---- Colors: text ---- */
+  --color-text-primary: #f5f7fa;
+  --color-text-secondary: #9aa6bf;
+  --color-text-disabled: #5b6478;
+
+  /* ---- Colors: borders ---- */
+  --color-border-subtle: #263252;
+
+  /* ---- Colors: subjects (fixed per subject, chips/icons only) ---- */
+  --color-subject-russian: #e8a33d;
+  --color-subject-math: #4da3ff;
+  --color-subject-physics: #4dd68c;
+  --color-subject-chemistry: #b084f5;
+  --color-subject-history: #f27d7d;
+
+  /* ---- Typography ---- */
+  --font-family-base: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --font-size-h1: 1.75rem; /* 28px */
+  --line-height-h1: 2.125rem; /* 34px */
+  --font-size-h2: 1.375rem; /* 22px */
+  --line-height-h2: 1.75rem; /* 28px */
+  --font-size-h3: 1.125rem; /* 18px */
+  --line-height-h3: 1.5rem; /* 24px */
+  --font-size-body: 1rem; /* 16px */
+  --line-height-body: 1.5rem; /* 24px */
+  --font-size-body-sm: 0.875rem; /* 14px */
+  --line-height-body-sm: 1.25rem; /* 20px */
+  --font-size-label: 0.75rem; /* 12px */
+  --line-height-label: 1rem; /* 16px */
+  --font-size-button: 1rem; /* 16px */
+  --line-height-button: 1.25rem; /* 20px */
+  --font-size-stat: 1.5rem; /* 24px */
+  --line-height-stat: 1.75rem; /* 28px */
+
+  /* Task statement gets its own larger, more readable style */
+  --font-size-task: 1.125rem; /* 18px */
+  --line-height-task: 1.75rem; /* 28px */
+  --font-size-explanation: 1rem; /* 16px */
+  --line-height-explanation: 1.5rem; /* 24px */
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* ---- Spacing scale (4px base) ---- */
+  --space-1: 0.25rem; /* 4px */
+  --space-2: 0.5rem; /* 8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-5: 1.25rem; /* 20px */
+  --space-6: 1.5rem; /* 24px */
+  --space-8: 2rem; /* 32px */
+  --space-10: 2.5rem; /* 40px */
+  --space-12: 3rem; /* 48px */
+  --space-16: 4rem; /* 64px */
+
+  --space-screen-margin: var(--space-4); /* 16px, 20px on larger phones */
+  --space-card-padding: var(--space-4);
+  --space-card-gap: var(--space-3);
+
+  /* ---- Radius ---- */
+  --radius-chip: 999px;
+  --radius-button: 1rem; /* 16px */
+  --radius-input: 0.875rem; /* 14px */
+  --radius-card: 1.25rem; /* 20px */
+  --radius-modal: 1.5rem; /* 24px */
+
+  /* ---- Shadows / elevation ---- */
+  --shadow-e1: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-e2: 0 6px 16px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-e3: 0 16px 40px rgba(0, 0, 0, 0.55);
+  --shadow-glow-accent: 0 0 24px rgba(245, 166, 35, 0.35);
+
+  /* ---- Motion timing ---- */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-page: 250ms;
+  --duration-reveal: 300ms;
+  --duration-celebrate: 600ms;
+  --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ---- Layout ---- */
+  --bottom-nav-height: 4rem; /* 64px */
+  --layout-max-width: 30rem; /* 480px, phone-proportioned column on wider screens */
+  --touch-target-min: 2.75rem; /* 44px */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-page: 0ms;
+    --duration-reveal: 0ms;
+    --duration-celebrate: 0ms;
+  }
+}

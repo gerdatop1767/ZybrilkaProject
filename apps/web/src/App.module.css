@@ -1,0 +1,21 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-card-gap);
+}
+
+.row {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.iconRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-text-secondary);
+}
+
+.iconRow > * {
+  color: var(--color-accent-primary);
+}
