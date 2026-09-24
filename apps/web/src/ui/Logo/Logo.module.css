@@ -1,0 +1,6 @@
+.logo {
+  display: block;
+  /* Intrinsic 332x291 — height-driven sizing keeps the exact original
+     proportions; width is derived, never stretched. */
+  width: auto;
+}

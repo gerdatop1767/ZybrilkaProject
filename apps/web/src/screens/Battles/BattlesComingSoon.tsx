@@ -1,4 +1,4 @@
-import { Mascot } from '../../ui/Mascot/Mascot.js';
+import { Icon } from '../../ui/Icon/Icon.js';
 import { FadeIn } from '../../ui/motion/motion.js';
 import styles from './BattlesComingSoon.module.css';
 
@@ -11,7 +11,9 @@ import styles from './BattlesComingSoon.module.css';
 export function BattlesComingSoon() {
   return (
     <FadeIn className={styles.stack}>
-      <Mascot pose="idle" size={72} />
+      <span className={styles.icon}>
+        <Icon name="battles" size={32} />
+      </span>
       <h1 className="text-h2">Битвы скоро здесь</h1>
       <p className="text-body text-secondary">
         1×1 тренировки на скорость и точность появятся в одном из следующих блоков.

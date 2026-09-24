@@ -20,10 +20,10 @@ function renderHome() {
 }
 
 describe('Home', () => {
-  it('renders the Zybrilka brand and greeting', () => {
+  it('renders the greeting and streak', () => {
     renderHome();
-    expect(screen.getByText('Zybrilka')).toBeInTheDocument();
     expect(screen.getByText(/Привет,/)).toBeInTheDocument();
+    expect(screen.getByText('12')).toBeInTheDocument();
   });
 
   it('renders subject chips and recent activity', () => {
@@ -32,12 +32,9 @@ describe('Home', () => {
     expect(screen.getByText('Недавняя активность')).toBeInTheDocument();
   });
 
-  it('exposes a mascot in the greeting area', () => {
+  it('does not render a mascot placeholder', () => {
     renderHome();
-    expect(screen.getByRole('img', { name: 'Zybrilka' })).toHaveAttribute(
-      'data-mascot-pose',
-      'greeting',
-    );
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
   it('navigates to the task screen from the primary CTA', async () => {

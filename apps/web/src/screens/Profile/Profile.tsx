@@ -2,7 +2,6 @@ import { useNavigation } from '../../lib/navigation.js';
 import { achievementPreview, userStats } from '../../data/sampleProgress.js';
 import { Card } from '../../ui/Card/Card.js';
 import { Icon } from '../../ui/Icon/Icon.js';
-import { Mascot } from '../../ui/Mascot/Mascot.js';
 import { CircularProgress } from '../../ui/Progress/CircularProgress.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { SectionHeader } from '../../ui/SectionHeader/SectionHeader.js';
@@ -23,7 +22,7 @@ export function Profile() {
 
       <Card elevated className={styles.identity}>
         <CircularProgress value={(userStats.xp / userStats.xpToNextLevel) * 100} label="Уровень">
-          <Mascot pose="idle" size={40} />
+          <span className="text-h3">{userStats.level}</span>
         </CircularProgress>
         <div className={styles.identityText}>
           <p className="text-h3">{userStats.name}</p>

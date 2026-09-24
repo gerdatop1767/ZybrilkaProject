@@ -59,11 +59,8 @@ describe('Result — incorrect state', () => {
     expect(screen.getByRole('button', { name: 'Похожее задание' })).toBeInTheDocument();
   });
 
-  it('uses the encouraging mascot pose, never a defeated one', () => {
+  it('does not render a mascot placeholder', () => {
     renderResult(false);
-    expect(screen.getByRole('img', { name: 'Zybrilka' })).toHaveAttribute(
-      'data-mascot-pose',
-      'encouraging',
-    );
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 });

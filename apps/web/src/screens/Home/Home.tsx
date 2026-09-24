@@ -6,7 +6,6 @@ import { Button } from '../../ui/Button/Button.js';
 import { Card } from '../../ui/Card/Card.js';
 import { Chip } from '../../ui/Chip/Chip.js';
 import { Icon } from '../../ui/Icon/Icon.js';
-import { Mascot } from '../../ui/Mascot/Mascot.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { SectionHeader } from '../../ui/SectionHeader/SectionHeader.js';
 import { clsx } from '../../lib/clsx.js';
@@ -16,28 +15,26 @@ import styles from './Home.module.css';
 /**
  * Home (Design Spec Section 7): the user's dashboard and the entry
  * point into the core loop — task → result → explanation → progress.
+ * The Zybrilka wordmark itself lives once in MobileShell's persistent
+ * header, so this screen's own top row carries only the greeting and
+ * streak — no duplicate branding.
  */
 export function Home() {
   const { navigate } = useNavigation();
 
   return (
     <SlideUp className={styles.stack}>
-      <header className={styles.header}>
-        <p className={clsx('text-h2', styles.wordmark)}>Zybrilka</p>
-        <div className={styles.streakChip}>
-          <Icon name="flame" size={18} />
-          <span className="text-body-sm">{userStats.streakDays} дней подряд</span>
-        </div>
-      </header>
-
       <div className={styles.hero}>
         <div className={styles.greeting}>
-          <Mascot pose="greeting" size={64} />
           <div className={styles.greetingText}>
             <p className="text-h2">Привет, {userStats.name}!</p>
             <p className="text-body-sm text-secondary">
               Сегодня ты ближе к своей цели, чем вчера. Продолжаем!
             </p>
+          </div>
+          <div className={styles.streakChip}>
+            <Icon name="flame" size={18} />
+            <span className="text-body-sm">{userStats.streakDays}</span>
           </div>
         </div>
 

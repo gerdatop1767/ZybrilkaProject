@@ -6,3 +6,14 @@
   text-align: center;
   padding-top: var(--space-12);
 }
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  background: var(--color-bg-elevated);
+  color: var(--color-accent-primary);
+}

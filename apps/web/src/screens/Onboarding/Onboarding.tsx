@@ -6,7 +6,7 @@ import { Button } from '../../ui/Button/Button.js';
 import { Card } from '../../ui/Card/Card.js';
 import { Chip } from '../../ui/Chip/Chip.js';
 import { Icon } from '../../ui/Icon/Icon.js';
-import { Mascot } from '../../ui/Mascot/Mascot.js';
+import { Logo } from '../../ui/Logo/Logo.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { clsx } from '../../lib/clsx.js';
 import { FadeIn } from '../../ui/motion/motion.js';
@@ -82,7 +82,7 @@ export function Onboarding() {
       <FadeIn key={step} className={styles.content}>
         {step === 1 && (
           <div className={styles.centered}>
-            <Mascot pose="greeting" size={88} />
+            <Logo size={56} />
             <h1 className="text-h1">Добро пожаловать в Zybrilka!</h1>
             <p className="text-body text-secondary">
               Бесплатный тренажёр для подготовки к ЕГЭ. Ответим на пару вопросов и подберём
@@ -155,7 +155,6 @@ export function Onboarding() {
 
         {step === 4 && (
           <div className={styles.centered}>
-            <Mascot pose="thinking" size={88} />
             <h1 className="text-h2">Короткая диагностика</h1>
             <p className="text-body text-secondary">
               Ответь на 10–15 заданий (≈10 минут) — это поможет понять твой текущий уровень по
@@ -170,7 +169,6 @@ export function Onboarding() {
         {step === 5 && (
           <>
             <div className={styles.centered}>
-              <Mascot pose="celebrating" size={88} />
               <h1 className="text-h2">Готово! Вот твой профиль</h1>
             </div>
             <Card>

@@ -19,7 +19,7 @@ function renderApp() {
 describe('App', () => {
   it('renders Home first, with the bottom navigation visible', () => {
     renderApp();
-    expect(screen.getByText('Zybrilka')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Zybrilka' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Главная/ })).toHaveAttribute('aria-current', 'page');
   });
 

@@ -4,17 +4,6 @@
   gap: var(--space-5);
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.wordmark {
-  color: var(--color-accent-primary);
-  font-weight: var(--font-weight-bold);
-}
-
 /* Reserved for streak/achievement moments only (Design Spec Section 2:
    "Glow accent ... never a hard neon outline") — not applied broadly. */
 .streakChip {
@@ -48,7 +37,8 @@
 
 .greeting {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: var(--space-4);
 }
 

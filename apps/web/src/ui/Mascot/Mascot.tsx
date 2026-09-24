@@ -34,15 +34,11 @@ export interface MascotProps {
 /**
  * Mascot placeholder (Design Spec Sections 5 & 17).
  *
- * IMPORTANT: the approved mascot character (an exact reference image
- * and 15 Higgsfield-generated pose clips) is not yet committed to this
- * repository. Per instructions, this component does NOT invent or
- * redraw a mascot — it renders a neutral placeholder that carries the
- * right pose/size/position contract, so screens can call `<Mascot
- * pose="..." />` in their final spots now and swap in the real
- * asset (an image/video/Lottie keyed by `pose`) later without any
- * screen-level changes. No Higgsfield credits are spent by this
- * component.
+ * NOT USED in any live screen as of Block 4: the approved Zybrilka
+ * logo (see ui/Logo) is now the app's real brand element, and the
+ * animated mascot direction was explicitly dropped. This component is
+ * kept dormant, unimported by any screen, purely as a reference for a
+ * possible future mascot experiment — it must not affect current UI.
  */
 export function Mascot({ pose, size = 56, className }: MascotProps) {
   return (
