@@ -1,0 +1,14 @@
+.tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 30%;
+  color: #fff;
+}
+
+.glyphText {
+  font-size: var(--tile-font-size, 22px);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}

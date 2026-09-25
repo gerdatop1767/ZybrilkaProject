@@ -93,7 +93,14 @@ export function Result({ taskId, correct }: ResultProps) {
           <Button
             variant="secondary"
             fullWidth
-            onClick={() => navigate({ screen: 'task', taskId: task.id })}
+            onClick={() =>
+              navigate({
+                screen: 'task',
+                subjectId: task.subjectId,
+                taskNumber: task.number,
+                taskId: task.id,
+              })
+            }
           >
             Похожее задание
           </Button>
@@ -101,7 +108,14 @@ export function Result({ taskId, correct }: ResultProps) {
         <Button
           variant="primary"
           fullWidth
-          onClick={() => navigate({ screen: 'task', taskId: task.id })}
+          onClick={() =>
+            navigate({
+              screen: 'task',
+              subjectId: task.subjectId,
+              taskNumber: task.number,
+              taskId: task.id,
+            })
+          }
         >
           Следующее задание
         </Button>

@@ -1,6 +1,27 @@
-.logo {
+.lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.icon {
   display: block;
-  /* Intrinsic 332x291 — height-driven sizing keeps the exact original
-     proportions; width is derived, never stretched. */
-  width: auto;
+  flex-shrink: 0;
+  border-radius: 28%;
+  object-fit: cover;
+}
+
+.wordmark {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.wordmarkAccent {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }

@@ -7,21 +7,34 @@
  */
 
 :root {
-  /* ---- Colors: backgrounds & surfaces ---- */
-  --color-bg-base: #0b1220;
-  --color-bg-surface: #131c2e;
-  --color-bg-elevated: #1c2740;
-  --color-bg-overlay: rgba(6, 10, 20, 0.72);
+  /* ---- Colors: backgrounds & surfaces ----
+     Sampled from the approved Zybrilka screenshots (S1 Block 6 —
+     "final approved design" package). Purple/violet is now the brand
+     system; this replaces the earlier orange-based token values
+     entirely, not just where it happens to show. */
+  --color-bg-base: #05070f;
+  --color-bg-surface: #0d1226;
+  --color-bg-elevated: #161b3f;
+  --color-bg-overlay: rgba(3, 5, 12, 0.75);
 
   /* ---- Colors: accents ---- */
-  --color-accent-primary: #f5a623;
-  --color-accent-primary-hover: #ffb84d;
+  --color-accent-primary: #8b14f5;
+  --color-accent-primary-end: #ce3dfd;
+  --color-accent-primary-hover: #a13ffc;
   --color-accent-secondary: #4da3ff;
+  --gradient-primary: linear-gradient(
+    135deg,
+    var(--color-accent-primary) 0%,
+    var(--color-accent-primary-end) 100%
+  );
 
   /* ---- Colors: status ---- */
-  --color-success: #34c77b;
-  --color-error: #ff5c5c;
-  --color-warning: #ffc94d;
+  --color-success: #22c55e;
+  --color-error: #ff4a6b;
+  --color-warning: #f5a623;
+  /* Gold: streak flame, level crown, trophy/achievement accents —
+     the one place amber survives, exactly as shown in the screenshots. */
+  --color-gold: #f5a623;
 
   /* ---- Colors: text ---- */
   --color-text-primary: #f5f7fa;
@@ -29,14 +42,17 @@
   --color-text-disabled: #5b6478;
 
   /* ---- Colors: borders ---- */
-  --color-border-subtle: #263252;
+  --color-border-subtle: #23284a;
 
   /* ---- Colors: subjects (fixed per subject, chips/icons only) ---- */
-  --color-subject-russian: #e8a33d;
-  --color-subject-math: #4da3ff;
-  --color-subject-physics: #4dd68c;
-  --color-subject-chemistry: #b084f5;
+  --color-subject-math: #22c55e;
+  --color-subject-russian: #4da3ff;
+  --color-subject-english: #a855f7;
+  --color-subject-social: #f5a623;
+  --color-subject-informatics: #ef4444;
   --color-subject-history: #f27d7d;
+  --color-subject-physics: #4dd6e8;
+  --color-subject-chemistry: #b084f5;
 
   /* ---- Typography ---- */
   --font-family-base: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -102,7 +118,8 @@
   --shadow-e1: 0 2px 8px rgba(0, 0, 0, 0.35);
   --shadow-e2: 0 6px 16px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
   --shadow-e3: 0 16px 40px rgba(0, 0, 0, 0.55);
-  --shadow-glow-accent: 0 0 24px rgba(245, 166, 35, 0.35);
+  --shadow-glow-accent: 0 0 24px rgba(139, 20, 245, 0.45);
+  --shadow-glow-gold: 0 0 24px rgba(245, 166, 35, 0.35);
 
   /* ---- Motion timing ---- */
   --duration-fast: 120ms;
@@ -115,6 +132,8 @@
   /* ---- Layout ---- */
   --bottom-nav-height: 4rem; /* 64px */
   --layout-max-width: 30rem; /* 480px, phone-proportioned column on wider screens */
+  --layout-max-width-desktop: 90rem; /* 1440px, desktop shell content width */
+  --sidebar-width: 15.5rem; /* 248px, desktop left nav rail */
   --touch-target-min: 2.75rem; /* 44px */
 
   /* ---- Elevation stacking (overlays render above the nav/content) ---- */

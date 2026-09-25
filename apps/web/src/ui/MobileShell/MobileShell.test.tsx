@@ -3,24 +3,25 @@ import { render, screen } from '@testing-library/react';
 import { MobileShell } from './MobileShell.js';
 
 describe('MobileShell', () => {
-  it('renders the brand header with the logo when a nav is provided', () => {
+  it('renders the header with logo and status chips when a nav is provided', () => {
     render(
       <MobileShell nav={<span>nav</span>}>
         <p>Content</p>
       </MobileShell>,
     );
     expect(screen.getByRole('banner')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Zybrilka' })).toBeInTheDocument();
+    expect(screen.getByText('Zybr')).toBeInTheDocument();
+    expect(screen.getByText(/Серия/)).toBeInTheDocument();
   });
 
-  it('omits the brand header and the nav wrapper when no nav is given (overlay screens)', () => {
+  it('omits the header and the nav wrapper when no nav is given (overlay screens)', () => {
     const { container } = render(
       <MobileShell>
         <p>Overlay content</p>
       </MobileShell>,
     );
     expect(screen.queryByRole('banner')).not.toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: 'Zybrilka' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Zybr')).not.toBeInTheDocument();
     expect(container.querySelector('nav')).not.toBeInTheDocument();
   });
 

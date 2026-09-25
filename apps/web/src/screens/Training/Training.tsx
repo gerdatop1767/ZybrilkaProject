@@ -166,7 +166,14 @@ export function Training() {
       <Button
         variant="primary"
         fullWidth
-        onClick={() => navigate({ screen: 'task', taskId: sampleTask.id })}
+        onClick={() =>
+          navigate({
+            screen: 'task',
+            subjectId: sampleTask.subjectId,
+            taskNumber: sampleTask.number,
+            taskId: sampleTask.id,
+          })
+        }
       >
         Начать тренировку
       </Button>

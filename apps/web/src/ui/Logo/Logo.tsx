@@ -1,27 +1,46 @@
 import { clsx } from '../../lib/clsx.js';
 import styles from './Logo.module.css';
 
+export type LogoIconVariant = 'desktop' | 'mobile';
+
 export interface LogoProps {
-  /** Rendered height in px; width follows the asset's own 332:291 ratio. */
+  /** Rendered icon height in px. */
   size?: number;
+  /** The approved package ships two distinct bison-icon crops — a
+   * refined one for desktop headers, a simpler one for mobile — not a
+   * single asset scaled between them. */
+  icon?: LogoIconVariant;
+  /** Hides the "Zybrilka" wordmark, e.g. where space is tight. */
+  wordmark?: boolean;
   className?: string;
 }
 
+const iconSrc: Record<LogoIconVariant, string> = {
+  desktop: '/branding/v2/logo-icon-desktop.png',
+  mobile: '/branding/v2/logo-icon-mobile.png',
+};
+
 /**
- * The approved Zybrilka logo (apps/web/public/branding/zybrilka-logo.png)
- * — the exact asset provided, used as-is. Not redrawn, not recreated
- * with HTML/CSS, not replaced with an icon. This is now the product's
- * main visual brand element, replacing the earlier Mascot placeholder
- * in the visible UI (see ui/Mascot for why that component still exists
- * but is no longer rendered anywhere).
+ * The approved Zybrilka logo lockup (S1 Block 6 final design): the
+ * bison-icon crop from the approved screenshots + a real "Zybrilka"
+ * wordmark rendered as text (white "Zybr", gradient "ilka") — not an
+ * image, since it's typography the browser can render natively.
  */
-export function Logo({ size = 32, className }: LogoProps) {
+export function Logo({ size = 32, icon = 'desktop', wordmark = true, className }: LogoProps) {
   return (
-    <img
-      src="/branding/zybrilka-logo.png"
-      alt="Zybrilka"
-      height={size}
-      className={clsx(styles.logo, className)}
-    />
+    <span className={clsx(styles.lockup, className)}>
+      <img
+        src={iconSrc[icon]}
+        alt={wordmark ? '' : 'Zybrilka'}
+        height={size}
+        width={size}
+        className={styles.icon}
+      />
+      {wordmark && (
+        <span className={styles.wordmark} style={{ fontSize: size * 0.62 }}>
+          Zybr<span className={styles.wordmarkAccent}>ilka</span>
+        </span>
+      )}
+    </span>
   );
 }

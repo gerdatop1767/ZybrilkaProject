@@ -3,16 +3,35 @@ import { render, screen } from '@testing-library/react';
 import { Logo } from './Logo.js';
 
 describe('Logo', () => {
-  it('renders the approved logo asset with accessible alt text', () => {
+  it('renders the wordmark as real text plus a decorative icon', () => {
     render(<Logo />);
-    const img = screen.getByRole('img', { name: 'Zybrilka' });
-    expect(img).toHaveAttribute('src', '/branding/zybrilka-logo.png');
+    expect(screen.getByText('Zybr')).toBeInTheDocument();
+    expect(screen.getByText('ilka')).toBeInTheDocument();
+    // The wordmark already conveys "Zybrilka" accessibly, so the icon
+    // next to it is decorative and must not repeat the same name.
+    expect(screen.queryByRole('img', { name: 'Zybrilka' })).not.toBeInTheDocument();
   });
 
-  it('sizes by height only, preserving the asset’s own aspect ratio', () => {
+  it('uses the desktop icon crop by default and the mobile crop when requested', () => {
+    const { rerender } = render(<Logo />);
+    expect(document.querySelector('img')).toHaveAttribute(
+      'src',
+      '/branding/v2/logo-icon-desktop.png',
+    );
+    rerender(<Logo icon="mobile" />);
+    expect(document.querySelector('img')).toHaveAttribute(
+      'src',
+      '/branding/v2/logo-icon-mobile.png',
+    );
+  });
+
+  it('falls back to an accessible icon label when the wordmark is hidden', () => {
+    render(<Logo wordmark={false} />);
+    expect(screen.getByRole('img', { name: 'Zybrilka' })).toBeInTheDocument();
+  });
+
+  it('sizes the icon by the given size', () => {
     render(<Logo size={40} />);
-    const img = screen.getByRole('img', { name: 'Zybrilka' });
-    expect(img).toHaveAttribute('height', '40');
-    expect(img).not.toHaveAttribute('width');
+    expect(document.querySelector('img')).toHaveAttribute('height', '40');
   });
 });

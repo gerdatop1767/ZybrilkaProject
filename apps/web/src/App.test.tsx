@@ -1,10 +1,9 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App.js';
 import { NavigationProvider } from './lib/navigation.js';
 import { ToastProvider } from './ui/Toast/ToastProvider.js';
-import { sampleTask } from './data/sampleTask.js';
 
 function renderApp() {
   return render(
@@ -16,62 +15,70 @@ function renderApp() {
   );
 }
 
-describe('App', () => {
-  it('renders Home first, with the bottom navigation visible', () => {
+/** Forces useIsDesktop() to a fixed value for one test. */
+function mockDesktop(matches: boolean) {
+  const original = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    matches,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia;
+  return () => {
+    window.matchMedia = original;
+  };
+}
+
+describe('App — mobile', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders the mobile Home with the bottom tab bar visible', () => {
     renderApp();
-    expect(screen.getByRole('img', { name: 'Zybrilka' })).toBeInTheDocument();
+    expect(screen.getByText(/Готов к новой/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Главная/ })).toHaveAttribute('aria-current', 'page');
   });
 
   it('switches tabs via the bottom navigation', async () => {
     const user = userEvent.setup();
     renderApp();
-    await user.click(screen.getByRole('button', { name: /Прогресс/ }));
-    expect(screen.getByRole('heading', { name: 'Прогресс' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Прогресс/ })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
-    expect(screen.getByRole('button', { name: /Главная/ })).not.toHaveAttribute('aria-current');
-  });
-
-  it('hides the bottom navigation on the Task overlay and shows it again after Result', async () => {
-    const user = userEvent.setup();
-    renderApp();
-    await user.click(screen.getByRole('button', { name: 'Продолжить тренировку' }));
-    expect(screen.queryByRole('button', { name: /Главная/ })).not.toBeInTheDocument();
-
-    await user.type(screen.getByLabelText('Ответ'), sampleTask.correctAnswer);
-    await user.click(screen.getByRole('button', { name: 'Проверить' }));
-    await waitFor(() => {
-      expect(screen.getByText('Правильно!')).toBeInTheDocument();
-    });
-    expect(screen.queryByRole('button', { name: /Главная/ })).not.toBeInTheDocument();
-  });
-
-  it("clears a toast from the previous screen so it never covers the new screen's back button", async () => {
-    const user = userEvent.setup();
-    renderApp();
-    await user.click(screen.getByRole('button', { name: /7 дней подряд/ }));
-    expect(await screen.findByRole('status')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Продолжить тренировку' }));
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
-  });
-
-  it('renders a coming-soon placeholder for the Battles tab', async () => {
-    const user = userEvent.setup();
-    renderApp();
-    await user.click(screen.getByRole('button', { name: /Битвы/ }));
-    expect(screen.getByText('Битвы скоро здесь')).toBeInTheDocument();
-  });
-
-  it('reaches onboarding from Profile and returns to Home tab on finish', async () => {
-    const user = userEvent.setup();
-    renderApp();
     await user.click(screen.getByRole('button', { name: /Профиль/ }));
-    await user.click(screen.getByRole('button', { name: /Пройти диагностику заново/ }));
-    expect(screen.getByText('Добро пожаловать в Zybrilka!')).toBeInTheDocument();
+    expect(screen.getAllByText('Профиль').length).toBeGreaterThan(1);
+    expect(screen.getByRole('button', { name: /Профиль/ })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('hides the tab bar on an overlay screen', async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getByRole('button', { name: /Тренировка · 15 заданий/ }));
     expect(screen.queryByRole('button', { name: /Главная/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('App — desktop', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders the desktop marketing Home without a sidebar', () => {
+    const restore = mockDesktop(true);
+    renderApp();
+    expect(screen.getByText(/ЕГЭ становится проще/)).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Zybrilka' })).not.toBeInTheDocument();
+    restore();
+  });
+
+  it('shows the sidebar once navigated to an inner screen', async () => {
+    const restore = mockDesktop(true);
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getByRole('button', { name: /Начать бесплатно/ }));
+    expect(screen.getByRole('navigation', { name: 'Zybrilka' })).toBeInTheDocument();
+    restore();
   });
 });

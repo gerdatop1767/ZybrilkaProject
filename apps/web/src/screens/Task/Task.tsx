@@ -41,7 +41,13 @@ export function Task({ taskId }: TaskProps) {
     setChecking(true);
     const correct = answer.trim() === task.correctAnswer;
     setTimeout(() => {
-      navigate({ screen: 'result', taskId: task.id, correct });
+      navigate({
+        screen: 'result',
+        subjectId: task.subjectId,
+        taskNumber: task.number,
+        taskId: task.id,
+        correct,
+      });
     }, CHECKING_DELAY_MS);
   }
 

@@ -50,9 +50,9 @@ export const achievementPreview: readonly AchievementPreview[] = [
 export const userStats = {
   name: 'Алексей',
   level: 8,
-  xp: 642,
-  xpToNextLevel: 1000,
+  xp: 320,
+  xpToNextLevel: 500,
   streakDays: 12,
-  solvedTotal: 356,
-  accuracy: 71,
+  solvedTotal: 248,
+  accuracy: 82,
 };

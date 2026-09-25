@@ -15,35 +15,16 @@
   background: var(--color-bg-base);
 }
 
-@media (min-width: 768px) {
-  .shell {
-    flex-direction: row;
-  }
-}
-
-/* Wraps the brand header + scrollable content as their own column, so
-   on the desktop rail layout (.shell becomes a row) this whole column
-   is one flex item next to the rail — the header never ends up as its
-   own row item squeezed between rail and content. */
-.main {
-  flex: 1;
-  min-width: 0;
-  min-height: 0; /* required for the nested .content to actually shrink+scroll */
-  display: flex;
-  flex-direction: column;
-}
-
-/* Persistent brand header (Design Spec: logo "in the upper-left area
-   of the main application shell"). Only rendered on the 5 tab screens
-   (tied to the same `nav` prop BottomNav uses) — Task/Result/
-   Onboarding render without it, prioritizing screen usability over
-   branding real estate there. A normal flow flex item, not
-   fixed/sticky, so it can never overlap content — it simply takes its
-   own space and .content fills what's left. */
+/* Persistent header: logo + streak/level chips, matching the approved
+   mobile screenshots. A normal flow flex item, not fixed/sticky, so
+   it can never overlap content — it simply takes its own space and
+   .content fills what's left. */
 .header {
   flex-shrink: 0;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
   padding: var(--space-3) var(--space-screen-margin) var(--space-2);
   padding-top: calc(var(--space-3) + env(safe-area-inset-top, 0));
 }
@@ -52,18 +33,15 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  /* -webkit-overflow-scrolling once mattered for momentum scroll in
-     older iOS Safari; harmless to omit on current engines, kept out
-     to avoid a stylelint deprecation warning if one is ever added. */
   padding: var(--space-4) var(--space-screen-margin);
   /* Every screen's last element must clear the iOS home-indicator
      safe area, whether or not BottomNav is showing. */
   padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0));
 }
 
-/* A screen with the brand header (above) needs no extra top padding of
-   its own — the header already reserved that space in normal flow —
-   but screens WITHOUT it (Task/Result/Onboarding) still need their own
+/* A screen with the header (above) needs no extra top padding of its
+   own — the header already reserved that space in normal flow — but
+   screens WITHOUT it (Task/Result/Onboarding) still need their own
    safe-area-top clearance since nothing else provides it. */
 .contentNoHeader {
   padding-top: calc(var(--space-4) + env(safe-area-inset-top, 0));
@@ -76,15 +54,6 @@
   padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0) + var(--space-4));
 }
 
-@media (min-width: 768px) {
-  .content,
-  .contentWithNav {
-    /* The rail (see .nav below) isn't fixed/bottom-anchored at this
-       breakpoint, so no extra reservation is needed here either way. */
-    padding-bottom: var(--space-4);
-  }
-}
-
 .nav {
   position: fixed;
   bottom: 0;
@@ -93,12 +62,4 @@
   z-index: var(--z-nav);
   max-width: var(--layout-max-width);
   margin: 0 auto;
-}
-
-@media (min-width: 768px) {
-  .nav {
-    position: sticky;
-    top: 0;
-    max-width: none;
-  }
 }

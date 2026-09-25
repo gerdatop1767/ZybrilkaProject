@@ -1,0 +1,112 @@
+.shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--color-bg-base);
+  display: flex;
+  flex-direction: column;
+}
+
+.topHeader {
+  flex-shrink: 0;
+  padding: var(--space-5) var(--space-8);
+}
+
+.topHeaderApp {
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.topHeaderInner {
+  max-width: var(--layout-max-width-desktop);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.topHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.menuButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius-input);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  transition: background-color var(--duration-fast) var(--easing-standard);
+}
+
+.menuButton:hover {
+  background: color-mix(in srgb, var(--color-accent-primary) 20%, var(--color-bg-elevated));
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+}
+
+.bodyApp {
+  display: flex;
+  max-width: var(--layout-max-width-desktop);
+  margin: 0 auto;
+  width: 100%;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-6) var(--space-8);
+}
+
+.bodyApp .content {
+  padding: var(--space-6) var(--space-8) var(--space-10);
+}
+
+/* ---- Sidebar ---- */
+
+.sidebar {
+  flex-shrink: 0;
+  width: var(--sidebar-width);
+  padding: var(--space-6) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  border-right: 1px solid var(--color-border-subtle);
+}
+
+.sidebarItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  border-radius: var(--radius-input);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  text-align: left;
+  transition:
+    background-color var(--duration-fast) var(--easing-standard),
+    color var(--duration-fast) var(--easing-standard);
+}
+
+.sidebarItem:hover {
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+}
+
+.sidebarItemActive,
+.sidebarItemActive:hover {
+  background: color-mix(in srgb, var(--color-accent-primary) 18%, transparent);
+  color: var(--color-text-primary);
+  box-shadow: inset 0 0 0 1.5px var(--color-accent-primary);
+}
