@@ -66,6 +66,21 @@ export function AppDesktop() {
         {overlay.screen === 'onboarding' && (
           <WipPlaceholder title="Онбординг" note="Экран в разработке — следующий блок." />
         )}
+        {overlay.screen === 'favorites' && (
+          <WipPlaceholder title="Избранное" note="Экран в разработке — следующий блок." />
+        )}
+        {overlay.screen === 'mockExams' && (
+          <WipPlaceholder title="Пробники" note="Экран в разработке — следующий блок." />
+        )}
+        {overlay.screen === 'topics' && (
+          <WipPlaceholder title="Темы" note="Экран в разработке — следующий блок." />
+        )}
+        {overlay.screen === 'friends' && (
+          <WipPlaceholder title="Друзья" note="Экран в разработке — следующий блок." />
+        )}
+        {overlay.screen === 'settings' && (
+          <WipPlaceholder title="Настройки" note="Экран в разработке — следующий блок." />
+        )}
       </DesktopShell>
     );
   }

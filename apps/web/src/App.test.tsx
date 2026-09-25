@@ -47,9 +47,19 @@ describe('App — mobile', () => {
   it('switches tabs via the bottom navigation', async () => {
     const user = userEvent.setup();
     renderApp();
+    await user.click(screen.getByRole('button', { name: /Статистика/ }));
+    expect(screen.getByRole('button', { name: 'Статистика' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
+  it('opens the Menu drawer from the bottom navigation "Профиль" slot', async () => {
+    const user = userEvent.setup();
+    renderApp();
     await user.click(screen.getByRole('button', { name: /Профиль/ }));
-    expect(screen.getAllByText('Профиль').length).toBeGreaterThan(1);
-    expect(screen.getByRole('button', { name: /Профиль/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('dialog', { name: 'Меню' })).toBeInTheDocument();
+    expect(screen.getByText('Зубрилка')).toBeInTheDocument();
   });
 
   it('hides the tab bar on an overlay screen', async () => {

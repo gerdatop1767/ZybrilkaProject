@@ -2,6 +2,7 @@ import { MobileShell } from './ui/MobileShell/MobileShell.js';
 import { BottomNav } from './ui/BottomNav/BottomNav.js';
 import { defaultBottomNavItems } from './ui/BottomNav/defaultItems.js';
 import { WipPlaceholder } from './ui/WipPlaceholder/WipPlaceholder.js';
+import { MobileMenu } from './ui/MobileMenu/MobileMenu.js';
 import { TaskMobile } from './screens/Task/TaskMobile.js';
 import { ResultMobile } from './screens/Result/ResultMobile.js';
 import { useNavigation, type MainTabId } from './lib/navigation.js';
@@ -19,9 +20,16 @@ import { sampleTask } from './data/sampleTask.js';
  * "not built yet" placeholder rather than the old orange-system
  * screens, which visually contradict the new design — see the
  * project report for which screens are still pending.
+ *
+ * Menu is not a full-screen overlay swap like Task/Result/Mistakes —
+ * the approved screenshot shows it as a drawer over whatever screen
+ * is currently showing, so it renders as a portal on top of the
+ * normal tab/overlay content instead (see `isMenuOpen` below).
  */
 export function AppMobile() {
-  const { tab, overlay, navigate } = useNavigation();
+  const { tab, overlay, navigate, back } = useNavigation();
+  const isMenuOpen = overlay?.screen === 'menu';
+  const contentOverlay = isMenuOpen ? null : overlay;
 
   function selectTab(id: string) {
     // The approved screenshots have no idle "Тренировка" tab screen —
@@ -36,66 +44,91 @@ export function AppMobile() {
       });
       return;
     }
+    // No approved "Профиль" screen exists yet, and the approved Menu
+    // screenshot already doubles as the profile/account hub — so the
+    // bottom nav's profile slot opens it rather than a dead WIP tab.
+    if (id === 'profile') {
+      navigate({ screen: 'menu' });
+      return;
+    }
     navigate({ screen: id as MainTabId });
   }
 
-  if (overlay) {
+  const menu = <MobileMenu open={isMenuOpen} onClose={back} activeTab={tab} />;
+
+  if (contentOverlay) {
     return (
       <MobileShell>
-        {overlay.screen === 'menu' && (
-          <WipPlaceholder title="Меню" note="Экран в разработке — следующий блок." />
-        )}
-        {overlay.screen === 'subjectCatalog' && (
+        {contentOverlay.screen === 'subjectCatalog' && (
           <WipPlaceholder title="Предметы" note="Экран в разработке — следующий блок." />
         )}
-        {overlay.screen === 'subject' && (
+        {contentOverlay.screen === 'subject' && (
           <WipPlaceholder title="Предмет" note="Экран в разработке — следующий блок." />
         )}
-        {overlay.screen === 'task' && (
+        {contentOverlay.screen === 'task' && (
           <TaskMobile
-            subjectId={overlay.subjectId}
-            taskNumber={overlay.taskNumber}
-            taskId={overlay.taskId}
+            subjectId={contentOverlay.subjectId}
+            taskNumber={contentOverlay.taskNumber}
+            taskId={contentOverlay.taskId}
           />
         )}
-        {overlay.screen === 'result' && (
+        {contentOverlay.screen === 'result' && (
           <ResultMobile
-            subjectId={overlay.subjectId}
-            taskNumber={overlay.taskNumber}
-            taskId={overlay.taskId}
-            correct={overlay.correct}
-            userAnswer={overlay.userAnswer}
+            subjectId={contentOverlay.subjectId}
+            taskNumber={contentOverlay.taskNumber}
+            taskId={contentOverlay.taskId}
+            correct={contentOverlay.correct}
+            userAnswer={contentOverlay.userAnswer}
           />
         )}
-        {overlay.screen === 'mistakes' && <MistakesMobile />}
-        {overlay.screen === 'rating' && <RatingMobile />}
-        {overlay.screen === 'about' && <AboutMobile />}
-        {overlay.screen === 'learningCenter' && (
+        {contentOverlay.screen === 'mistakes' && <MistakesMobile />}
+        {contentOverlay.screen === 'rating' && <RatingMobile />}
+        {contentOverlay.screen === 'about' && <AboutMobile />}
+        {contentOverlay.screen === 'learningCenter' && (
           <WipPlaceholder
             title="Учебный центр"
             note="Утверждённый референс для этого экрана ещё не получен."
           />
         )}
-        {overlay.screen === 'onboarding' && (
+        {contentOverlay.screen === 'onboarding' && (
           <WipPlaceholder title="Онбординг" note="Экран в разработке — следующий блок." />
         )}
+        {contentOverlay.screen === 'favorites' && (
+          <WipPlaceholder title="Избранное" note="Экран в разработке — следующий блок." />
+        )}
+        {contentOverlay.screen === 'mockExams' && (
+          <WipPlaceholder title="Пробники" note="Экран в разработке — следующий блок." />
+        )}
+        {contentOverlay.screen === 'topics' && (
+          <WipPlaceholder title="Темы" note="Экран в разработке — следующий блок." />
+        )}
+        {contentOverlay.screen === 'friends' && (
+          <WipPlaceholder title="Друзья" note="Экран в разработке — следующий блок." />
+        )}
+        {contentOverlay.screen === 'settings' && (
+          <WipPlaceholder title="Настройки" note="Экран в разработке — следующий блок." />
+        )}
+        {menu}
       </MobileShell>
     );
   }
 
   return (
-    <MobileShell
-      nav={<BottomNav items={defaultBottomNavItems} activeId={tab} onSelect={selectTab} />}
-    >
-      {tab === 'home' && <HomeMobile />}
-      {tab === 'training' && (
-        <WipPlaceholder title="Тренировка" note="Экран в разработке — следующий блок." />
-      )}
-      {tab === 'statistics' && <StatisticsMobile />}
-      {tab === 'achievements' && <AchievementsMobile />}
-      {tab === 'profile' && (
-        <WipPlaceholder title="Профиль" note="Экран в разработке — следующий блок." />
-      )}
-    </MobileShell>
+    <>
+      <MobileShell
+        nav={<BottomNav items={defaultBottomNavItems} activeId={tab} onSelect={selectTab} />}
+      >
+        {tab === 'home' && <HomeMobile />}
+        {tab === 'training' && (
+          <WipPlaceholder title="Тренировка" note="Экран в разработке — следующий блок." />
+        )}
+        {tab === 'statistics' && <StatisticsMobile />}
+        {tab === 'achievements' && <AchievementsMobile />}
+        {tab === 'profile' && (
+          <WipPlaceholder title="Профиль" note="Экран в разработке — следующий блок." />
+        )}
+      </MobileShell>
+      {menu}
+    </>
   );
 }

@@ -43,7 +43,12 @@ export type OverlayRoute =
   | { screen: 'mistakes' }
   | { screen: 'rating' }
   | { screen: 'about' }
-  | { screen: 'menu' };
+  | { screen: 'menu' }
+  | { screen: 'favorites' }
+  | { screen: 'mockExams' }
+  | { screen: 'topics' }
+  | { screen: 'friends' }
+  | { screen: 'settings' };
 
 export type Route = { screen: MainTabId } | OverlayRoute;
 
