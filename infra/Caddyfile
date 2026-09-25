@@ -1,14 +1,14 @@
-# Production edge for zybrilka.ru. Caddy handles TLS certificates
+# Production edge for zybrilovka.ru. Caddy handles TLS certificates
 # automatically (Let's Encrypt via HTTP-01/ALPN — no manual cert
 # generation) and redirects HTTP -> HTTPS by default for any domain
 # name listed here; nothing extra to configure for that.
 
 # Canonicalize www -> apex, preserving path/query.
-www.zybrilka.ru {
-	redir https://zybrilka.ru{uri} permanent
+www.zybrilovka.ru {
+	redir https://zybrilovka.ru{uri} permanent
 }
 
-zybrilka.ru {
+zybrilovka.ru {
 	encode zstd gzip
 
 	# The web container already handles SPA client-side-route
