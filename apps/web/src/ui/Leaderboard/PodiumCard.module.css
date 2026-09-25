@@ -1,0 +1,63 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  padding-top: var(--space-5);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg, 16px);
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.first {
+  border-color: color-mix(in srgb, var(--color-gold) 55%, var(--color-border-subtle));
+  background: color-mix(in srgb, var(--color-gold) 8%, var(--color-bg-surface));
+  transform: translateY(-0.75rem);
+}
+
+.rankBadge {
+  position: absolute;
+  top: -14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+}
+
+.crownIcon {
+  position: absolute;
+  top: -34px;
+  color: var(--color-gold);
+}
+
+.username {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.xp {
+  font-weight: 700;
+}
+
+.stats {
+  margin-top: var(--space-1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  text-align: center;
+}

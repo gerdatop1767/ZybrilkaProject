@@ -1,0 +1,131 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.filterRow {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.sectionHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+  gap: var(--space-3);
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.progressCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.progressRingBox {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.progressRingCenter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.progressPercent {
+  margin: 0;
+}
+
+.recentList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.recentRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.recentIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md, 10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.recentBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.recentDate {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
+
+.nextGoalCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.nextGoalRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.nextGoalIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md, 10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+@media (max-width: 1180px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

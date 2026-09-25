@@ -8,6 +8,9 @@ import { useNavigation, type MainTabId } from './lib/navigation.js';
 import { HomeMobile } from './screens/Home/HomeMobile.js';
 import { StatisticsMobile } from './screens/Statistics/StatisticsMobile.js';
 import { MistakesMobile } from './screens/Mistakes/MistakesMobile.js';
+import { AchievementsMobile } from './screens/Achievements/AchievementsMobile.js';
+import { RatingMobile } from './screens/Rating/RatingMobile.js';
+import { AboutMobile } from './screens/About/AboutMobile.js';
 import { sampleTask } from './data/sampleTask.js';
 
 /**
@@ -65,12 +68,8 @@ export function AppMobile() {
           />
         )}
         {overlay.screen === 'mistakes' && <MistakesMobile />}
-        {overlay.screen === 'rating' && (
-          <WipPlaceholder title="Рейтинг" note="Экран в разработке — следующий блок." />
-        )}
-        {overlay.screen === 'about' && (
-          <WipPlaceholder title="О проекте" note="Экран в разработке — следующий блок." />
-        )}
+        {overlay.screen === 'rating' && <RatingMobile />}
+        {overlay.screen === 'about' && <AboutMobile />}
         {overlay.screen === 'learningCenter' && (
           <WipPlaceholder
             title="Учебный центр"
@@ -93,9 +92,7 @@ export function AppMobile() {
         <WipPlaceholder title="Тренировка" note="Экран в разработке — следующий блок." />
       )}
       {tab === 'statistics' && <StatisticsMobile />}
-      {tab === 'achievements' && (
-        <WipPlaceholder title="Достижения" note="Экран в разработке — следующий блок." />
-      )}
+      {tab === 'achievements' && <AchievementsMobile />}
       {tab === 'profile' && (
         <WipPlaceholder title="Профиль" note="Экран в разработке — следующий блок." />
       )}

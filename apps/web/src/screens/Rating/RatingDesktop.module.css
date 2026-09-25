@@ -1,0 +1,202 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.controls {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.select {
+  width: 11rem;
+}
+
+.tabRow {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.tableHeaderRow {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) 6rem 8rem 8rem 6rem 7rem;
+  padding: 0 var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) 6rem 8rem 8rem 6rem 7rem;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg, 16px);
+}
+
+.rowTop {
+  background: color-mix(in srgb, var(--medal) 10%, var(--color-bg-surface));
+  border-color: color-mix(in srgb, var(--medal) 35%, var(--color-border-subtle));
+}
+
+.rowCurrentUser {
+  background: color-mix(in srgb, var(--color-accent-primary) 14%, var(--color-bg-surface));
+  border-color: var(--color-accent-primary);
+}
+
+.rank {
+  font-weight: 700;
+}
+
+.userCell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.username {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.levelCell,
+.streakCell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-gold);
+}
+
+.streakCell {
+  color: var(--color-error);
+}
+
+.xpCell {
+  font-weight: 700;
+  text-align: right;
+}
+
+.ellipsisRow {
+  text-align: center;
+  color: var(--color-text-disabled);
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.positionCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.positionIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md, 12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--color-accent-primary-end) 20%, transparent);
+  color: var(--color-accent-primary-end);
+  flex-shrink: 0;
+}
+
+.positionChips {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.positionChip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-2);
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-md, 10px);
+}
+
+.sectionHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.miniList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.miniRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.miniRank {
+  width: 20px;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.miniBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.miniXp {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 1180px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

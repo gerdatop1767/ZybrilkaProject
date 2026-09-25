@@ -153,6 +153,16 @@ export function StatisticsMobile() {
             <span className={styles.mistakesLinkLabel}>Мои ошибки</span>
             <Icon name="chevronRight" size={18} />
           </button>
+
+          <button
+            type="button"
+            className={styles.mistakesLink}
+            onClick={() => navigate({ screen: 'about' })}
+          >
+            <Icon name="info" size={20} />
+            <span className={styles.mistakesLinkLabel}>О проекте</span>
+            <Icon name="chevronRight" size={18} />
+          </button>
         </>
       )}
     </SlideUp>

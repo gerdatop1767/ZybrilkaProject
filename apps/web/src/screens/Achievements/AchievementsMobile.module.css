@@ -1,0 +1,149 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ratingLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4);
+  background: var(--color-bg-elevated);
+  border: none;
+  border-radius: var(--radius-lg, 16px);
+  color: var(--color-text-primary);
+}
+
+.ratingLinkLabel {
+  flex: 1;
+  text-align: left;
+  font-weight: 600;
+}
+
+.trailingButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  border: none;
+  border-radius: 50%;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+}
+
+.levelCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg, 16px);
+}
+
+.levelHex {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+}
+
+.levelHexShape {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(25% 6.7%, 75% 6.7%, 100% 50%, 75% 93.3%, 25% 93.3%, 0% 50%);
+  background: color-mix(in srgb, var(--color-accent-primary-end) 30%, var(--color-bg-elevated));
+  box-shadow: 0 0 20px color-mix(in srgb, var(--color-accent-primary-end) 50%, transparent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-primary);
+}
+
+.levelBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.statTile {
+  padding: var(--space-3);
+  gap: 4px;
+}
+
+.streakStrip {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.streakStrip::-webkit-scrollbar {
+  display: none;
+}
+
+.streakDay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.streakCircle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-disabled);
+}
+
+.streakCircleActive {
+  background: color-mix(in srgb, var(--color-error) 25%, var(--color-bg-elevated));
+  color: var(--color-error);
+}
+
+.streakToday {
+  background: none;
+  border: 2px solid var(--color-accent-primary-end);
+  color: var(--color-accent-primary-end);
+}
+
+.streakLabel {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.sectionHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+@media (max-width: 400px) {
+  .cardsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

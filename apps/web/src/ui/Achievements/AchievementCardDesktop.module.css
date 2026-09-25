@@ -1,0 +1,61 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg, 16px);
+}
+
+.cardUnlocked {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--color-border-subtle));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent) inset;
+}
+
+.iconTile {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md, 12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+}
+
+.iconTileLocked {
+  background: var(--color-bg-elevated);
+  color: var(--color-text-disabled);
+}
+
+.title {
+  margin: 0;
+}
+
+.titleUnlocked {
+  color: var(--accent);
+}
+
+.description {
+  margin: 0;
+  min-height: 2.6em;
+}
+
+.meta {
+  margin-top: auto;
+}
+
+.unlockedDate {
+  color: var(--color-text-secondary);
+}
+
+.progressRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.progressValue {
+  text-align: right;
+}

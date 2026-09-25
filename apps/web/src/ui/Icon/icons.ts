@@ -79,6 +79,9 @@ import {
   Square,
   CheckSquare,
   Plus,
+  Brain,
+  MessageCircle,
+  Users2,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -171,6 +174,9 @@ export const icons = {
   checkboxEmpty: Square,
   checkboxChecked: CheckSquare,
   add: Plus,
+  brain: Brain,
+  chat: MessageCircle,
+  community: Users2,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof icons;
