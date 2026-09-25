@@ -1,0 +1,288 @@
+import { useState } from 'react';
+import { useNavigation } from '../../lib/navigation.js';
+import { getTaskById } from '../../data/sampleTask.js';
+import { subjects } from '../../data/subjects.js';
+import { userStats } from '../../data/sampleProgress.js';
+import { Button } from '../../ui/Button/Button.js';
+import { Icon } from '../../ui/Icon/Icon.js';
+import { DesktopToolsCard } from '../../ui/Training/DesktopToolsCard.js';
+import { SessionTaskListCard } from '../../ui/Training/SessionTaskListCard.js';
+import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
+import { useCountUp } from '../../lib/useCountUp.js';
+import { FadeIn } from '../../ui/motion/motion.js';
+import { clsx } from '../../lib/clsx.js';
+import styles from './ResultDesktop.module.css';
+
+export interface ResultDesktopProps {
+  subjectId: string;
+  taskNumber: number;
+  taskId: string;
+  correct: boolean;
+  userAnswer: string;
+}
+
+const XP_REWARD = 20;
+
+/**
+ * Desktop Result screen (S1 Block 6, approved design —
+ * desktop/05_correct.png / desktop/06_wrong.png): the feedback banner
+ * and answer comparison live inline in the main task card, and the
+ * sidebar swaps "Инструменты"/"Прогресс в теме" for "Результат" +
+ * the session task list — matching the approved compositions exactly,
+ * not a recolored Training screen.
+ */
+export function ResultDesktop({ subjectId, taskId, correct, userAnswer }: ResultDesktopProps) {
+  const { navigate, back } = useNavigation();
+  const task = getTaskById(taskId);
+  const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
+  const [detailedSolution, setDetailedSolution] = useState(true);
+  const xp = useCountUp(correct ? XP_REWARD : 0, 500);
+  const progressPercent = (task.indexInSession / task.totalInSession) * 100;
+  const displayedAnswer = userAnswer || '—';
+
+  function goToNext() {
+    const nextVariant = task.otherVariants[0];
+    if (!nextVariant) return;
+    navigate({
+      screen: 'task',
+      subjectId: task.subjectId,
+      taskNumber: task.number,
+      taskId: nextVariant.id,
+    });
+  }
+
+  return (
+    <FadeIn key={`${taskId}-${correct}`} className={styles.page}>
+      <div className={styles.breadcrumb}>
+        <button type="button" className={styles.backButton} onClick={back} aria-label="Назад">
+          <Icon name="back" size={18} />
+        </button>
+        <span>{subject.shortName}</span>
+        <Icon name="chevronRight" size={14} />
+        <span>Тренировка</span>
+        <Icon name="chevronRight" size={14} />
+        <span className={styles.breadcrumbCurrent}>Задание {task.indexInSession}</span>
+      </div>
+
+      <div className={styles.grid}>
+        <div className={styles.main}>
+          <div className={styles.progressHeader}>
+            <button type="button" className={styles.roundButton} onClick={back} aria-label="Назад">
+              <Icon name="back" size={18} />
+            </button>
+            <div className={styles.progressHeaderBar}>
+              <span className="text-body-sm">
+                Задание {task.indexInSession} из {task.totalInSession}
+              </span>
+              <ProgressBar value={progressPercent} label="Прогресс тренировки" />
+            </div>
+            <span className={styles.timer}>
+              <Icon name="time" size={16} /> 00:12:34
+            </span>
+            <button
+              type="button"
+              className={styles.roundButton}
+              onClick={goToNext}
+              aria-label="Перейти дальше"
+            >
+              <Icon name="arrowRight" size={18} />
+            </button>
+          </div>
+
+          <div className={styles.card}>
+            {!correct && <span className={styles.topicChip}>{task.topic}</span>}
+            <p className="text-h3">Условие</p>
+            <p className={clsx('text-task', styles.condition)}>{task.condition}</p>
+
+            <div
+              className={clsx(
+                styles.feedbackBanner,
+                correct ? styles.feedbackCorrect : styles.feedbackWrong,
+              )}
+            >
+              <span
+                className={clsx(
+                  styles.feedbackIcon,
+                  correct ? styles.iconCorrect : styles.iconWrong,
+                )}
+              >
+                <Icon name={correct ? 'check' : 'close'} size={22} />
+              </span>
+              <div className={styles.feedbackText}>
+                <p className={clsx('text-h3', correct ? styles.textCorrect : styles.textWrong)}>
+                  {correct ? 'Правильно!' : 'Неверно'}
+                </p>
+                <p className="text-body-sm text-secondary">
+                  {correct ? 'Ты отлично справился!' : 'Разберём это задание вместе.'}
+                </p>
+              </div>
+              {correct && (
+                <div className={styles.rewardChips}>
+                  <span className={styles.rewardChip}>
+                    <Icon name="target" size={16} className={styles.rewardIconGold} />+
+                    {Math.round(xp)} XP
+                    <span className="text-label text-secondary">Опыт</span>
+                  </span>
+                  <span className={styles.rewardChip}>
+                    <Icon name="flame" size={16} className={styles.rewardIconGold} />
+                    +1 день
+                    <span className="text-label text-secondary">Серия</span>
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className={styles.answerCompare}>
+              <span className="text-body-sm text-secondary">Твой ответ:</span>
+              <p
+                className={clsx(
+                  styles.answerValue,
+                  correct ? styles.answerValueCorrect : styles.answerValueWrong,
+                )}
+              >
+                {displayedAnswer}
+              </p>
+              {!correct && (
+                <>
+                  <span className="text-body-sm text-secondary">Правильный ответ:</span>
+                  <p className={clsx(styles.answerValue, styles.answerValueReference)}>
+                    {task.correctAnswer}
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div className={styles.solutionHeader}>
+              <p className="text-h3">{correct ? 'Пошаговое решение' : 'Решение'}</p>
+              {!correct && (
+                <div className={styles.solutionToggle}>
+                  <button
+                    type="button"
+                    className={clsx(!detailedSolution && styles.solutionToggleActive)}
+                    onClick={() => setDetailedSolution(false)}
+                  >
+                    Краткое решение
+                  </button>
+                  <button
+                    type="button"
+                    className={clsx(detailedSolution && styles.solutionToggleActive)}
+                    onClick={() => setDetailedSolution(true)}
+                  >
+                    Подробное решение
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className={styles.steps}>
+              {(correct || detailedSolution ? task.steps : task.steps.slice(-1)).map((step, i) => {
+                const stepNumber = correct || detailedSolution ? i + 1 : task.steps.length;
+                return (
+                  <div key={stepNumber} className={styles.step}>
+                    <span className={styles.stepIndex}>{stepNumber}</span>
+                    <p className="text-body-sm">{step.text}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {!correct && (
+              <div className={styles.tipBox}>
+                <Icon name="hint" size={18} className={styles.tipIcon} />
+                <div>
+                  <p className="text-body-sm" style={{ fontWeight: 600 }}>
+                    Полезно знать
+                  </p>
+                  <p className="text-body-sm text-secondary">{task.hint}</p>
+                </div>
+              </div>
+            )}
+
+            <div className={styles.actions}>
+              <Button variant="secondary" onClick={back}>
+                {correct ? <Icon name="grid" size={16} /> : <Icon name="retry" size={16} />}
+                {correct ? 'К списку заданий' : 'Попробовать ещё раз'}
+              </Button>
+              <Button variant="primary" onClick={goToNext}>
+                Следующее задание <Icon name="arrowRight" size={18} />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.sidebar}>
+          <ResultCard correct={correct} userAnswer={displayedAnswer} task={task} xp={xp} />
+          {correct ? (
+            <SessionTaskListCard
+              title="Задания в теме"
+              sessionTasks={task.sessionTasks}
+              onSelect={() => undefined}
+            />
+          ) : (
+            <>
+              <SessionTaskListCard
+                title="Задания"
+                sessionTasks={task.sessionTasks}
+                onSelect={() => undefined}
+              />
+              <DesktopToolsCard onSelectHint={() => undefined} />
+            </>
+          )}
+        </div>
+      </div>
+    </FadeIn>
+  );
+}
+
+function ResultCard({
+  correct,
+  userAnswer,
+  task,
+  xp,
+}: {
+  correct: boolean;
+  userAnswer: string;
+  task: ReturnType<typeof getTaskById>;
+  xp: number;
+}) {
+  return (
+    <div className={styles.resultCard}>
+      <p className="text-h3">Результат</p>
+      <div className={styles.resultHead}>
+        <span className={clsx(styles.resultIcon, correct ? styles.iconCorrect : styles.iconWrong)}>
+          <Icon name={correct ? 'check' : 'close'} size={20} />
+        </span>
+        <div>
+          <p
+            className={clsx('text-body', correct ? styles.textCorrect : styles.textWrong)}
+            style={{ fontWeight: 700 }}
+          >
+            {correct ? 'Правильно!' : 'Неверно'}
+          </p>
+          <p className="text-body-sm text-secondary">
+            {correct ? 'Верный ответ' : 'Попробуй ещё раз'}
+          </p>
+        </div>
+      </div>
+      <div className={styles.resultRows}>
+        <div className={styles.resultRow}>
+          <span className="text-body-sm text-secondary">Твой ответ</span>
+          <span className="text-body-sm">{userAnswer}</span>
+        </div>
+        <div className={styles.resultRow}>
+          <span className="text-body-sm text-secondary">Правильный ответ</span>
+          <span className="text-body-sm">{task.correctAnswer}</span>
+        </div>
+        <div className={styles.resultRow}>
+          <span className="text-body-sm text-secondary">Получено опыта</span>
+          <span className={clsx('text-body-sm', styles.resultHighlight)}>+{Math.round(xp)} XP</span>
+        </div>
+        <div className={styles.resultRow}>
+          <span className="text-body-sm text-secondary">Серия</span>
+          <span className={clsx('text-body-sm', styles.resultHighlight)}>
+            {correct ? '+1 день' : `${userStats.streakDays} дней`}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}

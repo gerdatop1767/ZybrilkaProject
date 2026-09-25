@@ -2,8 +2,11 @@ import { MobileShell } from './ui/MobileShell/MobileShell.js';
 import { BottomNav } from './ui/BottomNav/BottomNav.js';
 import { defaultBottomNavItems } from './ui/BottomNav/defaultItems.js';
 import { WipPlaceholder } from './ui/WipPlaceholder/WipPlaceholder.js';
+import { TaskMobile } from './screens/Task/TaskMobile.js';
+import { ResultMobile } from './screens/Result/ResultMobile.js';
 import { useNavigation, type MainTabId } from './lib/navigation.js';
 import { HomeMobile } from './screens/Home/HomeMobile.js';
+import { sampleTask } from './data/sampleTask.js';
 
 /**
  * Mobile app tree (S1 Block 6, approved design). Screens not yet
@@ -14,6 +17,22 @@ import { HomeMobile } from './screens/Home/HomeMobile.js';
  */
 export function AppMobile() {
   const { tab, overlay, navigate } = useNavigation();
+
+  function selectTab(id: string) {
+    // The approved screenshots have no idle "Тренировка" tab screen —
+    // tapping it jumps straight into the active training session, the
+    // same real shortcut Home's own CTA uses.
+    if (id === 'training') {
+      navigate({
+        screen: 'task',
+        subjectId: sampleTask.subjectId,
+        taskNumber: sampleTask.number,
+        taskId: sampleTask.id,
+      });
+      return;
+    }
+    navigate({ screen: id as MainTabId });
+  }
 
   if (overlay) {
     return (
@@ -28,10 +47,20 @@ export function AppMobile() {
           <WipPlaceholder title="Предмет" note="Экран в разработке — следующий блок." />
         )}
         {overlay.screen === 'task' && (
-          <WipPlaceholder title="Тренировка" note="Экран в разработке — следующий блок." />
+          <TaskMobile
+            subjectId={overlay.subjectId}
+            taskNumber={overlay.taskNumber}
+            taskId={overlay.taskId}
+          />
         )}
         {overlay.screen === 'result' && (
-          <WipPlaceholder title="Результат" note="Экран в разработке — следующий блок." />
+          <ResultMobile
+            subjectId={overlay.subjectId}
+            taskNumber={overlay.taskNumber}
+            taskId={overlay.taskId}
+            correct={overlay.correct}
+            userAnswer={overlay.userAnswer}
+          />
         )}
         {overlay.screen === 'mistakes' && (
           <WipPlaceholder title="Мои ошибки" note="Экран в разработке — следующий блок." />
@@ -57,13 +86,7 @@ export function AppMobile() {
 
   return (
     <MobileShell
-      nav={
-        <BottomNav
-          items={defaultBottomNavItems}
-          activeId={tab}
-          onSelect={(id) => navigate({ screen: id as MainTabId })}
-        />
-      }
+      nav={<BottomNav items={defaultBottomNavItems} activeId={tab} onSelect={selectTab} />}
     >
       {tab === 'home' && <HomeMobile />}
       {tab === 'training' && (

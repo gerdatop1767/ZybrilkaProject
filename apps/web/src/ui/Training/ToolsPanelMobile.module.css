@@ -1,0 +1,75 @@
+.wrap {
+  border-radius: var(--radius-card);
+  background: var(--color-bg-surface);
+  overflow: hidden;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4);
+  border: none;
+  background: transparent;
+  text-align: left;
+}
+
+.summaryIcon {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
+
+.summaryText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.tool {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: none;
+  border-radius: var(--radius-input);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+}
+
+.tool:active {
+  transform: scale(0.97);
+}
+
+.fieldIconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: none;
+  border-radius: var(--radius-input);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
+}
+
+.fxButton {
+  background: color-mix(in srgb, var(--color-accent-primary) 24%, var(--color-bg-elevated));
+  color: var(--color-text-primary);
+}
+
+.fxButtonActive {
+  background: var(--gradient-primary);
+  color: #fff;
+}

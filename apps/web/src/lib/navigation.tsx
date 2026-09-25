@@ -36,6 +36,9 @@ export type OverlayRoute =
       taskNumber: number;
       taskId: string;
       correct: boolean;
+      /** The user's actual submitted answer — Result must show what
+       * they really typed, never a placeholder. */
+      userAnswer: string;
     }
   | { screen: 'mistakes' }
   | { screen: 'rating' }

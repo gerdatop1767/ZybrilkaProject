@@ -8,34 +8,37 @@ import { DesktopSidebar } from './DesktopSidebar.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './DesktopShell.module.css';
 
-export type DesktopShellVariant = 'marketing' | 'app';
-
 export interface DesktopShellProps {
-  /** 'marketing' = Home/Subject-catalog's top-bar-only hero layout;
-   * 'app' = every other screen's persistent left sidebar. Separate
-   * approved compositions (S1 Block 6), not one responsive layout. */
-  variant: DesktopShellVariant;
+  /** 'cta' = Home's logged-out-style "Начать заниматься" header (the
+   * only screen that shows it); 'status' = every other screen's
+   * streak/level chips. */
+  header?: 'cta' | 'status';
+  /** Whether the persistent left sidebar renders — independent of the
+   * header, since Task/Result use the status header WITHOUT a sidebar
+   * (no approved desktop screenshot shows one there). */
+  sidebar?: boolean;
   children: ReactNode;
 }
 
 /**
  * Desktop app shell (S1 Block 6 — approved design). Unlike mobile,
  * desktop Home is a logged-out-style marketing page (hero + "Начать
- * бесплатно"), while every other desktop screen is a logged-in
- * dashboard with a persistent left sidebar — that split is
- * intentional and comes straight from the approved screenshots, not
- * an invented distinction.
+ * бесплатно"), while most other desktop screens are a logged-in
+ * dashboard with a persistent left sidebar — except Training/Result,
+ * which show the status header but no sidebar. All three
+ * combinations come straight from the approved screenshots, not an
+ * invented distinction.
  */
-export function DesktopShell({ variant, children }: DesktopShellProps) {
+export function DesktopShell({ header = 'status', sidebar = true, children }: DesktopShellProps) {
   const { navigate } = useNavigation();
 
   return (
     <div className={styles.shell}>
-      <header className={clsx(styles.topHeader, variant === 'app' && styles.topHeaderApp)}>
+      <header className={clsx(styles.topHeader, sidebar && styles.topHeaderApp)}>
         <div className={styles.topHeaderInner}>
           <Logo icon="desktop" size={40} />
           <div className={styles.topHeaderActions}>
-            {variant === 'marketing' ? (
+            {header === 'cta' ? (
               <Button variant="primary" onClick={() => navigate({ screen: 'training' })}>
                 Начать заниматься <Icon name="arrowRight" size={16} />
               </Button>
@@ -53,8 +56,8 @@ export function DesktopShell({ variant, children }: DesktopShellProps) {
           </div>
         </div>
       </header>
-      <div className={clsx(styles.body, variant === 'app' && styles.bodyApp)}>
-        {variant === 'app' && <DesktopSidebar />}
+      <div className={clsx(styles.body, sidebar && styles.bodyApp)}>
+        {sidebar && <DesktopSidebar />}
         <main className={styles.content}>{children}</main>
       </div>
     </div>

@@ -1,21 +1,26 @@
 import { DesktopShell } from './ui/DesktopShell/DesktopShell.js';
 import { WipPlaceholder } from './ui/WipPlaceholder/WipPlaceholder.js';
+import { TaskDesktop } from './screens/Task/TaskDesktop.js';
+import { ResultDesktop } from './screens/Result/ResultDesktop.js';
 import { useNavigation } from './lib/navigation.js';
 import { HomeDesktop } from './screens/Home/HomeDesktop.js';
 
+/** Screens whose approved desktop composition has no left sidebar. */
+const noSidebarScreens = new Set(['home', 'subjectCatalog', 'task', 'result']);
+
 /**
  * Desktop app tree (S1 Block 6, approved design) — its own composition,
- * not mobile scaled up. Home/Subject-catalog use the marketing top-bar
- * shell; everything else uses the sidebar shell. Screens not yet
- * rebuilt render a plain placeholder rather than the old design.
+ * not mobile scaled up. Screens not yet rebuilt render a plain
+ * placeholder rather than the old design.
  */
 export function AppDesktop() {
   const { tab, overlay } = useNavigation();
 
   if (overlay) {
-    const isMarketing = overlay.screen === 'subjectCatalog';
+    const sidebar = !noSidebarScreens.has(overlay.screen);
+    const header = overlay.screen === 'subjectCatalog' ? 'cta' : 'status';
     return (
-      <DesktopShell variant={isMarketing ? 'marketing' : 'app'}>
+      <DesktopShell header={header} sidebar={sidebar}>
         {overlay.screen === 'menu' && (
           <WipPlaceholder
             title="Меню"
@@ -29,10 +34,20 @@ export function AppDesktop() {
           <WipPlaceholder title="Предмет" note="Экран в разработке — следующий блок." />
         )}
         {overlay.screen === 'task' && (
-          <WipPlaceholder title="Тренировка" note="Экран в разработке — следующий блок." />
+          <TaskDesktop
+            subjectId={overlay.subjectId}
+            taskNumber={overlay.taskNumber}
+            taskId={overlay.taskId}
+          />
         )}
         {overlay.screen === 'result' && (
-          <WipPlaceholder title="Результат" note="Экран в разработке — следующий блок." />
+          <ResultDesktop
+            subjectId={overlay.subjectId}
+            taskNumber={overlay.taskNumber}
+            taskId={overlay.taskId}
+            correct={overlay.correct}
+            userAnswer={overlay.userAnswer}
+          />
         )}
         {overlay.screen === 'mistakes' && (
           <WipPlaceholder title="Мои ошибки" note="Экран в разработке — следующий блок." />
@@ -56,10 +71,11 @@ export function AppDesktop() {
     );
   }
 
-  const isMarketingTab = tab === 'home';
+  const sidebar = !noSidebarScreens.has(tab);
+  const header = tab === 'home' ? 'cta' : 'status';
 
   return (
-    <DesktopShell variant={isMarketingTab ? 'marketing' : 'app'}>
+    <DesktopShell header={header} sidebar={sidebar}>
       {tab === 'home' && <HomeDesktop />}
       {tab === 'training' && (
         <WipPlaceholder title="Тренировка" note="Экран в разработке — следующий блок." />

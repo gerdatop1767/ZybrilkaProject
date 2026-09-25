@@ -1,0 +1,173 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.feedbackCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+  border-radius: var(--radius-card);
+  animation: settle var(--duration-base) var(--easing-standard);
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.feedbackCorrect {
+  background: color-mix(in srgb, var(--color-success) 14%, var(--color-bg-surface));
+}
+
+.feedbackWrong {
+  /* Softer than success on purpose — an incorrect answer should never
+     read as alarming. */
+  background: color-mix(in srgb, var(--color-error) 9%, var(--color-bg-surface));
+}
+
+.feedbackIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  animation: iconPop var(--duration-reveal) var(--easing-standard) both;
+  animation-delay: 60ms;
+}
+
+@keyframes iconPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.iconCorrect {
+  background: var(--color-success);
+  color: #06271a;
+  box-shadow: 0 0 32px color-mix(in srgb, var(--color-success) 55%, transparent);
+}
+
+.iconWrong {
+  background: var(--color-error);
+  color: #2a0b12;
+}
+
+.statRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.statChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-chip);
+  background: var(--color-bg-elevated);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.statIconGold {
+  color: var(--color-gold);
+}
+
+.statIconRed {
+  color: var(--color-error);
+}
+
+.statIconBlue {
+  color: var(--color-accent-secondary);
+}
+
+.answerBlock {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  text-align: left;
+}
+
+.answerBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-input);
+  font-size: var(--font-size-body);
+  margin: 0;
+}
+
+.answerBoxCorrect {
+  background: color-mix(in srgb, var(--color-success) 16%, transparent);
+  color: var(--color-success);
+}
+
+.answerBoxWrong {
+  background: color-mix(in srgb, var(--color-error) 14%, transparent);
+  color: var(--color-error);
+}
+
+.answerBoxReference {
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+}
+
+.solutionSteps {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  text-align: left;
+  padding-top: var(--space-3);
+}
+
+.solutionStep {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.solutionStepIndex {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--color-bg-elevated);
+  color: var(--color-accent-primary);
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-bold);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  width: 100%;
+}
