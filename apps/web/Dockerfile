@@ -1,0 +1,42 @@
+# syntax=docker/dockerfile:1
+#
+# Production image for @zybrilka/web (S1 static build). Multi-stage:
+# a Node/pnpm builder produces the Vite production bundle, then a
+# minimal nginx runtime serves the static files — no Node, pnpm or
+# dev dependencies ship in the final image.
+#
+# Build context is the repo root (this is a pnpm workspace and the
+# build needs pnpm-lock.yaml + the other workspace package.json files
+# to resolve, even though @zybrilka/web itself has no workspace
+# dependencies):
+#
+#   docker build -f apps/web/Dockerfile -t zybrilka-web .
+
+FROM node:22-alpine AS base
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+WORKDIR /repo
+
+# --- deps: install with the lockfile frozen, cached separately from source ---
+FROM base AS deps
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY apps/web/package.json apps/web/package.json
+COPY apps/api/package.json apps/api/package.json
+COPY apps/worker/package.json apps/worker/package.json
+COPY packages/db/package.json packages/db/package.json
+COPY packages/shared/package.json packages/shared/package.json
+RUN pnpm install --frozen-lockfile
+
+# --- build: only apps/web's own source is needed to build it ---
+FROM deps AS build
+COPY apps/web apps/web
+RUN pnpm --filter @zybrilka/web build
+
+# --- runtime: static files behind nginx, nothing else ---
+FROM nginx:1.27-alpine AS runtime
+COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /repo/apps/web/dist /usr/share/nginx/html
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1/ || exit 1
+
+EXPOSE 80

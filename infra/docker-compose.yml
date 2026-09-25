@@ -1,0 +1,47 @@
+# Production stack: Caddy (public edge, TLS) -> web (internal only).
+# No API/worker/Postgres/Redis/Telegram yet — those join later
+# compose files as they're built.
+#
+# Usage (from repo root):
+#   docker compose -f infra/docker-compose.yml up -d --build
+#
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    image: zybrilka-web:latest
+    container_name: zybrilka-web
+    restart: unless-stopped
+    expose:
+      - '80'
+    networks:
+      - internal
+    # No `ports:` — the web container is reachable only from other
+    # containers on the `internal` network (i.e. Caddy), never
+    # directly from the host/internet.
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: zybrilka-caddy
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - internal
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:
+    driver: bridge
