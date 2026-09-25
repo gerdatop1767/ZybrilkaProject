@@ -1,7 +1,7 @@
 # Deployment
 
 Production deployment of `apps/web` (S1 static build) to a VPS:
-GitHub → Docker → Zybrilka Web → Caddy → HTTPS → `zybrilovka.ru`.
+GitHub → Docker → Zybrilka Web → Caddy → HTTPS → `zybrilka.ru`.
 
 Only the web app is covered here. API/worker/Postgres/Redis/Telegram
 join in a later phase, as their own compose services.
@@ -10,7 +10,7 @@ join in a later phase, as their own compose services.
 
 - A VPS with Docker Engine + the Compose plugin installed (`docker compose version`).
   Nothing else needs installing on the host — Node/pnpm only run inside the build.
-- DNS: `zybrilovka.ru` and `www.zybrilovka.ru` A/AAAA records pointing at the VPS's public IP.
+- DNS: `zybrilka.ru` and `www.zybrilka.ru` A/AAAA records pointing at the VPS's public IP.
 - Ports 80 and 443 open and free on the VPS (Caddy needs both for HTTP→HTTPS redirect and ACME).
 - A clone of this repo on the VPS, on the branch you intend to run.
 
@@ -76,8 +76,8 @@ running container; `caddy` is untouched.
 
 `infra/Caddyfile` defines both hosts:
 
-- `www.zybrilovka.ru` — permanent redirect to the apex domain.
-- `zybrilovka.ru` — reverse-proxied to `web:80`, with gzip/zstd
+- `www.zybrilka.ru` — permanent redirect to the apex domain.
+- `zybrilka.ru` — reverse-proxied to `web:80`, with gzip/zstd
   encoding. Client-side route fallback (unknown paths → `index.html`)
   is handled by `web`'s own nginx config, not by Caddy.
 
@@ -90,7 +90,7 @@ docker run --rm -v "$(pwd)/infra/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpi
 
 ## DNS requirements
 
-Both `zybrilovka.ru` and `www.zybrilovka.ru` must resolve to the VPS's
+Both `zybrilka.ru` and `www.zybrilka.ru` must resolve to the VPS's
 public IP **before** `caddy` starts, so Let's Encrypt's HTTP-01
 challenge can reach it on port 80.
 
