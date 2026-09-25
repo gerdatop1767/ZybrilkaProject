@@ -11,8 +11,15 @@
 # dependencies):
 #
 #   docker build -f apps/web/Dockerfile -t zybrilka-web .
+#
+# --platform=linux/amd64 pins the build target explicitly, regardless
+# of the architecture of the machine actually running `docker build`
+# (e.g. an ARM dev/CI host). Without this, building on a non-amd64
+# host under emulation can let pnpm resolve the wrong native optional
+# dependency for Vite's bundler, which then fails to load at runtime
+# on the (linux/amd64) production VPS.
 
-FROM node:22-alpine AS base
+FROM --platform=linux/amd64 node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 WORKDIR /repo
 
@@ -32,7 +39,7 @@ COPY apps/web apps/web
 RUN pnpm --filter @zybrilka/web build
 
 # --- runtime: static files behind nginx, nothing else ---
-FROM nginx:1.27-alpine AS runtime
+FROM --platform=linux/amd64 nginx:1.27-alpine AS runtime
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /repo/apps/web/dist /usr/share/nginx/html
 
