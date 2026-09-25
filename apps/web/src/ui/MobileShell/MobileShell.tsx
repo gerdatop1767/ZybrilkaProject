@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { clsx } from '../../lib/clsx.js';
 import { Logo } from '../Logo/Logo.js';
 import { StatusChips } from '../StatusChips/StatusChips.js';
+import { useNavigation } from '../../lib/navigation.js';
 import styles from './MobileShell.module.css';
 
 export interface MobileShellProps {
@@ -23,6 +24,17 @@ export interface MobileShellProps {
  * never covered by the nav.
  */
 export function MobileShell({ children, nav }: MobileShellProps) {
+  const { tab, overlay } = useNavigation();
+  const contentRef = useRef<HTMLElement>(null);
+
+  // Each screen starts scrolled to its top, never wherever the
+  // previous screen happened to be left scrolled.
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.scrollTop = 0;
+    }
+  }, [tab, overlay?.screen]);
+
   return (
     <div className={styles.shell}>
       {nav && (
@@ -32,6 +44,7 @@ export function MobileShell({ children, nav }: MobileShellProps) {
         </header>
       )}
       <main
+        ref={contentRef}
         className={clsx(
           styles.content,
           !nav && styles.contentNoHeader,

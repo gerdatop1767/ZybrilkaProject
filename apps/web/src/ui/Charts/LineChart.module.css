@@ -1,0 +1,68 @@
+.wrap {
+  width: 100%;
+}
+
+.svg {
+  width: 100%;
+  height: 160px;
+  display: block;
+  overflow: visible;
+}
+
+.area {
+  fill: url(#lineChartGradient);
+  opacity: 0.35;
+}
+
+.line {
+  fill: none;
+  stroke: var(--color-accent-primary-end);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: draw 0.7s ease-out forwards;
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.dot {
+  fill: var(--color-bg-base);
+  stroke: var(--color-accent-primary-end);
+  stroke-width: 2;
+}
+
+.labels {
+  display: flex;
+  gap: 4px;
+  margin-top: var(--space-2, 8px);
+}
+
+.labelCell {
+  position: relative;
+  flex: 1;
+  min-width: 4px;
+  height: 14px;
+}
+
+.labelCell span {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}

@@ -1,0 +1,76 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.cardHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  color: var(--color-accent-primary-end);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.topicList {
+  display: flex;
+  flex-direction: column;
+}
+
+.examScroller {
+  display: flex;
+  gap: var(--space-3);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.examScroller::-webkit-scrollbar {
+  display: none;
+}
+
+.mistakesLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4);
+  background: var(--color-bg-elevated);
+  border: none;
+  border-radius: var(--radius-lg, 16px);
+  color: var(--color-text-primary);
+}
+
+.mistakesLinkLabel {
+  flex: 1;
+  text-align: left;
+  font-weight: 600;
+}
+
+.trailingButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  border: none;
+  border-radius: 50%;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+}

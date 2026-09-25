@@ -1,0 +1,62 @@
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1, 4px);
+  height: 160px;
+  padding-top: var(--space-4, 16px);
+}
+
+.barTrack {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+  min-width: 4px;
+}
+
+.bar {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  background: var(--gradient-primary);
+  transform-origin: bottom;
+  animation: growUp 0.5s ease-out both;
+  min-height: 2px;
+}
+
+@keyframes growUp {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.labels {
+  display: flex;
+  gap: var(--space-1, 4px);
+  margin-top: var(--space-2, 8px);
+}
+
+.labelCell {
+  position: relative;
+  flex: 1;
+  min-width: 4px;
+  height: 14px;
+}
+
+.labelCell span {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    animation: none;
+  }
+}

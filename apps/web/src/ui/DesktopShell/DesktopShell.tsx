@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import { Logo } from '../Logo/Logo.js';
 import { StatusChips } from '../StatusChips/StatusChips.js';
@@ -30,7 +30,13 @@ export interface DesktopShellProps {
  * invented distinction.
  */
 export function DesktopShell({ header = 'status', sidebar = true, children }: DesktopShellProps) {
-  const { navigate } = useNavigation();
+  const { navigate, tab, overlay } = useNavigation();
+
+  // Each screen starts scrolled to its top, never wherever the
+  // previous screen happened to be left scrolled.
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [tab, overlay?.screen]);
 
   return (
     <div className={styles.shell}>

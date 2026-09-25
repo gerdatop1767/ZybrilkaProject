@@ -6,6 +6,8 @@ import { TaskMobile } from './screens/Task/TaskMobile.js';
 import { ResultMobile } from './screens/Result/ResultMobile.js';
 import { useNavigation, type MainTabId } from './lib/navigation.js';
 import { HomeMobile } from './screens/Home/HomeMobile.js';
+import { StatisticsMobile } from './screens/Statistics/StatisticsMobile.js';
+import { MistakesMobile } from './screens/Mistakes/MistakesMobile.js';
 import { sampleTask } from './data/sampleTask.js';
 
 /**
@@ -62,9 +64,7 @@ export function AppMobile() {
             userAnswer={overlay.userAnswer}
           />
         )}
-        {overlay.screen === 'mistakes' && (
-          <WipPlaceholder title="Мои ошибки" note="Экран в разработке — следующий блок." />
-        )}
+        {overlay.screen === 'mistakes' && <MistakesMobile />}
         {overlay.screen === 'rating' && (
           <WipPlaceholder title="Рейтинг" note="Экран в разработке — следующий блок." />
         )}
@@ -92,9 +92,7 @@ export function AppMobile() {
       {tab === 'training' && (
         <WipPlaceholder title="Тренировка" note="Экран в разработке — следующий блок." />
       )}
-      {tab === 'statistics' && (
-        <WipPlaceholder title="Статистика" note="Экран в разработке — следующий блок." />
-      )}
+      {tab === 'statistics' && <StatisticsMobile />}
       {tab === 'achievements' && (
         <WipPlaceholder title="Достижения" note="Экран в разработке — следующий блок." />
       )}

@@ -54,6 +54,16 @@
   --color-subject-physics: #4dd6e8;
   --color-subject-chemistry: #b084f5;
 
+  /* ---- Colors: charts (sampled from the approved Statistics screenshot's
+     topic donut — Statistics/Mistakes visualizations only) ---- */
+  --chart-1: #903cf4;
+  --chart-2: #ef5a9a;
+  --chart-3: #eb7d4c;
+  --chart-4: #f7d35e;
+  --chart-5: #6ae96b;
+  --chart-6: #4bb2f9;
+  --chart-7: #545d8b;
+
   /* ---- Typography ---- */
   --font-family-base: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 

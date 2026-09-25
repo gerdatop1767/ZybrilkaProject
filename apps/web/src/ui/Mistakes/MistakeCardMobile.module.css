@@ -1,0 +1,113 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg, 16px);
+  text-align: left;
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.checkbox {
+  flex-shrink: 0;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  margin: calc(var(--space-2) * -1) 0 calc(var(--space-2) * -1) calc(var(--space-2) * -1);
+}
+
+.checkboxChecked {
+  color: var(--color-accent-primary-end);
+}
+
+.metaRow {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.numberChip {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  flex-shrink: 0;
+}
+
+.topicChip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill, 999px);
+  flex-shrink: 0;
+}
+
+.date {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--color-text-disabled);
+}
+
+.condition {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0 0 0 var(--touch-target-min);
+  background: none;
+  border: none;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  text-align: left;
+}
+
+.bottomRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+
+.retryButton {
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+}
+
+.chevron {
+  color: var(--color-text-secondary);
+}
+
+.bottomRow button[aria-label='Открыть задание'] {
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+}

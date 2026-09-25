@@ -68,6 +68,17 @@ import {
   ClipboardCheck,
   MessageCircleQuestion,
   Palette,
+  SquareRadical,
+  LineChart,
+  Triangle,
+  Box,
+  Dices,
+  TrendingDown,
+  Inbox,
+  ListChecks,
+  Square,
+  CheckSquare,
+  Plus,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -149,6 +160,17 @@ export const icons = {
   analysis: ClipboardCheck,
   question: MessageCircleQuestion,
   palette: Palette,
+  topicEquations: SquareRadical,
+  topicFunctions: LineChart,
+  topicPlanimetry: Triangle,
+  topicStereometry: Box,
+  topicProbability: Dices,
+  trendDown: TrendingDown,
+  emptyState: Inbox,
+  checklist: ListChecks,
+  checkboxEmpty: Square,
+  checkboxChecked: CheckSquare,
+  add: Plus,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof icons;

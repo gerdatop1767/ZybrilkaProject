@@ -1,0 +1,45 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  padding: var(--space-3, 12px);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg, 16px);
+  text-align: center;
+  flex-shrink: 0;
+  width: 132px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.date {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.fraction {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.newCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2, 8px);
+  padding: var(--space-3, 12px);
+  border: 1px dashed var(--color-border-subtle);
+  border-radius: var(--radius-lg, 16px);
+  background: none;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  width: 132px;
+  min-height: 148px;
+}

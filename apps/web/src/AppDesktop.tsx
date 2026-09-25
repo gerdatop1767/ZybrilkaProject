@@ -4,6 +4,8 @@ import { TaskDesktop } from './screens/Task/TaskDesktop.js';
 import { ResultDesktop } from './screens/Result/ResultDesktop.js';
 import { useNavigation } from './lib/navigation.js';
 import { HomeDesktop } from './screens/Home/HomeDesktop.js';
+import { StatisticsDesktop } from './screens/Statistics/StatisticsDesktop.js';
+import { MistakesDesktop } from './screens/Mistakes/MistakesDesktop.js';
 
 /** Screens whose approved desktop composition has no left sidebar. */
 const noSidebarScreens = new Set(['home', 'subjectCatalog', 'task', 'result']);
@@ -49,9 +51,7 @@ export function AppDesktop() {
             userAnswer={overlay.userAnswer}
           />
         )}
-        {overlay.screen === 'mistakes' && (
-          <WipPlaceholder title="Мои ошибки" note="Экран в разработке — следующий блок." />
-        )}
+        {overlay.screen === 'mistakes' && <MistakesDesktop />}
         {overlay.screen === 'rating' && (
           <WipPlaceholder title="Рейтинг" note="Экран в разработке — следующий блок." />
         )}
@@ -80,9 +80,7 @@ export function AppDesktop() {
       {tab === 'training' && (
         <WipPlaceholder title="Тренировка" note="Экран в разработке — следующий блок." />
       )}
-      {tab === 'statistics' && (
-        <WipPlaceholder title="Статистика" note="Экран в разработке — следующий блок." />
-      )}
+      {tab === 'statistics' && <StatisticsDesktop />}
       {tab === 'achievements' && (
         <WipPlaceholder title="Достижения" note="Экран в разработке — следующий блок." />
       )}

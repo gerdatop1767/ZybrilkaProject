@@ -1,0 +1,40 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-primary);
+}
+
+.leadingButton {
+  margin-left: calc(var(--space-3) * -1);
+}
+
+.trailingButton {
+  margin-right: calc(var(--space-3) * -1);
+  background: var(--color-bg-elevated);
+}
+
+.headerText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.subjectRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

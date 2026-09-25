@@ -1,0 +1,68 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.statTile {
+  padding: var(--space-3);
+  gap: 4px;
+}
+
+.sectionHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.sectionActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.selectButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--color-accent-primary-end);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.groupLabel {
+  margin: var(--space-2) 0 0;
+}
+
+.analysisButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4);
+  background: var(--color-bg-elevated);
+  border: none;
+  border-radius: var(--radius-lg, 16px);
+  color: var(--color-text-primary);
+}
+
+.analysisLabel {
+  flex: 1;
+  text-align: left;
+  font-weight: 600;
+}
