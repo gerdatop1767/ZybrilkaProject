@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { subjects } from '../../data/subjects.js';
 import {
   leaderboard,
@@ -6,6 +6,10 @@ import {
   totalParticipants,
   weeklyLeaders,
   subjectLeaders,
+  getSubjectLeaderboard,
+  friendsLeaderboard,
+  currentUserFriendEntry,
+  type LeaderboardEntry,
 } from '../../data/sampleLeaderboard.js';
 import { userStats } from '../../data/sampleProgress.js';
 import { Card } from '../../ui/Card/Card.js';
@@ -13,7 +17,7 @@ import { Chip } from '../../ui/Chip/Chip.js';
 import { Select } from '../../ui/Select/Select.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { Avatar } from '../../ui/Leaderboard/Avatar.js';
-import { WipPlaceholder } from '../../ui/WipPlaceholder/WipPlaceholder.js';
+import { BackRow } from '../../ui/BackRow/BackRow.js';
 import { FadeIn } from '../../ui/motion/motion.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './RatingDesktop.module.css';
@@ -53,8 +57,32 @@ export function RatingDesktop() {
     ...subjects.map((s) => ({ value: s.id, label: s.shortName })),
   ];
 
+  // "По предметам" needs one concrete subject to rank by; "Все
+  // предметы" (the overall-view default) falls back to the first real
+  // subject rather than rendering an empty/undefined ranking.
+  const activeSubjectId = subjectId === 'all' ? subjects[0]!.id : subjectId;
+  const activeSubjectName =
+    subjects.find((s) => s.id === activeSubjectId)?.shortName ?? subjects[0]!.shortName;
+
+  const bySubjectRanking = useMemo(() => getSubjectLeaderboard(activeSubjectId), [activeSubjectId]);
+
+  let entries: readonly LeaderboardEntry[];
+  let currentEntry: LeaderboardEntry;
+  if (view === 'bySubject') {
+    entries = bySubjectRanking.filter((entry) => entry.id !== 'me');
+    currentEntry = bySubjectRanking.find((entry) => entry.id === 'me')!;
+  } else if (view === 'friends') {
+    entries = friendsLeaderboard.filter((entry) => entry.id !== 'me');
+    currentEntry = currentUserFriendEntry;
+  } else {
+    entries = leaderboard;
+    currentEntry = currentUserEntry;
+  }
+  const totalForView = view === 'friends' ? friendsLeaderboard.length : totalParticipants;
+
   return (
     <FadeIn className={styles.page}>
+      <BackRow />
       <div className={styles.headerRow}>
         <div>
           <h1 className="text-h1">Рейтинг</h1>
@@ -85,141 +113,165 @@ export function RatingDesktop() {
         ))}
       </div>
 
-      {view !== 'overall' ? (
-        <WipPlaceholder
-          title={viewTabs.find((t) => t.id === view)!.label}
-          note="Экран в разработке — следующий блок."
-        />
-      ) : (
-        <div className={styles.grid}>
-          <div className={styles.table}>
-            <div className={styles.tableHeaderRow}>
-              <span>#</span>
-              <span>Пользователь</span>
-              <span>Уровень</span>
-              <span>Решено заданий</span>
-              <span>Правильных ответов</span>
-              <span>Серия</span>
-              <span style={{ textAlign: 'right' }}>XP</span>
-            </div>
+      {view === 'bySubject' && (
+        <p className="text-body-sm text-secondary">Рейтинг по предмету «{activeSubjectName}»</p>
+      )}
 
-            {leaderboard.map((entry) => (
-              <div
-                key={entry.id}
-                className={clsx(styles.row, entry.rank <= 3 && styles.rowTop)}
-                style={
-                  entry.rank <= 3 ? { ['--medal' as string]: medalColor[entry.rank] } : undefined
-                }
-              >
-                <span className={styles.rank}>{entry.rank}</span>
-                <span className={styles.userCell}>
-                  <Avatar username={entry.username} color={entry.avatarColor} />
-                  <span className={styles.username}>{entry.username}</span>
-                  {entry.rank <= 3 && (
-                    <span className={styles.badge}>Топ-{entry.rank === 1 ? '1' : '3'}</span>
-                  )}
-                </span>
-                <span className={styles.levelCell}>
-                  <Icon name="crown" size={16} /> {entry.level}
-                </span>
-                <span>{entry.solved.toLocaleString('ru-RU')}</span>
-                <span>{entry.accuracyPercent}%</span>
-                <span className={styles.streakCell}>
-                  <Icon name="flame" size={16} /> {entry.streakDays}
-                </span>
-                <span className={styles.xpCell}>{entry.xp.toLocaleString('ru-RU')}</span>
-              </div>
-            ))}
+      <div className={styles.grid}>
+        <div className={styles.table}>
+          <div className={styles.tableHeaderRow}>
+            <span>#</span>
+            <span>Пользователь</span>
+            <span>Уровень</span>
+            <span>Решено заданий</span>
+            <span>Правильных ответов</span>
+            <span>Серия</span>
+            <span style={{ textAlign: 'right' }}>XP</span>
+          </div>
 
-            <p className={styles.ellipsisRow}>···</p>
-
-            <div className={clsx(styles.row, styles.rowCurrentUser)}>
-              <span className={styles.rank}>{currentUserEntry.rank}</span>
+          {entries.map((entry) => (
+            <div
+              key={entry.id}
+              className={clsx(styles.row, entry.rank <= 3 && styles.rowTop)}
+              style={
+                entry.rank <= 3 ? { ['--medal' as string]: medalColor[entry.rank] } : undefined
+              }
+            >
+              <span className={styles.rank}>{entry.rank}</span>
               <span className={styles.userCell}>
-                <Avatar username={currentUserEntry.username} color={currentUserEntry.avatarColor} />
-                <span className={styles.username}>{currentUserEntry.username}</span>
-                <span className={styles.badge}>Текущая позиция</span>
+                <Avatar
+                  username={entry.username}
+                  color={entry.avatarColor}
+                  avatarUrl={entry.avatarUrl}
+                />
+                <span className={styles.username}>{entry.username}</span>
+                {entry.rank <= 3 && (
+                  <span className={styles.badge}>Топ-{entry.rank === 1 ? '1' : '3'}</span>
+                )}
               </span>
               <span className={styles.levelCell}>
-                <Icon name="crown" size={16} /> {currentUserEntry.level}
+                <Icon name="crown" size={16} /> {entry.level}
               </span>
-              <span>{currentUserEntry.solved.toLocaleString('ru-RU')}</span>
-              <span>{currentUserEntry.accuracyPercent}%</span>
+              <span>{entry.solved.toLocaleString('ru-RU')}</span>
+              <span>{entry.accuracyPercent}%</span>
               <span className={styles.streakCell}>
-                <Icon name="flame" size={16} /> {currentUserEntry.streakDays}
+                <Icon name="flame" size={16} /> {entry.streakDays}
               </span>
-              <span className={styles.xpCell}>{currentUserEntry.xp.toLocaleString('ru-RU')}</span>
+              <span className={styles.xpCell}>{entry.xp.toLocaleString('ru-RU')}</span>
             </div>
-          </div>
+          ))}
 
-          <div className={styles.sidebar}>
-            <Card>
-              <p className="text-h3">Твоя позиция</p>
-              <div className={styles.positionCard} style={{ marginTop: 'var(--space-3)' }}>
-                <span className={styles.positionIcon}>
-                  <Icon name="crown" size={26} />
-                </span>
-                <div>
-                  <p className="text-h2">{currentUserEntry.rank} место</p>
-                  <p className="text-body-sm text-secondary">
-                    из {totalParticipants.toLocaleString('ru-RU')} пользователей
-                  </p>
-                </div>
-              </div>
-              <div className={styles.positionChips}>
-                <span className={styles.positionChip}>
-                  <Icon name="crown" size={16} />
-                  <span className="text-body-sm">{userStats.level}</span>
-                </span>
-                <span className={styles.positionChip}>
-                  <Icon name="flame" size={16} />
-                  <span className="text-body-sm">{userStats.streakDays}</span>
-                </span>
-                <span className={styles.positionChip}>
-                  <Icon name="star" size={16} />
-                  <span className="text-body-sm">{userStats.accuracy}%</span>
-                </span>
-              </div>
-            </Card>
+          <p className={styles.ellipsisRow}>···</p>
 
-            <Card>
-              <div className={styles.sectionHeaderRow}>
-                <p className="text-h3">Лидеры недели</p>
-                <span className="text-body-sm text-secondary">Все →</span>
-              </div>
-              <div className={styles.miniList} style={{ marginTop: 'var(--space-3)' }}>
-                {weeklyLeaders.map((leader) => (
-                  <div key={leader.rank} className={styles.miniRow}>
-                    <span className={styles.miniRank}>{leader.rank}</span>
-                    <Avatar username={leader.username} color={leader.avatarColor} size={32} />
-                    <span className={styles.miniBody}>{leader.username}</span>
-                    <span className={styles.miniXp}>{leader.xp.toLocaleString('ru-RU')} XP</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            <Card>
-              <div className={styles.sectionHeaderRow}>
-                <p className="text-h3">Топ по предметам</p>
-                <span className="text-body-sm text-secondary">Все →</span>
-              </div>
-              <div className={styles.miniList} style={{ marginTop: 'var(--space-3)' }}>
-                {subjectLeaders.map((leader) => (
-                  <div key={leader.subjectId} className={styles.miniRow}>
-                    <Icon name={leader.icon} size={20} />
-                    <span className={styles.miniBody}>
-                      <p className="text-body-sm">{leader.subjectName}</p>
-                      <p className="text-body-sm text-secondary">{leader.username}</p>
-                    </span>
-                    <span className={styles.miniXp}>{leader.xp.toLocaleString('ru-RU')} XP</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
+          <div className={clsx(styles.row, styles.rowCurrentUser)}>
+            <span className={styles.rank}>{currentEntry.rank}</span>
+            <span className={styles.userCell}>
+              <Avatar
+                username={currentEntry.username}
+                color={currentEntry.avatarColor}
+                avatarUrl={currentEntry.avatarUrl}
+              />
+              <span className={styles.username}>{currentEntry.username}</span>
+              <span className={styles.badge}>Текущая позиция</span>
+            </span>
+            <span className={styles.levelCell}>
+              <Icon name="crown" size={16} /> {currentEntry.level}
+            </span>
+            <span>{currentEntry.solved.toLocaleString('ru-RU')}</span>
+            <span>{currentEntry.accuracyPercent}%</span>
+            <span className={styles.streakCell}>
+              <Icon name="flame" size={16} /> {currentEntry.streakDays}
+            </span>
+            <span className={styles.xpCell}>{currentEntry.xp.toLocaleString('ru-RU')}</span>
           </div>
         </div>
-      )}
+
+        <div className={styles.sidebar}>
+          <Card>
+            <p className="text-h3">Твоя позиция</p>
+            <div className={styles.positionCard} style={{ marginTop: 'var(--space-3)' }}>
+              <span className={styles.positionIcon}>
+                <Icon name="crown" size={26} />
+              </span>
+              <div>
+                <p className="text-h2">{currentEntry.rank} место</p>
+                <p className="text-body-sm text-secondary">
+                  из {totalForView.toLocaleString('ru-RU')}{' '}
+                  {view === 'friends' ? 'друзей' : 'пользователей'}
+                </p>
+              </div>
+            </div>
+            <div className={styles.positionChips}>
+              <span className={styles.positionChip}>
+                <Icon name="crown" size={16} />
+                <span className="text-body-sm">{userStats.level}</span>
+              </span>
+              <span className={styles.positionChip}>
+                <Icon name="flame" size={16} />
+                <span className="text-body-sm">{userStats.streakDays}</span>
+              </span>
+              <span className={styles.positionChip}>
+                <Icon name="star" size={16} />
+                <span className="text-body-sm">{userStats.accuracy}%</span>
+              </span>
+            </div>
+          </Card>
+
+          {view === 'overall' && (
+            <>
+              <Card>
+                <div className={styles.sectionHeaderRow}>
+                  <p className="text-h3">Лидеры недели</p>
+                  <span className="text-body-sm text-secondary">Все →</span>
+                </div>
+                <div className={styles.miniList} style={{ marginTop: 'var(--space-3)' }}>
+                  {weeklyLeaders.map((leader) => (
+                    <div key={leader.rank} className={styles.miniRow}>
+                      <span className={styles.miniRank}>{leader.rank}</span>
+                      <Avatar
+                        username={leader.username}
+                        color={leader.avatarColor}
+                        avatarUrl={leader.avatarUrl}
+                        size={32}
+                      />
+                      <span className={styles.miniBody}>{leader.username}</span>
+                      <span className={styles.miniXp}>{leader.xp.toLocaleString('ru-RU')} XP</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              <Card>
+                <div className={styles.sectionHeaderRow}>
+                  <p className="text-h3">Топ по предметам</p>
+                  <span className="text-body-sm text-secondary">Все →</span>
+                </div>
+                <div className={styles.miniList} style={{ marginTop: 'var(--space-3)' }}>
+                  {subjectLeaders.map((leader) => (
+                    <div key={leader.subjectId} className={styles.miniRow}>
+                      <Icon name={leader.icon} size={20} />
+                      <span className={styles.miniBody}>
+                        <p className="text-body-sm">{leader.subjectName}</p>
+                        <p className="text-body-sm text-secondary">{leader.username}</p>
+                      </span>
+                      <span className={styles.miniXp}>{leader.xp.toLocaleString('ru-RU')} XP</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </>
+          )}
+
+          {view === 'friends' && (
+            <Card>
+              <p className="text-h3">Друзья</p>
+              <p className="text-body-sm text-secondary" style={{ marginTop: 'var(--space-2)' }}>
+                Только твой близкий круг — не общий рейтинг.
+              </p>
+            </Card>
+          )}
+        </div>
+      </div>
     </FadeIn>
   );
 }

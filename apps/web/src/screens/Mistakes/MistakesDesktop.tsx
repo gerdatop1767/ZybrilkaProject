@@ -12,6 +12,7 @@ import { RankedBarList } from '../../ui/Charts/RankedBarList.js';
 import { MistakeCardDesktop } from '../../ui/Mistakes/MistakeCardDesktop.js';
 import { FeedbackState } from '../../ui/FeedbackState/FeedbackState.js';
 import { FadeIn } from '../../ui/motion/motion.js';
+import { BackRow } from '../../ui/BackRow/BackRow.js';
 import styles from './MistakesDesktop.module.css';
 
 type FilterId = 'all' | 'unsolved' | 'byTopic' | 'byDate';
@@ -57,6 +58,7 @@ export function MistakesDesktop() {
 
   return (
     <FadeIn className={styles.page}>
+      <BackRow />
       <div className={styles.headerRow}>
         <div>
           <h1 className="text-h1">Мои ошибки</h1>

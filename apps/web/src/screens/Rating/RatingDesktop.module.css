@@ -37,11 +37,21 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  min-width: 0;
 }
 
+/* Fixed-rem tracks never shrink below their length, so at narrower
+   desktop widths (~1280px, with the nav sidebar + this page's own
+   20rem sidebar both eating into the available width) the row content
+   used to be wider than its container and spill past the card edge.
+   Every column but the rank/username ones is now a shrinkable
+   `minmax(0, Nfr)` instead, so the whole row compresses together. */
 .tableHeaderRow {
   display: grid;
-  grid-template-columns: 3rem minmax(0, 1fr) 6rem 8rem 8rem 6rem 7rem;
+  grid-template-columns:
+    2.5rem minmax(0, 1.6fr) minmax(3.5rem, 0.7fr) minmax(4.5rem, 0.9fr) minmax(4.5rem, 0.9fr)
+    minmax(3.5rem, 0.7fr) minmax(4rem, 0.8fr);
+  gap: var(--space-2);
   padding: 0 var(--space-4);
   color: var(--color-text-secondary);
   font-size: 13px;
@@ -49,12 +59,16 @@
 
 .row {
   display: grid;
-  grid-template-columns: 3rem minmax(0, 1fr) 6rem 8rem 8rem 6rem 7rem;
+  grid-template-columns:
+    2.5rem minmax(0, 1.6fr) minmax(3.5rem, 0.7fr) minmax(4.5rem, 0.9fr) minmax(4.5rem, 0.9fr)
+    minmax(3.5rem, 0.7fr) minmax(4rem, 0.8fr);
+  gap: var(--space-2);
   align-items: center;
   padding: var(--space-3) var(--space-4);
   background: var(--color-bg-surface);
   border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-lg, 16px);
+  border-radius: var(--radius-card);
+  min-width: 0;
 }
 
 .rowTop {

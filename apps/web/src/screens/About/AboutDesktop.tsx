@@ -8,6 +8,7 @@ import {
 } from '../../data/sampleAbout.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { Collapse, FadeIn } from '../../ui/motion/motion.js';
+import { BackRow } from '../../ui/BackRow/BackRow.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './AboutDesktop.module.css';
 
@@ -31,6 +32,7 @@ export function AboutDesktop() {
 
   return (
     <FadeIn className={styles.page}>
+      <BackRow />
       <div>
         <h1 className="text-h1">О проекте</h1>
         <p className="text-body-sm text-secondary">

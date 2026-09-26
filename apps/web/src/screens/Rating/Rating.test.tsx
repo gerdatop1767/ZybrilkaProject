@@ -18,11 +18,20 @@ describe('RatingDesktop', () => {
     expect(screen.getByText(`${currentUserEntry.rank} место`)).toBeInTheDocument();
   });
 
-  it('shows a WIP note for the "По предметам" tab', async () => {
+  it('re-ranks by subject on the "По предметам" tab', async () => {
     const user = userEvent.setup();
     renderWithNav(<RatingDesktop />);
     await user.click(screen.getByRole('button', { name: 'По предметам' }));
-    expect(screen.getByText('Экран в разработке — следующий блок.')).toBeInTheDocument();
+    expect(screen.getByText(/Рейтинг по предмету/)).toBeInTheDocument();
+    expect(screen.getByText('Текущая позиция')).toBeInTheDocument();
+  });
+
+  it('shows a separate pool on the "Среди друзей" tab', async () => {
+    const user = userEvent.setup();
+    renderWithNav(<RatingDesktop />);
+    await user.click(screen.getByRole('button', { name: 'Среди друзей' }));
+    expect(screen.getByText('Текущая позиция')).toBeInTheDocument();
+    expect(screen.getByText(/^из \d+ друзей$/)).toBeInTheDocument();
   });
 });
 

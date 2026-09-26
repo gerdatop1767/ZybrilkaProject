@@ -7,3 +7,9 @@
   color: var(--color-bg-base);
   font-weight: 700;
 }
+
+.avatarPhoto {
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+}

@@ -9,8 +9,14 @@ export interface LeaderboardEntry {
   id: string;
   rank: number;
   username: string;
-  /** Deterministic avatar color — no stock photos are bundled with the app. */
+  /** Deterministic avatar color — used whenever `avatarUrl` is absent. */
   avatarColor: string;
+  /**
+   * The user's Telegram profile photo. `undefined` in this seed data —
+   * no real Telegram accounts are linked yet — so every entry falls
+   * back to its colored-initials circle until Telegram auth lands.
+   */
+  avatarUrl?: string;
   level: number;
   solved: number;
   accuracyPercent: number;
@@ -149,6 +155,7 @@ export interface WeeklyLeader {
   rank: number;
   username: string;
   avatarColor: string;
+  avatarUrl?: string;
   xp: number;
 }
 
@@ -158,6 +165,7 @@ export const weeklyLeaders: readonly WeeklyLeader[] = leaderboard.slice(0, 3).ma
   rank: entry.rank,
   username: entry.username,
   avatarColor: entry.avatarColor,
+  avatarUrl: entry.avatarUrl,
   xp: Math.round(entry.xp * 0.42),
 }));
 
@@ -200,3 +208,100 @@ export const subjectLeaders: readonly SubjectLeader[] = [
     xp: 62880,
   },
 ];
+
+/** Deterministic 0.55–1.0 multiplier per (username, subject) pair — a
+ * stand-in for real per-subject stats until the backend has them, but
+ * stable across renders/tests rather than random. */
+function subjectFactor(username: string, subjectId: string): number {
+  const seed = `${username}:${subjectId}`;
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  return 0.55 + (hash % 100) / 220;
+}
+
+function scaleEntryForSubject(entry: LeaderboardEntry, subjectId: string): LeaderboardEntry {
+  const factor = subjectFactor(entry.username, subjectId);
+  return {
+    ...entry,
+    solved: Math.round(entry.solved * factor * 0.4),
+    accuracyPercent: Math.max(50, Math.min(99, Math.round(entry.accuracyPercent * factor))),
+    xp: Math.round(entry.xp * factor),
+  };
+}
+
+/**
+ * "По предметам": the same user pool re-ranked by that subject's XP.
+ * A real backend would return this pre-ranked; until then it's derived
+ * deterministically from the overall leaderboard rather than invented
+ * per-subject data that could drift from it.
+ */
+export function getSubjectLeaderboard(subjectId: string): readonly LeaderboardEntry[] {
+  return [...leaderboard, currentUserEntry]
+    .map((entry) => scaleEntryForSubject(entry, subjectId))
+    .sort((a, b) => b.xp - a.xp)
+    .map((entry, index) => ({ ...entry, rank: index + 1 }));
+}
+
+/**
+ * "Среди друзей" seed circle — a small, separate pool (not a slice of
+ * the global leaderboard), since a real friends list is its own social
+ * graph the backend will supply later.
+ */
+const friendsPool: readonly LeaderboardEntry[] = [
+  {
+    id: 'f1',
+    rank: 0,
+    username: 'nastya_solves',
+    avatarColor: 'var(--chart-3)',
+    level: 11,
+    solved: 612,
+    accuracyPercent: 88,
+    streakDays: 24,
+    xp: 15420,
+  },
+  {
+    id: 'f2',
+    rank: 0,
+    username: 'kirill_ege',
+    avatarColor: 'var(--chart-2)',
+    level: 9,
+    solved: 401,
+    accuracyPercent: 79,
+    streakDays: 9,
+    xp: 9870,
+  },
+  {
+    id: 'f3',
+    rank: 0,
+    username: 'sonya_11b',
+    avatarColor: 'var(--chart-6)',
+    level: 7,
+    solved: 305,
+    accuracyPercent: 84,
+    streakDays: 15,
+    xp: 6540,
+  },
+  { ...currentUserEntry, id: 'me' },
+  {
+    id: 'f4',
+    rank: 0,
+    username: 'timur_phys',
+    avatarColor: 'var(--chart-4)',
+    level: 6,
+    solved: 198,
+    accuracyPercent: 76,
+    streakDays: 4,
+    xp: 4120,
+  },
+];
+
+export const friendsLeaderboard: readonly LeaderboardEntry[] = friendsPool
+  .slice()
+  .sort((a, b) => b.xp - a.xp)
+  .map((entry, index) => ({ ...entry, rank: index + 1 }));
+
+export const currentUserFriendEntry: LeaderboardEntry = friendsLeaderboard.find(
+  (entry) => entry.id === 'me',
+)!;
