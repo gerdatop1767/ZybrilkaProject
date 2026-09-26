@@ -112,11 +112,7 @@ export function AchievementsDesktop() {
         <div className={styles.sidebar}>
           <Card className={styles.progressCard}>
             <div className={styles.progressRingBox}>
-              <CircularProgress value={summary.unlockedPercent} size={100} strokeWidth={10}>
-                <span style={{ color: 'var(--color-gold)' }}>
-                  <Icon name="star" size={20} />
-                </span>
-              </CircularProgress>
+              <CircularProgress value={summary.unlockedPercent} size={100} strokeWidth={10} />
               <div className={styles.progressRingCenter}>
                 <p className="text-h2">{summary.unlockedCount}</p>
                 <p className="text-body-sm text-secondary">из {summary.total}</p>

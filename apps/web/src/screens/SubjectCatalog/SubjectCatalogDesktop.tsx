@@ -1,0 +1,99 @@
+import { useNavigation } from '../../lib/navigation.js';
+import { subjects } from '../../data/subjects.js';
+import { BackRow } from '../../ui/BackRow/BackRow.js';
+import { Card } from '../../ui/Card/Card.js';
+import { Icon } from '../../ui/Icon/Icon.js';
+import { SubjectTile } from '../../ui/SubjectTile/SubjectTile.js';
+import styles from './SubjectCatalogDesktop.module.css';
+
+const totalTasks = subjects.reduce((sum, subject) => sum + subject.taskCount, 0);
+
+const stats = [
+  { icon: 'topic', color: 'var(--color-error)', label: 'предметов', value: `${subjects.length}` },
+  {
+    icon: 'check',
+    color: 'var(--color-success)',
+    label: 'заданий',
+    value: `${totalTasks.toLocaleString('ru-RU')}+`,
+  },
+  {
+    icon: 'progress',
+    color: 'var(--color-accent-secondary)',
+    label: 'статистика',
+    value: 'Полная',
+  },
+] as const;
+
+/**
+ * Desktop "Предметы" (approved reference screenshot): a hero banner
+ * over the existing mascot illustration, three headline stats, then a
+ * card grid — one per EGE subject — each opening that subject's
+ * catalog overlay.
+ */
+export function SubjectCatalogDesktop() {
+  const { navigate } = useNavigation();
+
+  return (
+    <div>
+      <BackRow />
+
+      <div className={styles.hero}>
+        <img
+          src="/branding/v2/hero-mascot-desktop.webp"
+          alt=""
+          className={styles.heroImg}
+          aria-hidden="true"
+        />
+        <div className={styles.heroOverlay} />
+        <div className={styles.heroContent}>
+          <h1 className="text-h1">Предметы</h1>
+          <p className="text-body-sm text-secondary">Выбери предмет и начни готовиться к ЕГЭ</p>
+        </div>
+      </div>
+
+      <div className={styles.statsRow}>
+        {stats.map((stat) => (
+          <Card key={stat.label} className={styles.statCard}>
+            <span className={styles.statIcon} style={{ background: stat.color }}>
+              <Icon name={stat.icon} size={18} />
+            </span>
+            <span>
+              <strong className="text-body">{stat.value}</strong>
+              <br />
+              <span className="text-body-sm text-secondary">{stat.label}</span>
+            </span>
+          </Card>
+        ))}
+      </div>
+
+      <div className={styles.grid}>
+        {subjects.map((subject) => (
+          <button
+            key={subject.id}
+            type="button"
+            className={styles.subjectCard}
+            style={{ ['--subject-accent' as string]: subject.color }}
+            onClick={() => navigate({ screen: 'subject', subjectId: subject.id })}
+          >
+            <div className={styles.subjectThumb}>
+              <SubjectTile glyph={subject.glyph} color={subject.color} size={56} />
+            </div>
+            <div className={styles.subjectFooter}>
+              <span>
+                <p className="text-body" style={{ fontWeight: 700 }}>
+                  {subject.shortName}
+                </p>
+                <p className="text-body-sm text-secondary">
+                  {subject.taskCount.toLocaleString('ru-RU')} заданий
+                </p>
+              </span>
+              <span className={styles.subjectArrow} style={{ background: subject.color }}>
+                <Icon name="arrowRight" size={18} />
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

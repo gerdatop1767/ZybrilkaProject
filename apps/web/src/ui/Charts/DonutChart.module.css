@@ -1,6 +1,7 @@
 .wrap {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-6, 24px);
   flex-wrap: wrap;
 }
@@ -8,6 +9,7 @@
 .ringBox {
   position: relative;
   flex-shrink: 0;
+  margin: 0 auto;
 }
 
 .svg {

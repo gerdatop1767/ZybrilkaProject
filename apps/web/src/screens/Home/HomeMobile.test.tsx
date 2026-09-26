@@ -34,9 +34,9 @@ describe('HomeMobile', () => {
     expect(screen.getByText('82%')).toBeInTheDocument();
   });
 
-  it('renders every subject as a tappable card', () => {
+  it('renders every popular subject as a tappable card', () => {
     renderHome();
-    for (const subject of subjects) {
+    for (const subject of subjects.slice(0, 6)) {
       expect(screen.getAllByText(subject.shortName).length).toBeGreaterThan(0);
     }
   });

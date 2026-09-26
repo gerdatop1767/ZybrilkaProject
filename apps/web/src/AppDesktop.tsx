@@ -9,9 +9,11 @@ import { MistakesDesktop } from './screens/Mistakes/MistakesDesktop.js';
 import { AchievementsDesktop } from './screens/Achievements/AchievementsDesktop.js';
 import { RatingDesktop } from './screens/Rating/RatingDesktop.js';
 import { AboutDesktop } from './screens/About/AboutDesktop.js';
+import { LearningCenterDesktop } from './screens/LearningCenter/LearningCenterDesktop.js';
+import { SubjectCatalogDesktop } from './screens/SubjectCatalog/SubjectCatalogDesktop.js';
 
 /** Screens whose approved desktop composition has no left sidebar. */
-const noSidebarScreens = new Set(['home', 'subjectCatalog', 'task', 'result']);
+const noSidebarScreens = new Set(['home', 'task', 'result']);
 
 /**
  * Desktop app tree (S1 Block 6, approved design) — its own composition,
@@ -23,7 +25,7 @@ export function AppDesktop() {
 
   if (overlay) {
     const sidebar = !noSidebarScreens.has(overlay.screen);
-    const header = overlay.screen === 'subjectCatalog' ? 'cta' : 'status';
+    const header = 'status';
     return (
       <DesktopShell header={header} sidebar={sidebar}>
         {overlay.screen === 'menu' && (
@@ -32,9 +34,7 @@ export function AppDesktop() {
             note="Утверждённый референс для десктоп-меню ещё не получен."
           />
         )}
-        {overlay.screen === 'subjectCatalog' && (
-          <WipPlaceholder title="Предметы" note="Экран в разработке — следующий блок." />
-        )}
+        {overlay.screen === 'subjectCatalog' && <SubjectCatalogDesktop />}
         {overlay.screen === 'subject' && (
           <WipPlaceholder title="Предмет" note="Экран в разработке — следующий блок." />
         )}
@@ -57,12 +57,7 @@ export function AppDesktop() {
         {overlay.screen === 'mistakes' && <MistakesDesktop />}
         {overlay.screen === 'rating' && <RatingDesktop />}
         {overlay.screen === 'about' && <AboutDesktop />}
-        {overlay.screen === 'learningCenter' && (
-          <WipPlaceholder
-            title="Учебный центр"
-            note="Утверждённый референс для этого экрана ещё не получен."
-          />
-        )}
+        {overlay.screen === 'learningCenter' && <LearningCenterDesktop />}
         {overlay.screen === 'onboarding' && (
           <WipPlaceholder title="Онбординг" note="Экран в разработке — следующий блок." />
         )}

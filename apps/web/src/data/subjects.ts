@@ -5,7 +5,8 @@
  * Физика, each its own color + glyph). Demo content for the UI — not
  * the real catalog.
  */
-export type SubjectGlyph = 'pi' | 'aa' | 'globe' | 'users' | 'code' | 'atom';
+export type SubjectGlyph =
+  'pi' | 'aa' | 'globe' | 'users' | 'code' | 'atom' | 'flask' | 'leaf' | 'landmark';
 
 export interface Subject {
   id: string;
@@ -71,5 +72,32 @@ export const subjects: readonly Subject[] = [
     glyph: 'atom',
     mastery: 46,
     taskCount: 1030,
+  },
+  {
+    id: 'chemistry',
+    name: 'Химия',
+    shortName: 'Химия',
+    color: 'var(--color-subject-chemistry)',
+    glyph: 'flask',
+    mastery: 52,
+    taskCount: 980,
+  },
+  {
+    id: 'biology',
+    name: 'Биология',
+    shortName: 'Биология',
+    color: 'var(--color-subject-biology)',
+    glyph: 'leaf',
+    mastery: 57,
+    taskCount: 960,
+  },
+  {
+    id: 'history',
+    name: 'История',
+    shortName: 'История',
+    color: 'var(--color-subject-history)',
+    glyph: 'landmark',
+    mastery: 44,
+    taskCount: 880,
   },
 ];

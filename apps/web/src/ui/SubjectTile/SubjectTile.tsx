@@ -16,6 +16,9 @@ const glyphIcon: Partial<Record<SubjectGlyph, IconName>> = {
   users: 'subjectSocial',
   code: 'subjectInformatics',
   atom: 'subjectPhysics',
+  flask: 'subjectChemistry',
+  leaf: 'subjectBiology',
+  landmark: 'subjectHistory',
 };
 
 /**

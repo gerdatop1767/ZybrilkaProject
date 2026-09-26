@@ -82,6 +82,9 @@ import {
   Brain,
   MessageCircle,
   Users2,
+  FlaskConical,
+  Leaf,
+  Landmark,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -177,6 +180,9 @@ export const icons = {
   brain: Brain,
   chat: MessageCircle,
   community: Users2,
+  subjectChemistry: FlaskConical,
+  subjectBiology: Leaf,
+  subjectHistory: Landmark,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof icons;
