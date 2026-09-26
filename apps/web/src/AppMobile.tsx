@@ -13,6 +13,8 @@ import { AchievementsMobile } from './screens/Achievements/AchievementsMobile.js
 import { RatingMobile } from './screens/Rating/RatingMobile.js';
 import { AboutMobile } from './screens/About/AboutMobile.js';
 import { HelpMobile } from './screens/Help/HelpMobile.js';
+import { FriendsMobile } from './screens/Friends/FriendsMobile.js';
+import { FriendProfileMobile } from './screens/Friends/FriendProfileMobile.js';
 import { sampleTask } from './data/sampleTask.js';
 
 /**
@@ -112,8 +114,9 @@ export function AppMobile() {
         {contentOverlay.screen === 'topics' && (
           <WipPlaceholder title="Темы" note="Экран в разработке — следующий блок." />
         )}
-        {contentOverlay.screen === 'friends' && (
-          <WipPlaceholder title="Друзья" note="Экран в разработке — следующий блок." />
+        {contentOverlay.screen === 'friends' && <FriendsMobile />}
+        {contentOverlay.screen === 'friendProfile' && (
+          <FriendProfileMobile friendId={contentOverlay.friendId} />
         )}
         {contentOverlay.screen === 'settings' && (
           <WipPlaceholder title="Настройки" note="Экран в разработке — следующий блок." />

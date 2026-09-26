@@ -1,0 +1,87 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.backButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  border: none;
+  border-radius: 999px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+.tabRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.friendCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+}
+
+.friendTop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.friendBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.friendStats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.statChip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: var(--font-size-body-sm);
+  white-space: nowrap;
+}
+
+.xp {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-weight: 700;
+  font-size: var(--font-size-body-sm);
+  white-space: nowrap;
+}
+
+.requestActions {
+  display: flex;
+  gap: var(--space-2);
+}

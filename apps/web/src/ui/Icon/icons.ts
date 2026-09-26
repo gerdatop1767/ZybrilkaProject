@@ -87,6 +87,8 @@ import {
   Landmark,
   Bell,
   Shield,
+  Copy,
+  Share2,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -189,6 +191,8 @@ export const icons = {
   bank: Landmark,
   shield: Shield,
   language: Globe,
+  copy: Copy,
+  share: Share2,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof icons;

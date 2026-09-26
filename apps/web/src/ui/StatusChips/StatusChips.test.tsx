@@ -2,12 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { StatusChips } from './StatusChips.js';
 import { userStats } from '../../data/sampleProgress.js';
+import { getStreakAsset, getLevelAsset } from '../../lib/rank.js';
 
 describe('StatusChips', () => {
-  it('renders the real streak/level badge illustrations', () => {
+  it('renders the streak/level badges from the shared rank system, not emoji', () => {
     render(<StatusChips />);
-    expect(document.querySelector('img[src="/branding/v2/badges/flame.png"]')).toBeInTheDocument();
-    expect(document.querySelector('img[src="/branding/v2/badges/crown.png"]')).toBeInTheDocument();
+    expect(
+      document.querySelector(`img[src="${getStreakAsset(userStats.streakDays)}"]`),
+    ).toBeInTheDocument();
+    expect(
+      document.querySelector(`img[src="${getLevelAsset(userStats.level)}"]`),
+    ).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/🔥|👑/);
   });
 
   it('keeps the streak days and level dynamic, not baked into the image', () => {

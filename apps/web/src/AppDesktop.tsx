@@ -14,6 +14,8 @@ import { SubjectCatalogDesktop } from './screens/SubjectCatalog/SubjectCatalogDe
 import { SubjectDesktop } from './screens/Subject/SubjectDesktop.js';
 import { ProfileDesktop } from './screens/Profile/ProfileDesktop.js';
 import { HelpDesktop } from './screens/Help/HelpDesktop.js';
+import { FriendsDesktop } from './screens/Friends/FriendsDesktop.js';
+import { FriendProfileDesktop } from './screens/Friends/FriendProfileDesktop.js';
 
 /** Screens whose approved desktop composition has no left sidebar. */
 const noSidebarScreens = new Set(['home', 'task', 'result']);
@@ -76,9 +78,8 @@ export function AppDesktop() {
         {overlay.screen === 'topics' && (
           <WipPlaceholder title="Темы" note="Экран в разработке — следующий блок." />
         )}
-        {overlay.screen === 'friends' && (
-          <WipPlaceholder title="Друзья" note="Экран в разработке — следующий блок." />
-        )}
+        {overlay.screen === 'friends' && <FriendsDesktop />}
+        {overlay.screen === 'friendProfile' && <FriendProfileDesktop friendId={overlay.friendId} />}
         {overlay.screen === 'settings' && (
           <WipPlaceholder title="Настройки" note="Экран в разработке — следующий блок." />
         )}

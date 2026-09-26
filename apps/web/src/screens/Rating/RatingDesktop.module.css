@@ -146,12 +146,9 @@
 .positionIcon {
   width: 52px;
   height: 52px;
-  border-radius: var(--radius-md, 12px);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--color-accent-primary-end) 20%, transparent);
-  color: var(--color-accent-primary-end);
   flex-shrink: 0;
 }
 

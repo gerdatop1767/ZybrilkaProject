@@ -17,6 +17,8 @@ import { Chip } from '../../ui/Chip/Chip.js';
 import { Select } from '../../ui/Select/Select.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { Avatar } from '../../ui/Leaderboard/Avatar.js';
+import { StreakBadge } from '../../ui/RankBadge/StreakBadge.js';
+import { LevelBadge } from '../../ui/RankBadge/LevelBadge.js';
 import { BackRow } from '../../ui/BackRow/BackRow.js';
 import { FadeIn } from '../../ui/motion/motion.js';
 import { clsx } from '../../lib/clsx.js';
@@ -150,12 +152,12 @@ export function RatingDesktop() {
                 )}
               </span>
               <span className={styles.levelCell}>
-                <Icon name="crown" size={16} /> {entry.level}
+                <LevelBadge level={entry.level} size={18} lazy /> {entry.level}
               </span>
               <span>{entry.solved.toLocaleString('ru-RU')}</span>
               <span>{entry.accuracyPercent}%</span>
               <span className={styles.streakCell}>
-                <Icon name="flame" size={16} /> {entry.streakDays}
+                <StreakBadge days={entry.streakDays} size={18} lazy /> {entry.streakDays}
               </span>
               <span className={styles.xpCell}>{entry.xp.toLocaleString('ru-RU')}</span>
             </div>
@@ -175,12 +177,12 @@ export function RatingDesktop() {
               <span className={styles.badge}>Текущая позиция</span>
             </span>
             <span className={styles.levelCell}>
-              <Icon name="crown" size={16} /> {currentEntry.level}
+              <LevelBadge level={currentEntry.level} size={18} /> {currentEntry.level}
             </span>
             <span>{currentEntry.solved.toLocaleString('ru-RU')}</span>
             <span>{currentEntry.accuracyPercent}%</span>
             <span className={styles.streakCell}>
-              <Icon name="flame" size={16} /> {currentEntry.streakDays}
+              <StreakBadge days={currentEntry.streakDays} size={18} /> {currentEntry.streakDays}
             </span>
             <span className={styles.xpCell}>{currentEntry.xp.toLocaleString('ru-RU')}</span>
           </div>
@@ -191,7 +193,7 @@ export function RatingDesktop() {
             <p className="text-h3">Твоя позиция</p>
             <div className={styles.positionCard} style={{ marginTop: 'var(--space-3)' }}>
               <span className={styles.positionIcon}>
-                <Icon name="crown" size={26} />
+                <LevelBadge level={currentEntry.level} size={32} />
               </span>
               <div>
                 <p className="text-h2">{currentEntry.rank} место</p>
@@ -203,11 +205,11 @@ export function RatingDesktop() {
             </div>
             <div className={styles.positionChips}>
               <span className={styles.positionChip}>
-                <Icon name="crown" size={16} />
+                <LevelBadge level={userStats.level} size={18} />
                 <span className="text-body-sm">{userStats.level}</span>
               </span>
               <span className={styles.positionChip}>
-                <Icon name="flame" size={16} />
+                <StreakBadge days={userStats.streakDays} size={18} />
                 <span className="text-body-sm">{userStats.streakDays}</span>
               </span>
               <span className={styles.positionChip}>

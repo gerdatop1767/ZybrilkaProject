@@ -79,6 +79,10 @@ export function pathForRoute(route: Route): string | null {
     return '/profile';
   }
 
+  if (route.screen === 'friendProfile') {
+    return `/friends/${route.friendId}`;
+  }
+
   const simple = simpleOverlayPaths[route.screen as OverlayRoute['screen']];
   return simple ?? null;
 }
@@ -106,6 +110,11 @@ export function routeFromPath(pathname: string): Route {
 
   if (path === '/profile') return { screen: 'profile' };
 
+  const friendMatch = path.match(/^\/friends\/([a-zA-Z0-9_-]+)$/);
+  if (friendMatch) {
+    return { screen: 'friendProfile', friendId: friendMatch[1]! };
+  }
+
   for (const [screen, screenPath] of Object.entries(simpleOverlayPaths)) {
     if (path === screenPath) return { screen } as OverlayRoute;
   }
@@ -118,6 +127,7 @@ export function isAddressableScreen(screen: string): boolean {
     screen in tabPaths ||
     screen === 'subject' ||
     screen === 'profile' ||
+    screen === 'friendProfile' ||
     simpleOverlayScreens.has(screen)
   );
 }

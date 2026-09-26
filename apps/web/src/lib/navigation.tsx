@@ -63,6 +63,7 @@ export type OverlayRoute =
   | { screen: 'mockExams' }
   | { screen: 'topics' }
   | { screen: 'friends' }
+  | { screen: 'friendProfile'; friendId: string }
   | { screen: 'settings' }
   | { screen: 'help' }
   | { screen: 'notifications' }

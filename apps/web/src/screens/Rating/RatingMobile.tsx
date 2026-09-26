@@ -4,6 +4,7 @@ import { sampleTask } from '../../data/sampleTask.js';
 import { useNavigation } from '../../lib/navigation.js';
 import { leaderboard, currentUserEntry, totalParticipants } from '../../data/sampleLeaderboard.js';
 import { Icon } from '../../ui/Icon/Icon.js';
+import { StreakBadge } from '../../ui/RankBadge/StreakBadge.js';
 import { Tabs } from '../../ui/Tabs/Tabs.js';
 import { SubjectHeaderMobile } from '../../ui/SubjectHeader/SubjectHeaderMobile.js';
 import { PodiumCard } from '../../ui/Leaderboard/PodiumCard.js';
@@ -108,7 +109,7 @@ export function RatingMobile() {
                 <span>{entry.solved}</span>
                 <span>{entry.accuracyPercent}%</span>
                 <span className={styles.streakCell}>
-                  <Icon name="flame" size={14} /> {entry.streakDays}
+                  <StreakBadge days={entry.streakDays} size={16} lazy /> {entry.streakDays}
                 </span>
               </div>
             ))}
@@ -129,7 +130,8 @@ export function RatingMobile() {
               <span>{scaledCurrentUser.solved}</span>
               <span>{scaledCurrentUser.accuracyPercent}%</span>
               <span className={styles.streakCell}>
-                <Icon name="flame" size={14} /> {scaledCurrentUser.streakDays}
+                <StreakBadge days={scaledCurrentUser.streakDays} size={16} />{' '}
+                {scaledCurrentUser.streakDays}
               </span>
             </div>
           </div>

@@ -33,6 +33,7 @@ const sidebarItems: readonly SidebarItem[] = [
     route: { screen: 'achievements' },
   },
   { id: 'rating', label: 'Рейтинг', icon: 'crown', route: { screen: 'rating' } },
+  { id: 'friends', label: 'Друзья', icon: 'friends', route: { screen: 'friends' } },
   { id: 'about', label: 'О проекте', icon: 'info', route: { screen: 'about' } },
 ];
 
