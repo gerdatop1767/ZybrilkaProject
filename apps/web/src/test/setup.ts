@@ -8,6 +8,11 @@ import '@testing-library/jest-dom/vitest';
 // otherwise each test's render() output would stack up in the DOM.
 afterEach(() => {
   cleanup();
+  // Routing now reads/writes real browser history (see lib/navigation.tsx
+  // + lib/routes.ts). Without resetting it, one test's pushState/back()
+  // calls would leak into the next test's initial location within the
+  // same file.
+  window.history.replaceState(null, '', '/');
 });
 
 // jsdom doesn't implement matchMedia. Components that check

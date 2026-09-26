@@ -39,7 +39,7 @@ export function MobileShell({ children, nav }: MobileShellProps) {
     <div className={styles.shell}>
       {nav && (
         <header className={styles.header}>
-          <Logo icon="mobile" size={32} />
+          <Logo icon="mobile" size={38} />
           <StatusChips />
         </header>
       )}

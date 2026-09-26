@@ -83,6 +83,15 @@ export function AppMobile() {
           />
         )}
         {contentOverlay.screen === 'mistakes' && <MistakesMobile />}
+        {contentOverlay.screen === 'trainingTopic' && (
+          <WipPlaceholder title="Тренировка по теме" note="Экран в разработке — следующий блок." />
+        )}
+        {contentOverlay.screen === 'trainingRandom' && (
+          <WipPlaceholder title="Случайные задания" note="Экран в разработке — следующий блок." />
+        )}
+        {contentOverlay.screen === 'trainingVariants' && (
+          <WipPlaceholder title="Варианты" note="Экран в разработке — следующий блок." />
+        )}
         {contentOverlay.screen === 'rating' && <RatingMobile />}
         {contentOverlay.screen === 'about' && <AboutMobile />}
         {contentOverlay.screen === 'learningCenter' && (
@@ -110,6 +119,9 @@ export function AppMobile() {
           <WipPlaceholder title="Настройки" note="Экран в разработке — следующий блок." />
         )}
         {contentOverlay.screen === 'help' && <HelpMobile />}
+        {contentOverlay.screen === 'profile' && (
+          <WipPlaceholder title="Профиль" note="Экран в разработке — следующий блок." />
+        )}
         {menu}
       </MobileShell>
     );

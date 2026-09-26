@@ -92,11 +92,7 @@
   justify-content: center;
   height: 8rem;
   padding: var(--space-3);
-  background: linear-gradient(
-    160deg,
-    color-mix(in srgb, var(--subject-accent) 24%, var(--color-bg-elevated)) 0%,
-    var(--color-bg-elevated) 100%
-  );
+  background: var(--color-bg-surface);
 }
 
 .subjectImg {

@@ -1,5 +1,6 @@
 .wrap {
   width: 100%;
+  min-width: 0;
 }
 
 .svg {
@@ -40,7 +41,10 @@
 .labels {
   display: flex;
   gap: 4px;
+  width: 100%;
+  min-width: 0;
   margin-top: var(--space-2, 8px);
+  overflow: hidden;
 }
 
 .labelCell {

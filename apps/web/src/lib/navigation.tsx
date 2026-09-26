@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { pathForRoute, routeFromPath } from './routes.js';
 
 /**
  * The persistent tabs behind the bottom nav (mobile) / sidebar
@@ -48,6 +49,13 @@ export type OverlayRoute =
       userAnswer: string;
     }
   | { screen: 'mistakes' }
+  /** Addressable placeholders for training modes not yet built as
+   * their own screens — routing needs a real page for each one so
+   * refresh/direct-link/Back-Forward work, even though the mode
+   * itself still renders the plain WIP placeholder. */
+  | { screen: 'trainingTopic' }
+  | { screen: 'trainingRandom' }
+  | { screen: 'trainingVariants' }
   | { screen: 'rating' }
   | { screen: 'about' }
   | { screen: 'menu' }
@@ -101,15 +109,47 @@ interface NavigationContextValue {
 
 const NavigationContext = createContext<NavigationContextValue | null>(null);
 
+function initialRoute(): Route {
+  return typeof window === 'undefined'
+    ? { screen: 'home' }
+    : routeFromPath(window.location.pathname);
+}
+
 /**
  * Lightweight typed navigation: a router this small doesn't need a
  * routing library. Tabs are mutually exclusive and drive the nav's
  * active state; everything else is an overlay on top of whichever tab
- * is underneath, dismissed by `back()`.
+ * is underneath, dismissed by `back()`. The URL is the source of truth
+ * (see `lib/routes.ts`): `navigate()` pushes a history entry for every
+ * addressable route, a `popstate` listener re-syncs `tab`/`overlay`
+ * when the user hits Back/Forward or the page is restored from
+ * history, and the initial state is parsed from `window.location` so
+ * a refresh or a direct link lands on the right screen instead of
+ * always resetting to Home.
  */
 export function NavigationProvider({ children }: { children: ReactNode }) {
-  const [tab, setTab] = useState<MainTabId>('home');
-  const [overlay, setOverlay] = useState<OverlayRoute | null>(null);
+  const [tab, setTab] = useState<MainTabId>(() => {
+    const route = initialRoute();
+    return isTabRoute(route) ? route.screen : 'home';
+  });
+  const [overlay, setOverlay] = useState<OverlayRoute | null>(() => {
+    const route = initialRoute();
+    return isTabRoute(route) ? null : route;
+  });
+
+  useEffect(() => {
+    function onPopState() {
+      const route = routeFromPath(window.location.pathname);
+      if (isTabRoute(route)) {
+        setTab(route.screen);
+        setOverlay(null);
+      } else {
+        setOverlay(route);
+      }
+    }
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   const navigate = useCallback((route: Route) => {
     if (isTabRoute(route)) {
@@ -118,9 +158,23 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     } else {
       setOverlay(route);
     }
+    const path = pathForRoute(route);
+    if (path !== null && path !== window.location.pathname) {
+      window.history.pushState(null, '', path);
+    }
   }, []);
 
-  const back = useCallback(() => setOverlay(null), []);
+  // Only routes `navigate()` actually pushed a history entry for can
+  // be popped — `menu`/`task`/`result` have no URL (see routes.ts), so
+  // closing them just clears the overlay in place, same as before URL
+  // routing existed.
+  const back = useCallback(() => {
+    if (overlay && pathForRoute(overlay) !== null) {
+      window.history.back();
+    } else {
+      setOverlay(null);
+    }
+  }, [overlay]);
 
   return (
     <NavigationContext.Provider value={{ tab, overlay, navigate, back }}>

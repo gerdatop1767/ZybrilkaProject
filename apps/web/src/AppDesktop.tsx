@@ -52,6 +52,15 @@ export function AppDesktop() {
           />
         )}
         {overlay.screen === 'mistakes' && <MistakesDesktop />}
+        {overlay.screen === 'trainingTopic' && (
+          <WipPlaceholder title="Тренировка по теме" note="Экран в разработке — следующий блок." />
+        )}
+        {overlay.screen === 'trainingRandom' && (
+          <WipPlaceholder title="Случайные задания" note="Экран в разработке — следующий блок." />
+        )}
+        {overlay.screen === 'trainingVariants' && (
+          <WipPlaceholder title="Варианты" note="Экран в разработке — следующий блок." />
+        )}
         {overlay.screen === 'rating' && <RatingDesktop />}
         {overlay.screen === 'about' && <AboutDesktop />}
         {overlay.screen === 'learningCenter' && <LearningCenterDesktop />}

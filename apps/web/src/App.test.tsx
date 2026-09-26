@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App.js';
 import { NavigationProvider } from './lib/navigation.js';
@@ -144,6 +144,111 @@ describe('App — desktop', () => {
     const backRow = within(screen.getByRole('main')).getByRole('button', { name: 'О проекте' });
     await user.click(backRow);
     expect(screen.getByText('Наши принципы')).toBeInTheDocument();
+    restore();
+  });
+
+  it('opens Помощь from Menu and BackRow closes it, returning to the underlying tab', async () => {
+    const restore = mockDesktop(true);
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getByRole('button', { name: /Начать бесплатно/ }));
+    await user.click(screen.getByRole('button', { name: 'Меню' }));
+    await user.click(screen.getByRole('button', { name: 'Помощь' }));
+    expect(screen.getByText('Нужна')).toBeInTheDocument();
+
+    const backRow = within(screen.getByRole('main')).getByRole('button', { name: /Тренировка/ });
+    await user.click(backRow);
+    expect(screen.queryByText('Нужна')).not.toBeInTheDocument();
+    restore();
+  });
+});
+
+describe('App — URL routing is the source of truth', () => {
+  beforeEach(() => {
+    window.history.replaceState(null, '', '/');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('a direct URL to /subjects opens the subject catalog on load (desktop)', () => {
+    const restore = mockDesktop(true);
+    window.history.replaceState(null, '', '/subjects');
+    renderApp();
+    expect(screen.getByText(/Выбери предмет/)).toBeInTheDocument();
+    restore();
+  });
+
+  it('a direct URL to /subjects/math opens that subject on load (desktop)', () => {
+    const restore = mockDesktop(true);
+    window.history.replaceState(null, '', '/subjects/math');
+    renderApp();
+    expect(screen.getByText('Темы ЕГЭ')).toBeInTheDocument();
+    restore();
+  });
+
+  it('a direct URL to /profile opens Профиль on load (desktop)', () => {
+    const restore = mockDesktop(true);
+    window.history.replaceState(null, '', '/profile');
+    renderApp();
+    expect(screen.getByText('Мой профиль')).toBeInTheDocument();
+    restore();
+  });
+
+  it('a direct URL to /help opens Помощь on load (desktop)', () => {
+    const restore = mockDesktop(true);
+    window.history.replaceState(null, '', '/help');
+    renderApp();
+    expect(screen.getByText('Нужна')).toBeInTheDocument();
+    restore();
+  });
+
+  it('a direct URL to /statistics opens the Статистика tab on load (mobile)', () => {
+    window.history.replaceState(null, '', '/statistics');
+    renderApp();
+    expect(screen.getByRole('button', { name: 'Статистика' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
+  it('an unknown URL falls back to Home instead of a blank screen', () => {
+    window.history.replaceState(null, '', '/this-page-does-not-exist');
+    renderApp();
+    expect(screen.getByText(/Готов к новой/)).toBeInTheDocument();
+  });
+
+  it('navigating updates the URL, and Back/Forward walk the real history', async () => {
+    const restore = mockDesktop(true);
+    const user = userEvent.setup();
+    renderApp();
+
+    await user.click(screen.getByRole('button', { name: /Начать бесплатно/ }));
+    expect(window.location.pathname).toBe('/training');
+
+    await user.click(screen.getByRole('button', { name: 'Предметы' }));
+    expect(window.location.pathname).toBe('/subjects');
+
+    await user.click(screen.getAllByRole('button', { name: /Математика/ })[0]!);
+    expect(window.location.pathname).toBe('/subjects/math');
+    expect(screen.getByText('Темы ЕГЭ')).toBeInTheDocument();
+
+    await act(async () => {
+      window.history.back();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(window.location.pathname).toBe('/subjects');
+    expect(screen.getByText(/Выбери предмет/)).toBeInTheDocument();
+
+    await act(async () => {
+      window.history.forward();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(window.location.pathname).toBe('/subjects/math');
+    expect(screen.getByText('Темы ЕГЭ')).toBeInTheDocument();
+
     restore();
   });
 });
