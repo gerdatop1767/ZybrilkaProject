@@ -28,7 +28,16 @@ export type OverlayRoute =
   | { screen: 'onboarding' }
   | { screen: 'learningCenter' }
   | { screen: 'subjectCatalog' }
-  | { screen: 'subject'; subjectId: string }
+  | {
+      screen: 'subject';
+      subjectId: string;
+      /** Which screen opened this subject page, so BackRow can return
+       * there directly (e.g. "Предметы → Математика → назад →
+       * Предметы") instead of falling back to the underlying tab —
+       * this router has no general back-stack, so the one drill-down
+       * that needs it carries its own parent explicitly. */
+      from?: 'subjectCatalog' | 'learningCenter';
+    }
   | { screen: 'task'; subjectId: string; taskNumber: number; taskId: string }
   | {
       screen: 'result';

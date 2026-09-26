@@ -135,7 +135,9 @@ export function LearningCenterDesktop() {
             key={subject.id}
             type="button"
             className={styles.subjectRow}
-            onClick={() => navigate({ screen: 'subject', subjectId: subject.id })}
+            onClick={() =>
+              navigate({ screen: 'subject', subjectId: subject.id, from: 'learningCenter' })
+            }
           >
             <SubjectTile glyph={subject.glyph} color={subject.color} size={36} />
             <span className={styles.subjectName}>{subject.shortName}</span>

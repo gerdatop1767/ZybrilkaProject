@@ -11,6 +11,7 @@ import { RatingDesktop } from './screens/Rating/RatingDesktop.js';
 import { AboutDesktop } from './screens/About/AboutDesktop.js';
 import { LearningCenterDesktop } from './screens/LearningCenter/LearningCenterDesktop.js';
 import { SubjectCatalogDesktop } from './screens/SubjectCatalog/SubjectCatalogDesktop.js';
+import { SubjectDesktop } from './screens/Subject/SubjectDesktop.js';
 
 /** Screens whose approved desktop composition has no left sidebar. */
 const noSidebarScreens = new Set(['home', 'task', 'result']);
@@ -30,7 +31,7 @@ export function AppDesktop() {
       <DesktopShell header={header} sidebar={sidebar}>
         {overlay.screen === 'subjectCatalog' && <SubjectCatalogDesktop />}
         {overlay.screen === 'subject' && (
-          <WipPlaceholder title="Предмет" note="Экран в разработке — следующий блок." />
+          <SubjectDesktop subjectId={overlay.subjectId} from={overlay.from} />
         )}
         {overlay.screen === 'task' && (
           <TaskDesktop

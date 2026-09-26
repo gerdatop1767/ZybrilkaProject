@@ -73,7 +73,9 @@ export function SubjectCatalogDesktop() {
             type="button"
             className={styles.subjectCard}
             style={{ ['--subject-accent' as string]: subject.color }}
-            onClick={() => navigate({ screen: 'subject', subjectId: subject.id })}
+            onClick={() =>
+              navigate({ screen: 'subject', subjectId: subject.id, from: 'subjectCatalog' })
+            }
           >
             <div className={styles.subjectThumb}>
               <SubjectTile glyph={subject.glyph} color={subject.color} size={56} />
