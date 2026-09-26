@@ -1,6 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
-import { getTaskById } from '../../data/sampleTask.js';
+import type { TaskPublic } from '@zybrilka/shared';
+import { getTask, listTasksByNumber, submitAttempt } from '../../lib/api.js';
+import { toSampleTask } from '../../lib/taskAdapter.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
@@ -18,8 +20,6 @@ export interface TaskDesktopProps {
   taskId: string;
 }
 
-const CHECKING_DELAY_MS = 450;
-
 /**
  * Desktop Training screen (S1 Block 6, approved design —
  * desktop/04_training.png): a three-part composition — breadcrumb +
@@ -27,34 +27,86 @@ const CHECKING_DELAY_MS = 450;
  * "Другие задания" in the sidebar. Structurally its own layout, not a
  * scaled mobile screen.
  */
-export function TaskDesktop({ subjectId, taskId }: TaskDesktopProps) {
+export function TaskDesktop({ subjectId, taskNumber, taskId }: TaskDesktopProps) {
   const { navigate, back } = useNavigation();
-  const task = getTaskById(taskId);
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
 
+  // The router remounts this component (key={taskId}) on every task
+  // change, so state starts fresh here — no manual reset-on-taskId-change
+  // effect needed.
+  const [task, setTask] = useState<ReturnType<typeof toSampleTask> | null>(null);
+  const [siblings, setSiblings] = useState<readonly TaskPublic[]>([]);
+  const [loadError, setLoadError] = useState(false);
   const [answer, setAnswer] = useState('');
   const [checking, setChecking] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const canSubmit = answer.trim().length > 0 && !checking;
-  const progressPercent = (task.indexInSession / task.totalInSession) * 100;
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([getTask(taskId), listTasksByNumber(subjectId, taskNumber)])
+      .then(([fetchedTask, fetchedSiblings]) => {
+        if (cancelled) return;
+        setSiblings(fetchedSiblings);
+        setTask(toSampleTask(fetchedTask, fetchedSiblings));
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [taskId, subjectId, taskNumber]);
+
+  function handleSelectSession(index: number) {
+    const sibling = siblings[index - 1];
+    if (!sibling) return;
+    navigate({
+      screen: 'task',
+      subjectId: sibling.subjectId,
+      taskNumber: sibling.taskNumber,
+      taskId: sibling.id,
+    });
+  }
+
+  const canSubmit = answer.trim().length > 0 && !checking && task !== null;
+  const progressPercent = task ? (task.indexInSession / task.totalInSession) * 100 : 0;
 
   function handleCheck() {
-    if (!canSubmit) return;
+    if (!canSubmit || !task) return;
     setChecking(true);
     const trimmedAnswer = answer.trim();
-    const correct = trimmedAnswer === task.correctAnswer.trim();
-    setTimeout(() => {
-      navigate({
-        screen: 'result',
-        subjectId: task.subjectId,
-        taskNumber: task.number,
-        taskId: task.id,
-        correct,
-        userAnswer: trimmedAnswer,
-      });
-    }, CHECKING_DELAY_MS);
+    void submitAttempt(task.id, { answer: trimmedAnswer })
+      .then((result) => {
+        navigate({
+          screen: 'result',
+          subjectId: task.subjectId,
+          taskNumber: task.number,
+          taskId: task.id,
+          correct: result.correct,
+          userAnswer: trimmedAnswer,
+        });
+      })
+      .finally(() => setChecking(false));
+  }
+
+  if (loadError) {
+    return (
+      <FadeIn className={styles.page}>
+        <p className="text-body-sm text-secondary">Не удалось загрузить задание.</p>
+        <Button variant="secondary" onClick={back}>
+          Назад
+        </Button>
+      </FadeIn>
+    );
+  }
+
+  if (!task) {
+    return (
+      <FadeIn className={styles.page}>
+        <p className="text-body-sm text-secondary">Загрузка задания…</p>
+      </FadeIn>
+    );
   }
 
   return (
@@ -190,7 +242,7 @@ export function TaskDesktop({ subjectId, taskId }: TaskDesktopProps) {
           <SessionTaskListCard
             title="Другие задания"
             sessionTasks={task.sessionTasks}
-            onSelect={() => undefined}
+            onSelect={handleSelectSession}
           />
         </div>
       </div>

@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
-import { getTaskById, type TaskVariant } from '../../data/sampleTask.js';
+import { getTask, listTasksByNumber } from '../../lib/api.js';
+import { toSampleTask } from '../../lib/taskAdapter.js';
+import type { SampleTask, TaskVariant } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { userStats } from '../../data/sampleProgress.js';
 import { Button } from '../../ui/Button/Button.js';
@@ -31,16 +33,60 @@ const XP_REWARD = 20;
  * replaced by the feedback state. Tools/other-variants stay collapsed
  * by default here too, matching the approved screenshots.
  */
-export function ResultMobile({ subjectId, taskId, correct, userAnswer }: ResultMobileProps) {
+export function ResultMobile({
+  subjectId,
+  taskNumber,
+  taskId,
+  correct,
+  userAnswer,
+}: ResultMobileProps) {
   const { navigate, back } = useNavigation();
-  const task = getTaskById(taskId);
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
+  // The router remounts this component (key={taskId}) whenever the task
+  // or its correctness changes, so state starts fresh here.
+  const [task, setTask] = useState<SampleTask | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [otherOpen, setOtherOpen] = useState(false);
   const [solutionOpen, setSolutionOpen] = useState(false);
   const xp = useCountUp(correct ? XP_REWARD : 0, 500);
 
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([getTask(taskId), listTasksByNumber(subjectId, taskNumber)])
+      .then(([fetchedTask, siblings]) => {
+        if (cancelled) return;
+        setTask(toSampleTask(fetchedTask, siblings));
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [taskId, subjectId, taskNumber]);
+
+  if (loadError) {
+    return (
+      <SlideUp className={styles.stack}>
+        <p className="text-body-sm text-secondary">Не удалось загрузить результат.</p>
+        <Button variant="secondary" onClick={back}>
+          Назад
+        </Button>
+      </SlideUp>
+    );
+  }
+
+  if (!task) {
+    return (
+      <SlideUp className={styles.stack}>
+        <p className="text-body-sm text-secondary">Загрузка результата…</p>
+      </SlideUp>
+    );
+  }
+
   function goToNext() {
+    if (!task) return;
     const nextVariant = task.otherVariants[0];
     if (!nextVariant) return;
     navigate({
@@ -52,6 +98,7 @@ export function ResultMobile({ subjectId, taskId, correct, userAnswer }: ResultM
   }
 
   function handleSelectVariant(variant: TaskVariant) {
+    if (!task) return;
     navigate({
       screen: 'task',
       subjectId: task.subjectId,

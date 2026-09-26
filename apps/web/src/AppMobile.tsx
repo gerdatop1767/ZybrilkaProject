@@ -70,6 +70,7 @@ export function AppMobile() {
         )}
         {contentOverlay.screen === 'task' && (
           <TaskMobile
+            key={contentOverlay.taskId}
             subjectId={contentOverlay.subjectId}
             taskNumber={contentOverlay.taskNumber}
             taskId={contentOverlay.taskId}
@@ -77,6 +78,7 @@ export function AppMobile() {
         )}
         {contentOverlay.screen === 'result' && (
           <ResultMobile
+            key={`${contentOverlay.taskId}-${contentOverlay.correct}`}
             subjectId={contentOverlay.subjectId}
             taskNumber={contentOverlay.taskNumber}
             taskId={contentOverlay.taskId}

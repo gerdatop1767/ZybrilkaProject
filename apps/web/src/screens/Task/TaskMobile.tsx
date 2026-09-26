@@ -1,6 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
-import { getTaskById, type TaskVariant } from '../../data/sampleTask.js';
+import { getTask, listTasksByNumber, submitAttempt } from '../../lib/api.js';
+import { toSampleTask } from '../../lib/taskAdapter.js';
+import type { TaskVariant } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
@@ -20,21 +22,21 @@ export interface TaskMobileProps {
 
 const mathSymbols = ['∞', '∪', '∩', '≤', '≥', '≠'];
 
-// Brief "checking" state before the result appears — long enough to
-// read as deliberate feedback, short enough to never feel slow.
-const CHECKING_DELAY_MS = 450;
-
 /**
  * Mobile Training/Task screen (S1 Block 6, approved design —
  * mobile/04_training.png + 04b_training_tools_hidden.png). 04b's
  * collapsed tools/variants state is the default; both are real
  * toggles, not two hardcoded screens.
  */
-export function TaskMobile({ subjectId, taskId }: TaskMobileProps) {
+export function TaskMobile({ subjectId, taskNumber, taskId }: TaskMobileProps) {
   const { navigate, back } = useNavigation();
-  const task = getTaskById(taskId);
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
 
+  // The router remounts this component (key={taskId}) on every task
+  // change, so state starts fresh here — no manual reset-on-taskId-change
+  // effect needed.
+  const [task, setTask] = useState<ReturnType<typeof toSampleTask> | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [answer, setAnswer] = useState('');
   const [checking, setChecking] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
@@ -43,26 +45,43 @@ export function TaskMobile({ subjectId, taskId }: TaskMobileProps) {
   const [otherOpen, setOtherOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const canSubmit = answer.trim().length > 0 && !checking;
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([getTask(taskId), listTasksByNumber(subjectId, taskNumber)])
+      .then(([fetchedTask, siblings]) => {
+        if (cancelled) return;
+        setTask(toSampleTask(fetchedTask, siblings));
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [taskId, subjectId, taskNumber]);
+
+  const canSubmit = answer.trim().length > 0 && !checking && task !== null;
 
   function handleCheck() {
-    if (!canSubmit) return;
+    if (!canSubmit || !task) return;
     setChecking(true);
     const trimmedAnswer = answer.trim();
-    const correct = trimmedAnswer === task.correctAnswer.trim();
-    setTimeout(() => {
-      navigate({
-        screen: 'result',
-        subjectId: task.subjectId,
-        taskNumber: task.number,
-        taskId: task.id,
-        correct,
-        userAnswer: trimmedAnswer,
-      });
-    }, CHECKING_DELAY_MS);
+    void submitAttempt(task.id, { answer: trimmedAnswer })
+      .then((result) => {
+        navigate({
+          screen: 'result',
+          subjectId: task.subjectId,
+          taskNumber: task.number,
+          taskId: task.id,
+          correct: result.correct,
+          userAnswer: trimmedAnswer,
+        });
+      })
+      .finally(() => setChecking(false));
   }
 
   function handleSelectVariant(variant: TaskVariant) {
+    if (!task) return;
     navigate({
       screen: 'task',
       subjectId: task.subjectId,
@@ -74,6 +93,25 @@ export function TaskMobile({ subjectId, taskId }: TaskMobileProps) {
   function insertSymbol(symbol: string) {
     setAnswer((prev) => prev + symbol);
     inputRef.current?.focus();
+  }
+
+  if (loadError) {
+    return (
+      <SlideUp className={styles.stack}>
+        <p className="text-body-sm text-secondary">Не удалось загрузить задание.</p>
+        <Button variant="secondary" onClick={back}>
+          Назад
+        </Button>
+      </SlideUp>
+    );
+  }
+
+  if (!task) {
+    return (
+      <SlideUp className={styles.stack}>
+        <p className="text-body-sm text-secondary">Загрузка задания…</p>
+      </SlideUp>
+    );
   }
 
   return (

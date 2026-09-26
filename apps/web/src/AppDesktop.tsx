@@ -39,6 +39,7 @@ export function AppDesktop() {
         )}
         {overlay.screen === 'task' && (
           <TaskDesktop
+            key={overlay.taskId}
             subjectId={overlay.subjectId}
             taskNumber={overlay.taskNumber}
             taskId={overlay.taskId}
@@ -46,6 +47,7 @@ export function AppDesktop() {
         )}
         {overlay.screen === 'result' && (
           <ResultDesktop
+            key={`${overlay.taskId}-${overlay.correct}`}
             subjectId={overlay.subjectId}
             taskNumber={overlay.taskNumber}
             taskId={overlay.taskId}

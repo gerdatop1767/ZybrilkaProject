@@ -59,6 +59,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@zybrilka/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       lucide-react:
         specifier: ^1.48.0
         version: 1.48.0(react@19.3.0)

@@ -1,27 +1,56 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ResultDesktop } from './ResultDesktop.js';
-import { sampleTask } from '../../data/sampleTask.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
 import { userStats } from '../../data/sampleProgress.js';
 import { getStreakAsset } from '../../lib/rank.js';
+import * as api from '../../lib/api.js';
+
+vi.mock('../../lib/api.js', () => ({
+  getTask: vi.fn(),
+  listTasksByNumber: vi.fn(),
+}));
+
+const TASK_ID = '11111111-1111-1111-1111-111111111111';
+const SIBLING_A = '22222222-2222-2222-2222-222222222222';
+const CORRECT_ANSWER = '(−∞; −1] ∪ [2; +∞)';
+const CONDITION = 'Решите неравенство: log₂(x² − 3x − 4) ≥ 1';
+const EXPLANATION = 'Приводим к общему основанию и решаем полученную систему.';
+
+const baseTask = {
+  id: TASK_ID,
+  subjectId: 'math',
+  taskNumber: 15,
+  topicId: null,
+  topicName: 'Логарифмы',
+  difficulty: 3 as const,
+  conditionMd: CONDITION,
+  imageUrl: null,
+  answerType: 'short_answer' as const,
+  answerOptions: null,
+  source: 'ФИПИ',
+  sourceUrl: null,
+  sourceYear: 2026,
+  tags: [],
+  status: 'published' as const,
+};
+
+const taskWithSolution = { ...baseTask, correctAnswer: CORRECT_ANSWER, explanationMd: EXPLANATION };
+const siblings = [baseTask, { ...baseTask, id: SIBLING_A, conditionMd: 'log₅(x − 1) ≤ 2' }];
 
 function OverlayMarker() {
   const { overlay } = useNavigation();
   return <p data-testid="overlay">{overlay?.screen ?? 'none'}</p>;
 }
 
-function renderResult(
-  correct: boolean,
-  userAnswer = correct ? sampleTask.correctAnswer : '(−∞; 2]',
-) {
+function renderResult(correct: boolean, userAnswer = correct ? CORRECT_ANSWER : '(−∞; 2]') {
   return render(
     <NavigationProvider>
       <ResultDesktop
-        subjectId={sampleTask.subjectId}
-        taskNumber={sampleTask.number}
-        taskId={sampleTask.id}
+        subjectId={baseTask.subjectId}
+        taskNumber={baseTask.taskNumber}
+        taskId={TASK_ID}
         correct={correct}
         userAnswer={userAnswer}
       />
@@ -30,59 +59,53 @@ function renderResult(
   );
 }
 
+beforeEach(() => {
+  vi.mocked(api.getTask).mockResolvedValue(taskWithSolution);
+  vi.mocked(api.listTasksByNumber).mockResolvedValue(siblings);
+});
+
 describe('ResultDesktop — correct state', () => {
-  it('shows the success banner and the sidebar result card', () => {
+  it('shows the success banner and the sidebar result card', async () => {
     renderResult(true);
-    expect(screen.getAllByText('Правильно!').length).toBeGreaterThan(0);
+    expect(await screen.findAllByText('Правильно!')).not.toHaveLength(0);
     expect(screen.getByText('Результат')).toBeInTheDocument();
     expect(screen.getByText('Задания в теме')).toBeInTheDocument();
   });
 
-  it('shows all solution steps without a краткое/подробное toggle', () => {
+  it('shows the explanation as the solution, without a краткое/подробное toggle', async () => {
     renderResult(true);
-    for (const step of sampleTask.steps) {
-      expect(screen.getByText(step.text)).toBeInTheDocument();
-    }
+    expect(await screen.findByText(EXPLANATION)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Краткое решение' })).not.toBeInTheDocument();
   });
 
   it('navigates to the next task', async () => {
     const user = userEvent.setup();
     renderResult(true);
+    await screen.findByText(EXPLANATION);
     await user.click(screen.getByRole('button', { name: /Следующее задание/ }));
     expect(screen.getByTestId('overlay')).toHaveTextContent('task');
   });
 });
 
 describe('ResultDesktop — incorrect state', () => {
-  it('shows a calm error banner with both answers and the solution toggle', () => {
+  it('shows a calm error banner with both answers and the solution toggle', async () => {
     renderResult(false);
-    expect(screen.getAllByText('Неверно').length).toBeGreaterThan(0);
+    expect(await screen.findAllByText('Неверно')).not.toHaveLength(0);
     expect(screen.getByText('Правильный ответ:')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Краткое решение' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Подробное решение' })).toBeInTheDocument();
   });
 
-  it('switches between brief and detailed solutions', async () => {
-    const user = userEvent.setup();
+  it('shows the "Полезно знать" hint tip', async () => {
     renderResult(false);
-    // Detailed is the default — all steps visible.
-    expect(screen.getByText(sampleTask.steps[0]!.text)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Краткое решение' }));
-    expect(screen.queryByText(sampleTask.steps[0]!.text)).not.toBeInTheDocument();
-    expect(screen.getByText(sampleTask.steps.at(-1)!.text)).toBeInTheDocument();
-  });
-
-  it('shows the "Полезно знать" hint tip', () => {
-    renderResult(false);
-    expect(screen.getByText('Полезно знать')).toBeInTheDocument();
-    expect(screen.getByText(sampleTask.hint)).toBeInTheDocument();
+    expect(await screen.findByText('Полезно знать')).toBeInTheDocument();
   });
 });
 
 describe('ResultDesktop — badges', () => {
-  it('uses the shared StreakBadge PNG for the streak reward chip, never an emoji', () => {
+  it('uses the shared StreakBadge PNG for the streak reward chip, never an emoji', async () => {
     renderResult(true);
+    await screen.findByText(EXPLANATION);
     expect(
       document.querySelector(`img[src="${getStreakAsset(userStats.streakDays)}"]`),
     ).toBeInTheDocument();
