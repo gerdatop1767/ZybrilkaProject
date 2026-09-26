@@ -15,8 +15,14 @@
   box-shadow: var(--shadow-e1);
 }
 
-.hero > p.text-h2 {
-  max-width: 12.5rem;
+.heroHeading {
+  max-width: 10rem;
+  position: relative;
+  z-index: 1;
+}
+
+.heroSubtitle {
+  max-width: 13rem;
   position: relative;
   z-index: 1;
 }
@@ -28,12 +34,17 @@
   color: transparent;
 }
 
+/* Small, tucked into the top-right corner and clipped by .hero's own
+   overflow:hidden — never reaching down as far as the heading/subtitle
+   text columns, which are separately capped (.heroHeading/.heroSubtitle)
+   so nothing here can crowd them regardless of viewport width. */
 .heroTiles {
   position: absolute;
-  top: var(--space-2);
-  right: var(--space-3);
-  width: 6rem;
-  height: 4.5rem;
+  top: -0.5rem;
+  right: -0.5rem;
+  width: 4.75rem;
+  height: 3.25rem;
+  pointer-events: none;
 }
 
 .heroTiles span {
@@ -41,33 +52,35 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 0.75rem;
-  font-weight: var(--font-weight-bold);
-  font-size: 1.125rem;
-  color: #fff;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.625rem;
+  background: var(--color-bg-elevated);
   box-shadow: var(--shadow-e2);
+}
+
+.heroTiles img {
+  width: 68%;
+  height: 68%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--tile-glow) 60%, transparent));
 }
 
 .heroTilePi {
   top: 0;
-  right: 1.5rem;
-  background: var(--gradient-primary);
+  right: 1.25rem;
   transform: rotate(-8deg);
 }
 
 .heroTileAa {
-  top: 1.75rem;
-  right: 3.5rem;
-  background: var(--color-accent-secondary);
+  top: 1.25rem;
+  right: 2.75rem;
   transform: rotate(6deg);
 }
 
 .heroTileM {
-  top: 2rem;
+  top: 1.5rem;
   right: 0;
-  background: var(--color-subject-informatics);
   transform: rotate(12deg);
 }
 
@@ -99,11 +112,6 @@
   flex-shrink: 0;
   width: 2.75rem;
   height: 2.75rem;
-  border-radius: 50%;
-  background: var(--gradient-primary);
-  color: #fff;
-  font-weight: var(--font-weight-bold);
-  font-size: var(--font-size-h3);
 }
 
 .progressHeaderText {
@@ -164,9 +172,9 @@
 .subjectCard {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1, 8px);
   min-width: 0;
-  padding: var(--space-3) var(--space-2) var(--space-3) var(--space-3);
+  padding: var(--space-3) var(--space-1, 8px) var(--space-3) var(--space-2);
   border: none;
   border-radius: var(--radius-card);
   background: var(--color-bg-surface);
@@ -178,12 +186,32 @@
   background: var(--color-bg-elevated);
 }
 
+.subjectThumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+}
+
+.subjectThumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--subject-accent) 55%, transparent));
+}
+
 .subjectCardText {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  /* Long single words like "Обществознание" have no space to wrap at —
+     without this they overflowed the two-column card at phone widths
+     instead of breaking onto a second line. */
+  overflow-wrap: break-word;
 }
 
 .subjectCardCount {
@@ -209,6 +237,15 @@
   background: color-mix(in srgb, var(--color-accent-primary) 14%, var(--color-bg-surface));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent-primary) 35%, transparent);
   text-align: left;
+}
+
+.continueThumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
 }
 
 .continueCardText {

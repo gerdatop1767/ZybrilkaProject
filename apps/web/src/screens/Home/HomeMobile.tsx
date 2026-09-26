@@ -3,11 +3,13 @@ import { subjects } from '../../data/subjects.js';
 import { userStats } from '../../data/sampleProgress.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
-import { SubjectTile } from '../../ui/SubjectTile/SubjectTile.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { StatRow } from '../../ui/StatRow/StatRow.js';
 import { sampleTask } from '../../data/sampleTask.js';
+import { StreakBadge } from '../../ui/RankBadge/StreakBadge.js';
+import { LevelBadge } from '../../ui/RankBadge/LevelBadge.js';
 import { SlideUp } from '../../ui/motion/motion.js';
+import { clsx } from '../../lib/clsx.js';
 import styles from './HomeMobile.module.css';
 
 /**
@@ -25,14 +27,29 @@ export function HomeMobile() {
     <SlideUp className={styles.stack}>
       <div className={styles.hero}>
         <div className={styles.heroTiles} aria-hidden="true">
-          <span className={styles.heroTilePi}>π</span>
-          <span className={styles.heroTileAa}>Aa</span>
-          <span className={styles.heroTileM}>M</span>
+          <span
+            className={styles.heroTilePi}
+            style={{ ['--tile-glow' as string]: subjects[0]!.color }}
+          >
+            <img src={`/branding/v2/subjects/${subjects[0]!.id}.png`} alt="" />
+          </span>
+          <span
+            className={styles.heroTileAa}
+            style={{ ['--tile-glow' as string]: subjects[1]!.color }}
+          >
+            <img src={`/branding/v2/subjects/${subjects[1]!.id}.png`} alt="" />
+          </span>
+          <span
+            className={styles.heroTileM}
+            style={{ ['--tile-glow' as string]: subjects[4]!.color }}
+          >
+            <img src={`/branding/v2/subjects/${subjects[4]!.id}.png`} alt="" />
+          </span>
         </div>
-        <p className="text-h2">
+        <p className={clsx('text-h2', styles.heroHeading)}>
           Готов к новой <span className={styles.heroAccent}>тренировке?</span>
         </p>
-        <p className="text-body-sm text-secondary">
+        <p className={clsx('text-body-sm text-secondary', styles.heroSubtitle)}>
           Решай задания, развивайся и достигай своих целей!
         </p>
         <Button
@@ -47,7 +64,9 @@ export function HomeMobile() {
 
       <div className={styles.progressCard}>
         <div className={styles.progressHeader}>
-          <span className={styles.levelBadge}>{userStats.level}</span>
+          <span className={styles.levelBadge}>
+            <LevelBadge level={userStats.level} size={32} />
+          </span>
           <div className={styles.progressHeaderText}>
             <p className="text-body" style={{ fontWeight: 700 }}>
               Уровень {userStats.level}
@@ -64,7 +83,7 @@ export function HomeMobile() {
               id: 'streak',
               value: (
                 <span className={styles.statValue}>
-                  <Icon name="flame" size={16} className={styles.statIconGold} />
+                  <StreakBadge days={userStats.streakDays} size={18} />
                   {userStats.streakDays} дней
                 </span>
               ),
@@ -111,9 +130,17 @@ export function HomeMobile() {
               key={subject.id}
               type="button"
               className={styles.subjectCard}
+              style={{ ['--subject-accent' as string]: subject.color }}
               onClick={() => navigate({ screen: 'subject', subjectId: subject.id })}
             >
-              <SubjectTile glyph={subject.glyph} color={subject.color} size={36} />
+              <span className={styles.subjectThumb}>
+                <img
+                  src={`/branding/v2/subjects/${subject.id}.png`}
+                  alt=""
+                  className={styles.subjectThumbImg}
+                  loading="lazy"
+                />
+              </span>
               <span className={styles.subjectCardText}>
                 <span className="text-body-sm" style={{ fontWeight: 600 }}>
                   {subject.shortName}
@@ -142,6 +169,7 @@ export function HomeMobile() {
         <button
           type="button"
           className={styles.continueCard}
+          style={{ ['--subject-accent' as string]: subjects[0]!.color }}
           onClick={() =>
             navigate({
               screen: 'task',
@@ -151,7 +179,13 @@ export function HomeMobile() {
             })
           }
         >
-          <SubjectTile glyph="pi" color="var(--color-subject-math)" size={44} />
+          <span className={styles.continueThumb}>
+            <img
+              src={`/branding/v2/subjects/${subjects[0]!.id}.png`}
+              alt=""
+              className={styles.subjectThumbImg}
+            />
+          </span>
           <span className={styles.continueCardText}>
             <span className="text-body" style={{ fontWeight: 600 }}>
               Математика

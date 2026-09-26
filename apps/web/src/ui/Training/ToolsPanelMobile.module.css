@@ -35,6 +35,16 @@
   padding: 0 var(--space-4) var(--space-4);
 }
 
+.hiddenSummaryWrap {
+  border-radius: var(--radius-card);
+  background: var(--color-bg-surface);
+  overflow: hidden;
+}
+
+.hiddenSummaryWrap .grid {
+  padding: var(--space-4);
+}
+
 .tool {
   display: flex;
   flex-direction: column;

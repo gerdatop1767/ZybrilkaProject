@@ -15,16 +15,41 @@ const tools: { id: string; label: string; icon: IconName }[] = [
 export interface ToolsPanelMobileProps {
   open: boolean;
   onToggle: () => void;
+  /** Training's own answer field now has a pencil button that opens
+   * this same panel, so it no longer needs its own permanent summary
+   * row sitting in the page flow — only the collapsible tool grid
+   * renders there. Result has no such trigger, so it keeps the
+   * self-contained summary+chevron toggle (default). */
+  hideSummary?: boolean;
 }
 
 /**
- * "Дополнительные инструменты" (S1 Block 6 — mobile Training). Collapsed
- * is the approved default (04b_training_tools_hidden.png); expanding
- * reveals the same 5-tool grid shown open in 04_training.png. A real
- * toggle (controlled, shared with the answer field's own chevron
- * button), not two separate hardcoded screens.
+ * "Дополнительные инструменты" (S1 Block 6 — mobile Training/Result).
+ * On Result this is a self-contained collapsible card. On Training the
+ * pencil icon next to the answer field is the only trigger
+ * (`hideSummary`), so the tools never take up permanent space in the
+ * page when collapsed.
  */
-export function ToolsPanelMobile({ open, onToggle }: ToolsPanelMobileProps) {
+export function ToolsPanelMobile({ open, onToggle, hideSummary }: ToolsPanelMobileProps) {
+  const grid = (
+    <div className={styles.grid}>
+      {tools.map((tool) => (
+        <button key={tool.id} type="button" className={styles.tool}>
+          <Icon name={tool.icon} size={20} />
+          <span className="text-label">{tool.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+
+  if (hideSummary) {
+    return (
+      <Collapse open={open} className={styles.hiddenSummaryWrap}>
+        {grid}
+      </Collapse>
+    );
+  }
+
   return (
     <div className={styles.wrap}>
       <button type="button" className={styles.summary} aria-expanded={open} onClick={onToggle}>
@@ -39,16 +64,7 @@ export function ToolsPanelMobile({ open, onToggle }: ToolsPanelMobileProps) {
         </span>
         <Icon name={open ? 'chevronUp' : 'chevronDown'} size={18} className={styles.summaryIcon} />
       </button>
-      <Collapse open={open}>
-        <div className={styles.grid}>
-          {tools.map((tool) => (
-            <button key={tool.id} type="button" className={styles.tool}>
-              <Icon name={tool.icon} size={20} />
-              <span className="text-label">{tool.label}</span>
-            </button>
-          ))}
-        </div>
-      </Collapse>
+      <Collapse open={open}>{grid}</Collapse>
     </div>
   );
 }
@@ -56,29 +72,26 @@ export function ToolsPanelMobile({ open, onToggle }: ToolsPanelMobileProps) {
 export interface AnswerFieldToolsProps {
   fxOpen: boolean;
   onToggleFx: () => void;
-  onFocusInput: () => void;
   toolsOpen: boolean;
   onToggleTools: () => void;
 }
 
-/** The compact tool buttons directly in the answer field row. */
+/**
+ * The compact tool buttons directly in the answer field row. The old
+ * keyboard shortcut button was removed (the field already has a real
+ * text input, so it was dead weight) and the down/up chevron became a
+ * pencil — tapping it opens "Дополнительные инструменты" below
+ * (`ToolsPanelMobile` with `hideSummary`) instead of a plain expand
+ * arrow, since that's what the icon now actually opens.
+ */
 export function AnswerFieldTools({
   fxOpen,
   onToggleFx,
-  onFocusInput,
   toolsOpen,
   onToggleTools,
 }: AnswerFieldToolsProps) {
   return (
     <>
-      <button
-        type="button"
-        className={styles.fieldIconButton}
-        aria-label="Клавиатура"
-        onClick={onFocusInput}
-      >
-        <Icon name="keyboard" size={18} />
-      </button>
       <button
         type="button"
         className={clsx(styles.fieldIconButton, styles.fxButton, fxOpen && styles.fxButtonActive)}
@@ -90,12 +103,16 @@ export function AnswerFieldTools({
       </button>
       <button
         type="button"
-        className={styles.fieldIconButton}
+        className={clsx(
+          styles.fieldIconButton,
+          styles.fxButton,
+          toolsOpen && styles.fxButtonActive,
+        )}
         aria-expanded={toolsOpen}
-        aria-label="Показать дополнительные инструменты"
+        aria-label="Дополнительные инструменты"
         onClick={onToggleTools}
       >
-        <Icon name={toolsOpen ? 'chevronUp' : 'chevronDown'} size={18} />
+        <Icon name="edit" size={18} />
       </button>
     </>
   );

@@ -5,6 +5,7 @@ import { Card } from '../../ui/Card/Card.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import type { IconName } from '../../ui/Icon/icons.js';
+import { LevelBadge } from '../../ui/RankBadge/LevelBadge.js';
 import styles from './ProfileDesktop.module.css';
 
 interface ProfileRow {
@@ -105,7 +106,10 @@ export function ProfileDesktop({ from }: ProfileDesktopProps) {
           <div>
             <div className={styles.nameRow}>
               <p className="text-h3">ZybrilkaUser</p>
-              <span className={styles.levelBadge}>Уровень {userStats.level}</span>
+              <span className={styles.levelBadge}>
+                <LevelBadge level={userStats.level} size={16} />
+                Уровень {userStats.level}
+              </span>
             </div>
             <p className="text-body-sm text-secondary">Учусь, развиваюсь и готовлюсь к ЕГЭ 🚀</p>
             <Button variant="secondary" className={styles.editButton}>

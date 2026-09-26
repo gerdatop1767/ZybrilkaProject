@@ -50,6 +50,17 @@ describe('TaskMobile', () => {
     expect(screen.queryByRole('button', { name: 'Кальк.' })).not.toBeInTheDocument();
   });
 
+  it('has no old keyboard shortcut button next to the answer field', () => {
+    renderTask();
+    expect(screen.queryByRole('button', { name: 'Клавиатура' })).not.toBeInTheDocument();
+  });
+
+  it('opens the tools panel via the pencil icon, not a chevron', () => {
+    renderTask();
+    const pencilButton = screen.getByRole('button', { name: 'Дополнительные инструменты' });
+    expect(pencilButton.querySelector('svg.lucide-pencil')).toBeInTheDocument();
+  });
+
   it('expands the tools panel to reveal the 5 tools', async () => {
     const user = userEvent.setup();
     renderTask();

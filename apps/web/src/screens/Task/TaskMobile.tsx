@@ -128,7 +128,6 @@ export function TaskMobile({ subjectId, taskId }: TaskMobileProps) {
           <AnswerFieldTools
             fxOpen={fxOpen}
             onToggleFx={() => setFxOpen((v) => !v)}
-            onFocusInput={() => inputRef.current?.focus()}
             toolsOpen={toolsOpen}
             onToggleTools={() => setToolsOpen((v) => !v)}
           />
@@ -171,7 +170,7 @@ export function TaskMobile({ subjectId, taskId }: TaskMobileProps) {
         </div>
       </div>
 
-      <ToolsPanelMobile open={toolsOpen} onToggle={() => setToolsOpen((v) => !v)} />
+      <ToolsPanelMobile open={toolsOpen} onToggle={() => setToolsOpen((v) => !v)} hideSummary />
 
       <OtherVariantsSection
         taskNumber={task.number}

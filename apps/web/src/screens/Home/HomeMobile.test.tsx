@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { HomeMobile } from './HomeMobile.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
+import { userStats } from '../../data/sampleProgress.js';
+import { getStreakAsset, getLevelAsset } from '../../lib/rank.js';
 
 function OverlayMarker() {
   const { overlay } = useNavigation();
@@ -54,5 +56,32 @@ describe('HomeMobile', () => {
     renderHome();
     await user.click(screen.getByRole('button', { name: /Тренировка · 15 заданий/ }));
     expect(screen.getByTestId('overlay')).toHaveTextContent('task');
+  });
+
+  it('uses the shared LevelBadge/StreakBadge PNGs in the progress card, never an emoji', () => {
+    renderHome();
+    expect(
+      document.querySelector(`img[src="${getLevelAsset(userStats.level)}"]`),
+    ).toBeInTheDocument();
+    expect(
+      document.querySelector(`img[src="${getStreakAsset(userStats.streakDays)}"]`),
+    ).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/🔥|👑/);
+  });
+
+  it('shows a real subject illustration for every popular subject, not a flat glyph tile', () => {
+    renderHome();
+    for (const subject of subjects.slice(0, 6)) {
+      expect(
+        document.querySelector(`img[src="/branding/v2/subjects/${subject.id}.png"]`),
+      ).toBeInTheDocument();
+    }
+  });
+
+  it('keeps the hero heading/subtitle width-capped so the floating subject tiles never crowd them', () => {
+    const { container } = renderHome();
+    const heroTiles = container.querySelector('[aria-hidden="true"]');
+    expect(heroTiles).toBeInTheDocument();
+    expect(heroTiles!.querySelectorAll('img').length).toBe(3);
   });
 });

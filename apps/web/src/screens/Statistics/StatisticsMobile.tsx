@@ -1,18 +1,27 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
 import { sampleTask } from '../../data/sampleTask.js';
 import { userStats } from '../../data/sampleProgress.js';
-import { taskNumberProgress, topicMasteryRows, mockExams } from '../../data/sampleStatistics.js';
+import {
+  taskNumberProgress,
+  topicMasteryRows,
+  mockExams,
+  computeStatisticsSummary,
+  computeDifficultTopics,
+} from '../../data/sampleStatistics.js';
 import { Card } from '../../ui/Card/Card.js';
 import { Tabs } from '../../ui/Tabs/Tabs.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { SubjectHeaderMobile } from '../../ui/SubjectHeader/SubjectHeaderMobile.js';
 import { StatTile } from '../../ui/Statistics/StatTile.js';
 import { TaskNumberBars } from '../../ui/Statistics/TaskNumberBars.js';
+import { TaskNumberGrid } from '../../ui/Statistics/TaskNumberGrid.js';
 import { TopicProgressRow } from '../../ui/Statistics/TopicProgressRow.js';
 import { MockExamCard, NewMockExamCard } from '../../ui/Statistics/MockExamCard.js';
-import { WipPlaceholder } from '../../ui/WipPlaceholder/WipPlaceholder.js';
+import { CircularProgress } from '../../ui/Progress/CircularProgress.js';
+import { DonutChart } from '../../ui/Charts/DonutChart.js';
+import { FadeIn } from '../../ui/motion/motion.js';
 import { SlideUp } from '../../ui/motion/motion.js';
 import styles from './StatisticsMobile.module.css';
 
@@ -35,6 +44,11 @@ export function StatisticsMobile() {
   const { navigate } = useNavigation();
   const [subTab, setSubTab] = useState('overview');
   const subject = subjects.find((s) => s.id === sampleTask.subjectId) ?? subjects[0]!;
+  const summary = useMemo(() => computeStatisticsSummary(), []);
+  const difficultTopics = useMemo(() => computeDifficultTopics(), []);
+  const avgExamPercent = Math.round(
+    mockExams.reduce((sum, e) => sum + e.percent, 0) / mockExams.length,
+  );
 
   function openTask(taskNumber: number) {
     navigate({
@@ -59,12 +73,107 @@ export function StatisticsMobile() {
 
       <Tabs items={subTabs} activeId={subTab} onChange={setSubTab} aria-label="Раздел статистики" />
 
-      {subTab !== 'overview' ? (
-        <WipPlaceholder
-          title={subTabs.find((t) => t.id === subTab)!.label}
-          note="Экран в разработке — следующий блок."
-        />
-      ) : (
+      {subTab === 'byTask' && (
+        <FadeIn className={styles.stack}>
+          <Card className={styles.summaryCard}>
+            <CircularProgress value={summary.accuracyTotal} size={72} label="Твой прогресс">
+              <span className="text-body" style={{ fontWeight: 700 }}>
+                {summary.accuracyTotal}%
+              </span>
+            </CircularProgress>
+            <div>
+              <p className="text-body" style={{ fontWeight: 700 }}>
+                {summary.solvedTotal} из {subject.taskCount}
+              </p>
+              <p className="text-body-sm text-secondary">заданий решено</p>
+            </div>
+          </Card>
+          <Card>
+            <div className={styles.cardHeaderRow}>
+              <p className="text-h3">Задания по номерам</p>
+            </div>
+            <TaskNumberGrid rows={taskNumberProgress} onSelect={openTask} />
+          </Card>
+        </FadeIn>
+      )}
+
+      {subTab === 'byTopic' && (
+        <FadeIn className={styles.stack}>
+          <Card>
+            <div className={styles.cardHeaderRow}>
+              <p className="text-h3">Темы ЕГЭ</p>
+            </div>
+            <div className={styles.topicList}>
+              {topicMasteryRows.map((row) => (
+                <TopicProgressRow
+                  key={row.topic}
+                  icon={row.icon}
+                  topic={row.topic}
+                  masteryPercent={row.masteryPercent}
+                  onSelect={() => openTask(sampleTask.number)}
+                />
+              ))}
+            </div>
+          </Card>
+          <Card className={styles.donutCard}>
+            <div className={styles.cardHeaderRow}>
+              <p className="text-h3">Распределение ошибок по темам</p>
+            </div>
+            <DonutChart
+              ariaLabel="Распределение ошибок по темам"
+              size={160}
+              segments={difficultTopics.map((t) => ({
+                label: t.topic,
+                value: t.errorPercent,
+                percent: t.errorPercent,
+                color: t.color,
+              }))}
+              centerLabel={
+                <>
+                  <p className="text-h3">{difficultTopics.length}</p>
+                  <p className="text-body-sm text-secondary">тем</p>
+                </>
+              }
+            />
+          </Card>
+        </FadeIn>
+      )}
+
+      {subTab === 'exams' && (
+        <FadeIn className={styles.stack}>
+          <Card className={styles.summaryCard}>
+            <CircularProgress
+              value={avgExamPercent}
+              variant={avgExamPercent >= 75 ? 'success' : avgExamPercent < 60 ? 'error' : 'default'}
+              size={72}
+              label="Средний результат"
+            >
+              <span className="text-body" style={{ fontWeight: 700 }}>
+                {avgExamPercent}%
+              </span>
+            </CircularProgress>
+            <div>
+              <p className="text-body" style={{ fontWeight: 700 }}>
+                {mockExams.length} пробника решено
+              </p>
+              <p className="text-body-sm text-secondary">средний результат</p>
+            </div>
+          </Card>
+          <Card>
+            <div className={styles.cardHeaderRow}>
+              <p className="text-h3">Решённые пробники</p>
+            </div>
+            <div className={styles.examGrid}>
+              {mockExams.map((exam) => (
+                <MockExamCard key={exam.id} exam={exam} />
+              ))}
+              <NewMockExamCard />
+            </div>
+          </Card>
+        </FadeIn>
+      )}
+
+      {subTab === 'overview' && (
         <>
           <div className={styles.statsGrid}>
             <StatTile
