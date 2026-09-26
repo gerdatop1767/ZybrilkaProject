@@ -297,6 +297,17 @@ export function MobileMenu({ open, onClose, activeTab }: MobileMenuProps) {
             <button
               type="button"
               className={styles.plainItem}
+              onClick={() => go({ screen: 'help' })}
+            >
+              <span className={styles.plainIcon}>
+                <Icon name="faq" size={20} />
+              </span>
+              <span className={styles.plainLabel}>Помощь</span>
+              <Icon name="chevronRight" size={18} className={styles.navChevron} />
+            </button>
+            <button
+              type="button"
+              className={styles.plainItem}
               onClick={() => go({ screen: 'about' })}
             >
               <span className={styles.plainIcon}>

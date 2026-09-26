@@ -114,12 +114,20 @@ describe('App — desktop', () => {
     renderApp();
     await user.click(screen.getByRole('button', { name: /Начать бесплатно/ }));
     await user.click(screen.getByRole('button', { name: 'Меню' }));
-    await user.click(screen.getByRole('button', { name: 'Моя статистика' }));
+    await user.click(screen.getByRole('button', { name: 'Помощь' }));
     expect(screen.queryByRole('dialog', { name: 'Меню' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Статистика' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
+    expect(screen.getByText('Нужна')).toBeInTheDocument();
+    restore();
+  });
+
+  it('does not offer "Моя статистика" or "Настройки" from the desktop Menu anymore', async () => {
+    const restore = mockDesktop(true);
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getByRole('button', { name: /Начать бесплатно/ }));
+    await user.click(screen.getByRole('button', { name: 'Меню' }));
+    expect(screen.queryByRole('button', { name: 'Моя статистика' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Настройки' })).not.toBeInTheDocument();
     restore();
   });
 

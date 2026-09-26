@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigation, getRouteLabel, type Route } from '../../lib/navigation.js';
 import { userStats } from '../../data/sampleProgress.js';
 import { BackRow } from '../../ui/BackRow/BackRow.js';
@@ -6,7 +5,6 @@ import { Card } from '../../ui/Card/Card.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import type { IconName } from '../../ui/Icon/icons.js';
-import { clsx } from '../../lib/clsx.js';
 import styles from './ProfileDesktop.module.css';
 
 interface ProfileRow {
@@ -31,7 +29,6 @@ export interface ProfileDesktopProps {
 
 export function ProfileDesktop({ from }: ProfileDesktopProps) {
   const { navigate } = useNavigation();
-  const [darkTheme, setDarkTheme] = useState(true);
 
   const basicInfo: readonly ProfileRow[] = [
     { id: 'username', icon: 'profile', label: 'Имя пользователя', value: 'ZybrilkaUser' },
@@ -81,7 +78,6 @@ export function ProfileDesktop({ from }: ProfileDesktopProps) {
       value: 'Ответы на вопросы',
       onClick: () => navigate({ screen: 'help' }),
     },
-    { id: 'feedback', icon: 'chat', label: 'Обратная связь', value: 'Предложения и сообщения' },
   ];
 
   return (
@@ -151,25 +147,6 @@ export function ProfileDesktop({ from }: ProfileDesktopProps) {
                   <ProfileRowButton key={row.id} row={row} />
                 ),
               )}
-              <div className={clsx(styles.row, styles.rowStatic)}>
-                <Icon name="theme" size={18} />
-                <span className={styles.rowBody}>
-                  <p className="text-body-sm" style={{ fontWeight: 700 }}>
-                    Оформление
-                  </p>
-                  <p className="text-body-sm text-secondary">Тёмная тема</p>
-                </span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={darkTheme}
-                  aria-label="Тёмная тема"
-                  className={clsx(styles.toggle, darkTheme && styles.toggleOn)}
-                  onClick={() => setDarkTheme((v) => !v)}
-                >
-                  <span className={styles.toggleThumb} />
-                </button>
-              </div>
             </div>
           </Card>
 

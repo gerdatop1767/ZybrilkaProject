@@ -22,8 +22,6 @@ interface MenuItem {
 
 const menuItems: readonly MenuItem[] = [
   { id: 'profile', label: 'Профиль', icon: 'profile', route: { screen: 'profile' } },
-  { id: 'statistics', label: 'Моя статистика', icon: 'flame', route: { screen: 'statistics' } },
-  { id: 'settings', label: 'Настройки', icon: 'settings', route: { screen: 'settings' } },
   { id: 'help', label: 'Помощь', icon: 'faq', route: { screen: 'help' } },
 ];
 

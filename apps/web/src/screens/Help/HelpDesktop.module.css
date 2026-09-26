@@ -1,0 +1,144 @@
+.hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18rem;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-8, 40px);
+  margin-bottom: var(--space-6);
+  overflow: hidden;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-modal);
+  background-image:
+    radial-gradient(
+      circle at 0% 0%,
+      color-mix(in srgb, var(--color-accent-primary) 22%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at 100% 100%,
+      color-mix(in srgb, var(--chart-1) 18%, transparent),
+      transparent 55%
+    );
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.badge {
+  display: inline-flex;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill, 999px);
+  background: color-mix(in srgb, var(--color-accent-primary) 25%, transparent);
+  color: var(--color-accent-primary-end);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.heading {
+  margin: 0;
+}
+
+.headingAccent {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.ctaButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--gradient-primary);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+}
+
+.ctaDisabled {
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+}
+
+.mascot {
+  width: 100%;
+  height: auto;
+  justify-self: center;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.categoryCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  text-align: left;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--easing-standard);
+}
+
+.categoryCard:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent, var(--color-border-subtle));
+}
+
+.categoryIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-md, 10px);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+}
+
+.categoryBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.categoryChevron {
+  margin-top: auto;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 1440px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mascot {
+    max-width: 14rem;
+  }
+}

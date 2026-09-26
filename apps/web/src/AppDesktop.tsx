@@ -13,6 +13,7 @@ import { LearningCenterDesktop } from './screens/LearningCenter/LearningCenterDe
 import { SubjectCatalogDesktop } from './screens/SubjectCatalog/SubjectCatalogDesktop.js';
 import { SubjectDesktop } from './screens/Subject/SubjectDesktop.js';
 import { ProfileDesktop } from './screens/Profile/ProfileDesktop.js';
+import { HelpDesktop } from './screens/Help/HelpDesktop.js';
 
 /** Screens whose approved desktop composition has no left sidebar. */
 const noSidebarScreens = new Set(['home', 'task', 'result']);
@@ -72,9 +73,7 @@ export function AppDesktop() {
         {overlay.screen === 'settings' && (
           <WipPlaceholder title="Настройки" note="Экран в разработке — следующий блок." />
         )}
-        {overlay.screen === 'help' && (
-          <WipPlaceholder title="Помощь" note="Экран в разработке — следующий блок." />
-        )}
+        {overlay.screen === 'help' && <HelpDesktop />}
         {overlay.screen === 'notifications' && (
           <WipPlaceholder title="Уведомления" note="Экран в разработке — следующий блок." />
         )}

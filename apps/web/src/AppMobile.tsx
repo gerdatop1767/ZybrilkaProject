@@ -12,6 +12,7 @@ import { MistakesMobile } from './screens/Mistakes/MistakesMobile.js';
 import { AchievementsMobile } from './screens/Achievements/AchievementsMobile.js';
 import { RatingMobile } from './screens/Rating/RatingMobile.js';
 import { AboutMobile } from './screens/About/AboutMobile.js';
+import { HelpMobile } from './screens/Help/HelpMobile.js';
 import { sampleTask } from './data/sampleTask.js';
 
 /**
@@ -108,6 +109,7 @@ export function AppMobile() {
         {contentOverlay.screen === 'settings' && (
           <WipPlaceholder title="Настройки" note="Экран в разработке — следующий блок." />
         )}
+        {contentOverlay.screen === 'help' && <HelpMobile />}
         {menu}
       </MobileShell>
     );

@@ -3,7 +3,6 @@ import { subjects } from '../../data/subjects.js';
 import { BackRow } from '../../ui/BackRow/BackRow.js';
 import { Card } from '../../ui/Card/Card.js';
 import { Icon } from '../../ui/Icon/Icon.js';
-import { SubjectTile } from '../../ui/SubjectTile/SubjectTile.js';
 import styles from './SubjectCatalogDesktop.module.css';
 
 const totalTasks = subjects.reduce((sum, subject) => sum + subject.taskCount, 0);
@@ -78,7 +77,12 @@ export function SubjectCatalogDesktop() {
             }
           >
             <div className={styles.subjectThumb}>
-              <SubjectTile glyph={subject.glyph} color={subject.color} size={56} />
+              <img
+                src={`/branding/v2/subjects/${subject.id}.png`}
+                alt=""
+                aria-hidden="true"
+                className={styles.subjectImg}
+              />
             </div>
             <div className={styles.subjectFooter}>
               <span>
