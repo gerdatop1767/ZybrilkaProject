@@ -9,6 +9,7 @@ const app = buildApp({
   logger: { level: config.LOG_LEVEL },
   version: config.APP_VERSION,
   checkDb: database ? () => pingDb(database.db) : undefined,
+  db: database?.db,
 });
 
 async function shutdown(signal: string) {

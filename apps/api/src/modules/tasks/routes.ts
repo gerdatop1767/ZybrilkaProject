@@ -1,0 +1,59 @@
+import type { Database } from '@zybrilka/db';
+import { attemptRequestSchema, randomTaskQuerySchema, taskListQuerySchema } from '@zybrilka/shared';
+import type { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
+import * as service from './service.js';
+
+export interface TasksRoutesOptions {
+  db: Database;
+}
+
+const taskIdParamsSchema = z.object({ id: z.uuid() });
+
+export const tasksRoutes: FastifyPluginAsync<TasksRoutesOptions> = async (app, { db }) => {
+  // Registered before the parameterized routes below so "/tasks/random"
+  // is never swallowed by "/tasks/:id".
+  app.get('/tasks/random', async (request, reply) => {
+    const query = randomTaskQuerySchema.safeParse(request.query);
+    if (!query.success) {
+      return reply.code(400).send({ error: 'invalid_query', issues: query.error.issues });
+    }
+    const task = await service.getRandomTask(db, query.data);
+    if (!task) return reply.code(404).send({ error: 'no_tasks_available' });
+    return task;
+  });
+
+  app.get('/tasks', async (request, reply) => {
+    const query = taskListQuerySchema.safeParse(request.query);
+    if (!query.success) {
+      return reply.code(400).send({ error: 'invalid_query', issues: query.error.issues });
+    }
+    return service.listTasks(db, query.data);
+  });
+
+  app.get('/tasks/:id', async (request, reply) => {
+    const params = taskIdParamsSchema.safeParse(request.params);
+    if (!params.success) return reply.code(400).send({ error: 'invalid_id' });
+
+    const task = await service.getTask(db, params.data.id, request.userId);
+    if (!task) return reply.code(404).send({ error: 'task_not_found' });
+    return task;
+  });
+
+  app.post('/tasks/:id/attempt', async (request, reply) => {
+    const params = taskIdParamsSchema.safeParse(request.params);
+    if (!params.success) return reply.code(400).send({ error: 'invalid_id' });
+    if (!request.userId) {
+      return reply.code(400).send({ error: 'missing_anon_id' });
+    }
+
+    const body = attemptRequestSchema.safeParse(request.body);
+    if (!body.success) {
+      return reply.code(400).send({ error: 'invalid_body', issues: body.error.issues });
+    }
+
+    const result = await service.submitAttempt(db, params.data.id, request.userId, body.data);
+    if (!result) return reply.code(404).send({ error: 'task_not_found' });
+    return result;
+  });
+};
