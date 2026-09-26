@@ -8,6 +8,7 @@ import styles from './LearningCenterDesktop.module.css';
 
 interface LearningSection {
   image: string;
+  color: string;
   title: string;
   description: string;
 }
@@ -15,21 +16,25 @@ interface LearningSection {
 const sections: readonly LearningSection[] = [
   {
     image: '/branding/v2/learning/theory.png',
+    color: 'var(--color-accent-primary)',
     title: 'Теория',
     description: 'Краткие и понятные конспекты по всем темам ЕГЭ',
   },
   {
     image: '/branding/v2/learning/practice.png',
+    color: 'var(--color-accent-secondary)',
     title: 'Практика',
     description: 'Разборы заданий и примеры решений',
   },
   {
     image: '/branding/v2/learning/strategy.png',
+    color: 'var(--color-gold)',
     title: 'Стратегии',
     description: 'Советы, лайфхаки и эффективные методики',
   },
   {
     image: '/branding/v2/learning/useful-materials.png',
+    color: 'var(--color-warning)',
     title: 'Полезные материалы',
     description: 'Сборники, файлы и дополнительные ресурсы',
   },
@@ -77,7 +82,7 @@ export function LearningCenterDesktop() {
 
   return (
     <div>
-      <BackRow />
+      <BackRow to={{ screen: 'home' }} label="Главная" />
       <div className={styles.headRow}>
         <div>
           <h1 className="text-h1">Учебный центр</h1>
@@ -98,7 +103,11 @@ export function LearningCenterDesktop() {
 
       <div className={styles.sectionsGrid}>
         {sections.map((section) => (
-          <Card key={section.title} className={styles.sectionCard}>
+          <Card
+            key={section.title}
+            className={styles.sectionCard}
+            style={{ ['--section-accent' as string]: section.color }}
+          >
             <img src={section.image} alt="" aria-hidden="true" className={styles.sectionImg} />
             <div className={styles.sectionBody}>
               <p className="text-body" style={{ fontWeight: 700 }}>
@@ -128,6 +137,7 @@ export function LearningCenterDesktop() {
             key={subject.id}
             type="button"
             className={styles.subjectRow}
+            style={{ ['--subject-accent' as string]: subject.color }}
             onClick={() =>
               navigate({ screen: 'subject', subjectId: subject.id, from: 'learningCenter' })
             }

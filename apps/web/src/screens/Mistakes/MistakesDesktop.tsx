@@ -58,7 +58,7 @@ export function MistakesDesktop() {
 
   return (
     <FadeIn className={styles.page}>
-      <BackRow />
+      <BackRow to={{ screen: 'home' }} label="Главная" />
       <div className={styles.headerRow}>
         <div>
           <h1 className="text-h1">Мои ошибки</h1>

@@ -32,7 +32,7 @@ export function AboutDesktop() {
 
   return (
     <FadeIn className={styles.page}>
-      <BackRow />
+      <BackRow to={{ screen: 'home' }} label="Главная" />
       <div>
         <h1 className="text-h1">О проекте</h1>
         <p className="text-body-sm text-secondary">

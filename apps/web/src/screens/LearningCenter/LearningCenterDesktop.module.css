@@ -53,6 +53,8 @@
   height: 3rem;
   object-fit: contain;
   margin-bottom: var(--space-3);
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--section-accent) 55%, transparent))
+    drop-shadow(0 0 4px color-mix(in srgb, var(--section-accent) 65%, transparent));
 }
 
 .sectionBody {
@@ -109,6 +111,7 @@
   width: 2.25rem;
   height: 2.25rem;
   object-fit: contain;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--subject-accent) 55%, transparent));
 }
 
 .subjectName {

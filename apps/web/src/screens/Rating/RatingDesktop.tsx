@@ -82,7 +82,7 @@ export function RatingDesktop() {
 
   return (
     <FadeIn className={styles.page}>
-      <BackRow />
+      <BackRow to={{ screen: 'home' }} label="Главная" />
       <div className={styles.headerRow}>
         <div>
           <h1 className="text-h1">Рейтинг</h1>

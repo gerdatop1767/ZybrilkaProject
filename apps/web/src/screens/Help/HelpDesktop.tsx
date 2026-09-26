@@ -58,7 +58,7 @@ export function HelpDesktop() {
 
   return (
     <div>
-      <BackRow />
+      <BackRow to={{ screen: 'home' }} label="Главная" />
 
       <div className={styles.hero}>
         <div className={styles.heroText}>

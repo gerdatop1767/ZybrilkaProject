@@ -161,6 +161,32 @@ describe('App — desktop', () => {
     expect(screen.queryByText('Нужна')).not.toBeInTheDocument();
     restore();
   });
+
+  it('sidebar-level overlays (Мои ошибки, Рейтинг, О проекте, Предметы, Учебный центр, Помощь) always show "Главная" as Back, never a stale previous tab', async () => {
+    const restore = mockDesktop(true);
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getByRole('button', { name: /Начать бесплатно/ }));
+    // Switch the underlying tab away from Home first — this is exactly
+    // the scenario that used to leak the wrong tab's name into these
+    // screens' Back button ("Достижения" instead of "Главная").
+    await user.click(screen.getByRole('button', { name: 'Достижения' }));
+
+    for (const [sidebarLabel, screenText] of [
+      ['Мои ошибки', 'Разбирай ошибки'],
+      ['Рейтинг', 'Соревнуйся с другими'],
+      ['О проекте', 'Наши принципы'],
+    ] as const) {
+      await user.click(screen.getByRole('button', { name: sidebarLabel }));
+      await screen.findByText(new RegExp(screenText));
+      const backRow = within(screen.getByRole('main')).getByRole('button', { name: 'Главная' });
+      expect(backRow).toBeInTheDocument();
+      // Re-enter Достижения before the next iteration so each screen is
+      // independently checked against the same "stale tab" scenario.
+      await user.click(screen.getByRole('button', { name: 'Достижения' }));
+    }
+    restore();
+  });
 });
 
 describe('App — URL routing is the source of truth', () => {
