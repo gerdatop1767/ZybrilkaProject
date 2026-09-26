@@ -34,15 +34,21 @@
   color: transparent;
 }
 
-/* Small, tucked into the top-right corner and clipped by .hero's own
-   overflow:hidden — never reaching down as far as the heading/subtitle
-   text columns, which are separately capped (.heroHeading/.heroSubtitle)
-   so nothing here can crowd them regardless of viewport width. */
+/* Tucked into the top-right corner, fully inside .hero's padding box
+   (top:0/right:0 here is the padding edge, not the card's outer edge,
+   since .hero is the nearest positioned ancestor) — every tile's
+   rotated footprint stays within this zone, so nothing is clipped by
+   .hero's own overflow:hidden and nothing reaches as far down as the
+   heading/subtitle text columns, which are separately capped
+   (.heroHeading/.heroSubtitle) for extra safety at any viewport width. */
 .heroTiles {
   position: absolute;
-  top: -0.5rem;
-  right: -0.5rem;
-  width: 4.75rem;
+  /* A few px of slack beyond 0/0 so a tile's *rotated* bounding box
+     (bigger than its own unrotated box) never pokes past the padding
+     edge into .hero's overflow:hidden clip. */
+  top: 4px;
+  right: 4px;
+  width: 4.25rem;
   height: 3.25rem;
   pointer-events: none;
 }
@@ -52,9 +58,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.625rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
   background: var(--color-bg-elevated);
   box-shadow: var(--shadow-e2);
 }
@@ -68,19 +74,19 @@
 
 .heroTilePi {
   top: 0;
-  right: 1.25rem;
+  right: 1.5rem;
   transform: rotate(-8deg);
 }
 
 .heroTileAa {
-  top: 1.25rem;
-  right: 2.75rem;
+  top: 0.875rem;
+  right: 0;
   transform: rotate(6deg);
 }
 
 .heroTileM {
-  top: 1.5rem;
-  right: 0;
+  top: 1.25rem;
+  right: 1.75rem;
   transform: rotate(12deg);
 }
 
