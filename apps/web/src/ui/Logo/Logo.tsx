@@ -13,6 +13,10 @@ export interface LogoProps {
   /** Hides the "Zybrilka" wordmark, e.g. where space is tight. */
   wordmark?: boolean;
   className?: string;
+  /** When given, the whole lockup (wordmark + mascot icon) renders as
+   * a single clickable control instead of inert decoration — used by
+   * the app headers to send the logo/mascot to Учебный центр. */
+  onClick?: () => void;
 }
 
 const iconSrc: Record<LogoIconVariant, string> = {
@@ -26,9 +30,15 @@ const iconSrc: Record<LogoIconVariant, string> = {
  * wordmark rendered as text (white "Zybr", gradient "ilka") — not an
  * image, since it's typography the browser can render natively.
  */
-export function Logo({ size = 32, icon = 'desktop', wordmark = true, className }: LogoProps) {
-  return (
-    <span className={clsx(styles.lockup, className)}>
+export function Logo({
+  size = 32,
+  icon = 'desktop',
+  wordmark = true,
+  className,
+  onClick,
+}: LogoProps) {
+  const content = (
+    <>
       <img
         src={iconSrc[icon]}
         alt={wordmark ? '' : 'Zybrilka'}
@@ -41,6 +51,21 @@ export function Logo({ size = 32, icon = 'desktop', wordmark = true, className }
           Zybr<span className={styles.wordmarkAccent}>ilka</span>
         </span>
       )}
-    </span>
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        className={clsx(styles.lockup, styles.lockupInteractive, className)}
+        onClick={onClick}
+        aria-label="Zybrilka — Учебный центр"
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return <span className={clsx(styles.lockup, className)}>{content}</span>;
 }

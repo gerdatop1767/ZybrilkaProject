@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Logo } from './Logo.js';
 
 describe('Logo', () => {
@@ -33,5 +34,23 @@ describe('Logo', () => {
   it('sizes the icon by the given size', () => {
     render(<Logo size={40} />);
     expect(document.querySelector('img')).toHaveAttribute('height', '40');
+  });
+
+  it('renders as inert decoration with no onClick given', () => {
+    render(<Logo />);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('becomes a single clickable control — logo text and mascot icon both trigger it — when given an onClick', async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(<Logo onClick={onClick} />);
+    const button = screen.getByRole('button', { name: 'Zybrilka — Учебный центр' });
+    await user.click(button);
+    expect(onClick).toHaveBeenCalledTimes(1);
+    // The mascot icon is inside the same clickable control, not a
+    // separate target — clicking it fires the same handler.
+    await user.click(within(button).getByRole('presentation'));
+    expect(onClick).toHaveBeenCalledTimes(2);
   });
 });

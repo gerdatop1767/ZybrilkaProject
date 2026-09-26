@@ -138,3 +138,17 @@ describe('FriendProfileDesktop', () => {
     expect(screen.getByText('Друг не найден')).toBeInTheDocument();
   });
 });
+
+describe('BackRow labels', () => {
+  it('/friends never shows a stray "← Достижения"/"← Рейтинг" label — only "Главная"', () => {
+    renderWithNav(<FriendsDesktop />);
+    expect(screen.getByText('Главная')).toBeInTheDocument();
+    expect(screen.queryByText('Достижения')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Рейтинг$/)).not.toBeInTheDocument();
+  });
+
+  it('/friends/:id always points its BackRow at "Друзья", never a stale tab', () => {
+    renderWithNav(<FriendProfileDesktop friendId="alex_math" />);
+    expect(screen.getByText('Друзья')).toBeInTheDocument();
+  });
+});

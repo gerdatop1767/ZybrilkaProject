@@ -44,7 +44,7 @@ export function DesktopShell({ header = 'status', sidebar = true, children }: De
     <div className={styles.shell}>
       <header className={clsx(styles.topHeader, sidebar && styles.topHeaderApp)}>
         <div className={styles.topHeaderInner}>
-          <Logo icon="desktop" size={50} />
+          <Logo icon="desktop" size={50} onClick={() => navigate({ screen: 'learningCenter' })} />
           <div className={styles.topHeaderActions}>
             {header === 'cta' ? (
               <Button variant="primary" onClick={() => navigate({ screen: 'training' })}>

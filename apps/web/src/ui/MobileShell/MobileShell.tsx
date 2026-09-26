@@ -24,7 +24,7 @@ export interface MobileShellProps {
  * never covered by the nav.
  */
 export function MobileShell({ children, nav }: MobileShellProps) {
-  const { tab, overlay } = useNavigation();
+  const { tab, overlay, navigate } = useNavigation();
   const contentRef = useRef<HTMLElement>(null);
 
   // Each screen starts scrolled to its top, never wherever the
@@ -39,7 +39,7 @@ export function MobileShell({ children, nav }: MobileShellProps) {
     <div className={styles.shell}>
       {nav && (
         <header className={styles.header}>
-          <Logo icon="mobile" size={38} />
+          <Logo icon="mobile" size={38} onClick={() => navigate({ screen: 'learningCenter' })} />
           <StatusChips />
         </header>
       )}

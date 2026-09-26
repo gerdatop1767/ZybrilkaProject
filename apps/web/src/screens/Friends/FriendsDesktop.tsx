@@ -169,25 +169,32 @@ export function FriendsDesktop() {
                   {visibleFriends.map((friend, index) => (
                     <FadeIn key={friend.id} delayMs={index * 30} className={styles.friendRow}>
                       <span className={styles.rank}>{index + 1}</span>
-                      <Avatar
-                        username={friend.username}
-                        color={friend.avatarColor}
-                        avatarUrl={friend.avatarUrl}
-                      />
-                      <div className={styles.friendBody}>
-                        <p className="text-body" style={{ fontWeight: 700 }}>
-                          {friend.username}
-                        </p>
-                        <p className={clsx('text-body-sm', styles.statusRow)}>
-                          {friend.online ? (
-                            <>
-                              <span className={styles.onlineDot} aria-hidden="true" />
-                              <span className={styles.onlineText}>Онлайн</span>
-                            </>
-                          ) : (
-                            <span className="text-secondary">{friend.lastSeen}</span>
-                          )}
-                        </p>
+                      <div className={styles.userCell}>
+                        <Avatar
+                          username={friend.username}
+                          color={friend.avatarColor}
+                          avatarUrl={friend.avatarUrl}
+                        />
+                        <div className={styles.friendBody}>
+                          <p
+                            className={clsx('text-body', styles.username)}
+                            style={{ fontWeight: 700 }}
+                          >
+                            {friend.username}
+                          </p>
+                          <p className={clsx('text-body-sm', styles.statusRow)}>
+                            {friend.online ? (
+                              <>
+                                <span className={styles.onlineDot} aria-hidden="true" />
+                                <span className={styles.onlineText}>Онлайн</span>
+                              </>
+                            ) : (
+                              <span className={clsx('text-secondary', styles.lastSeen)}>
+                                {friend.lastSeen}
+                              </span>
+                            )}
+                          </p>
+                        </div>
                       </div>
                       <span className={styles.statChip}>
                         <LevelBadge level={friend.level} size={20} lazy />
@@ -221,7 +228,7 @@ export function FriendsDesktop() {
                   {visibleSuggested.map((s, index) => {
                     const sent = sentRequestIds.has(s.id);
                     return (
-                      <FadeIn key={s.id} delayMs={index * 30} className={styles.friendRow}>
+                      <FadeIn key={s.id} delayMs={index * 30} className={styles.suggestedRow}>
                         <Avatar username={s.username} color={s.avatarColor} />
                         <div className={styles.friendBody}>
                           <p className="text-body" style={{ fontWeight: 700 }}>

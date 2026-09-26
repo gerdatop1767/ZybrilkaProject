@@ -5,6 +5,23 @@
   min-width: 0;
 }
 
+.lockupInteractive {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  opacity: 1;
+  transition:
+    opacity var(--duration-fast) var(--easing-standard),
+    filter var(--duration-fast) var(--easing-standard);
+}
+
+.lockupInteractive:hover,
+.lockupInteractive:focus-visible {
+  opacity: 0.85;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--color-accent-primary) 45%, transparent));
+}
+
 .icon {
   display: block;
   flex-shrink: 0;
