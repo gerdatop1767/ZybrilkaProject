@@ -5,6 +5,7 @@ import { subjects } from '../../data/subjects.js';
 import { userStats } from '../../data/sampleProgress.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
+import { StreakBadge } from '../../ui/RankBadge/StreakBadge.js';
 import { TaskChrome } from '../../ui/Training/TaskChrome.js';
 import { ToolsPanelMobile } from '../../ui/Training/ToolsPanelMobile.js';
 import { OtherVariantsSection } from '../../ui/Training/OtherVariantsSection.js';
@@ -84,7 +85,7 @@ export function ResultMobile({ subjectId, taskId, correct, userAnswer }: ResultM
             <Icon name="xp" size={16} className={styles.statIconGold} />+{Math.round(xp)} XP
           </span>
           <span className={styles.statChip}>
-            <Icon name="flame" size={16} className={styles.statIconRed} />
+            <StreakBadge days={userStats.streakDays} size={18} />
             Серия {userStats.streakDays} дней
           </span>
           <span className={styles.statChip}>

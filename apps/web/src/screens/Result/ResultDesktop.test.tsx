@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { ResultDesktop } from './ResultDesktop.js';
 import { sampleTask } from '../../data/sampleTask.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
+import { userStats } from '../../data/sampleProgress.js';
+import { getStreakAsset } from '../../lib/rank.js';
 
 function OverlayMarker() {
   const { overlay } = useNavigation();
@@ -75,5 +77,15 @@ describe('ResultDesktop — incorrect state', () => {
     renderResult(false);
     expect(screen.getByText('Полезно знать')).toBeInTheDocument();
     expect(screen.getByText(sampleTask.hint)).toBeInTheDocument();
+  });
+});
+
+describe('ResultDesktop — badges', () => {
+  it('uses the shared StreakBadge PNG for the streak reward chip, never an emoji', () => {
+    renderResult(true);
+    expect(
+      document.querySelector(`img[src="${getStreakAsset(userStats.streakDays)}"]`),
+    ).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/🔥/);
   });
 });

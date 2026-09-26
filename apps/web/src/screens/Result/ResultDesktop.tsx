@@ -5,6 +5,7 @@ import { subjects } from '../../data/subjects.js';
 import { userStats } from '../../data/sampleProgress.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
+import { StreakBadge } from '../../ui/RankBadge/StreakBadge.js';
 import { DesktopToolsCard } from '../../ui/Training/DesktopToolsCard.js';
 import { SessionTaskListCard } from '../../ui/Training/SessionTaskListCard.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
@@ -124,7 +125,7 @@ export function ResultDesktop({ subjectId, taskId, correct, userAnswer }: Result
                     <span className="text-label text-secondary">Опыт</span>
                   </span>
                   <span className={styles.rewardChip}>
-                    <Icon name="flame" size={16} className={styles.rewardIconGold} />
+                    <StreakBadge days={userStats.streakDays} size={18} />
                     +1 день
                     <span className="text-label text-secondary">Серия</span>
                   </span>

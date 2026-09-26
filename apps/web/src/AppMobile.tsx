@@ -15,6 +15,8 @@ import { AboutMobile } from './screens/About/AboutMobile.js';
 import { HelpMobile } from './screens/Help/HelpMobile.js';
 import { FriendsMobile } from './screens/Friends/FriendsMobile.js';
 import { FriendProfileMobile } from './screens/Friends/FriendProfileMobile.js';
+import { SubjectCatalogMobile } from './screens/SubjectCatalog/SubjectCatalogMobile.js';
+import { SubjectMobile } from './screens/Subject/SubjectMobile.js';
 import { sampleTask } from './data/sampleTask.js';
 
 /**
@@ -62,11 +64,9 @@ export function AppMobile() {
   if (contentOverlay) {
     return (
       <MobileShell>
-        {contentOverlay.screen === 'subjectCatalog' && (
-          <WipPlaceholder title="Предметы" note="Экран в разработке — следующий блок." />
-        )}
+        {contentOverlay.screen === 'subjectCatalog' && <SubjectCatalogMobile />}
         {contentOverlay.screen === 'subject' && (
-          <WipPlaceholder title="Предмет" note="Экран в разработке — следующий блок." />
+          <SubjectMobile subjectId={contentOverlay.subjectId} from={contentOverlay.from} />
         )}
         {contentOverlay.screen === 'task' && (
           <TaskMobile

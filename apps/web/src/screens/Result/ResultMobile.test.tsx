@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { ResultMobile } from './ResultMobile.js';
 import { sampleTask } from '../../data/sampleTask.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
+import { userStats } from '../../data/sampleProgress.js';
+import { getStreakAsset } from '../../lib/rank.js';
 
 function OverlayMarker() {
   const { overlay } = useNavigation();
@@ -66,6 +68,16 @@ describe('ResultMobile — incorrect state', () => {
   it('shows the explanation topic via the meta chip on the task chrome', () => {
     renderResult(false);
     expect(screen.getByText(`Задание №${sampleTask.number}`)).toBeInTheDocument();
+  });
+});
+
+describe('ResultMobile — badges', () => {
+  it('uses the shared StreakBadge PNG for the streak stat, never an emoji', () => {
+    renderResult(true);
+    expect(
+      document.querySelector(`img[src="${getStreakAsset(userStats.streakDays)}"]`),
+    ).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/🔥/);
   });
 });
 
