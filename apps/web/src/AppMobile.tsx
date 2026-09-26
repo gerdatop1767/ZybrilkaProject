@@ -124,9 +124,6 @@ export function AppMobile() {
         )}
         {tab === 'statistics' && <StatisticsMobile />}
         {tab === 'achievements' && <AchievementsMobile />}
-        {tab === 'profile' && (
-          <WipPlaceholder title="Профиль" note="Экран в разработке — следующий блок." />
-        )}
       </MobileShell>
       {menu}
     </>

@@ -5,19 +5,32 @@ import {
   getSubjectContent,
   getTaskNumbers,
   getTopicProgress,
+  taskSources,
   type SubjectModeId,
   type SubjectTopic,
+  type TaskSourceId,
+  type TaskSourceGlyph,
 } from '../../data/subjectContent.js';
 import { BackRow, type BackRowProps } from '../../ui/BackRow/BackRow.js';
 import { Card } from '../../ui/Card/Card.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import type { IconName } from '../../ui/Icon/icons.js';
+import { Select } from '../../ui/Select/Select.js';
 import { SubjectTile } from '../../ui/SubjectTile/SubjectTile.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { CircularProgress } from '../../ui/Progress/CircularProgress.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './SubjectDesktop.module.css';
+
+const sourceGlyphIcon: Record<TaskSourceGlyph, IconName> = {
+  document: 'variant',
+  bank: 'bank',
+  book: 'reference',
+  star: 'star',
+};
+
+const sourceOptions = taskSources.map((source) => ({ value: source.id, label: source.label }));
 
 export interface SubjectDesktopProps {
   subjectId: string;
@@ -55,10 +68,12 @@ export function SubjectDesktop({ subjectId, from }: SubjectDesktopProps) {
   const [mode, setMode] = useState<SubjectModeId>('topics');
   const [selectedTopic, setSelectedTopic] = useState<SubjectTopic | null>(null);
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
+  const [byNumberSource, setByNumberSource] = useState<TaskSourceId>('fipi');
+  const [randomSource, setRandomSource] = useState<TaskSourceId>('fipi');
 
   const solved = Math.round((subject.taskCount * subject.mastery) / 100);
   const friendRank = 1 + (hashCode(subject.id) % 12);
-  const taskNumbers = getTaskNumbers(subject.id);
+  const taskNumbers = getTaskNumbers(subject.id, byNumberSource);
 
   function startTraining(taskNumber: number) {
     navigate({
@@ -146,32 +161,30 @@ export function SubjectDesktop({ subjectId, from }: SubjectDesktopProps) {
             />
           )}
           {mode === 'byNumber' && selectedNumber === null && (
-            <TaskNumberGrid numbers={taskNumbers} onSelect={setSelectedNumber} />
+            <TaskNumberGrid
+              numbers={taskNumbers}
+              source={byNumberSource}
+              onSourceChange={setByNumberSource}
+              onSelect={setSelectedNumber}
+            />
           )}
           {mode === 'byNumber' && selectedNumber !== null && (
             <TaskNumberDetail
               subjectName={subject.shortName}
               number={selectedNumber}
+              source={byNumberSource}
               summary={taskNumbers.find((n) => n.number === selectedNumber)!}
               onStart={() => startTraining(selectedNumber)}
             />
           )}
           {mode === 'variants' && (
-            <ModePlaceholder
-              icon="variant"
-              title="Полные варианты ЕГЭ"
-              note="Сборка полных тренировочных вариантов — следующий блок."
-              actionLabel="Решить пробный вариант"
-              onAction={() => startTraining(1)}
-            />
+            <VariantBuilder taskNumberCount={content.taskNumberCount} onStart={startTraining} />
           )}
           {mode === 'random' && (
-            <ModePlaceholder
-              icon="smart"
-              title="Случайные задания"
-              note="Тренировка вперемешку по всем темам — следующий блок."
-              actionLabel="Начать случайное задание"
-              onAction={() => startTraining(1)}
+            <RandomModeCard
+              source={randomSource}
+              onSourceChange={setRandomSource}
+              onStart={() => startTraining(1)}
             />
           )}
           {mode === 'favorites' && (
@@ -363,15 +376,32 @@ function TopicDetail({
 
 function TaskNumberGrid({
   numbers,
+  source,
+  onSourceChange,
   onSelect,
 }: {
   numbers: readonly { number: number; solved: number; total: number }[];
+  source: TaskSourceId;
+  onSourceChange: (source: TaskSourceId) => void;
   onSelect: (number: number) => void;
 }) {
   return (
     <Card>
-      <p className="text-h3">Задания по номерам</p>
-      <p className="text-body-sm text-secondary">Выбери номер задания ЕГЭ</p>
+      <div className={styles.numberGridHeader}>
+        <div>
+          <p className="text-h3">Задания по номерам</p>
+          <p className="text-body-sm text-secondary">Выбери номер задания ЕГЭ</p>
+        </div>
+        <div className={styles.sourceSelect}>
+          <span className="text-body-sm text-secondary">Источник:</span>
+          <Select
+            options={sourceOptions}
+            value={source}
+            onChange={(value) => onSourceChange(value as TaskSourceId)}
+            sheetTitle="Источник"
+          />
+        </div>
+      </div>
       <div className={styles.numberGrid}>
         {numbers.map((item) => (
           <button
@@ -394,19 +424,22 @@ function TaskNumberGrid({
 function TaskNumberDetail({
   subjectName,
   number,
+  source,
   summary,
   onStart,
 }: {
   subjectName: string;
   number: number;
+  source: TaskSourceId;
   summary: { solved: number; total: number };
   onStart: () => void;
 }) {
+  const sourceLabel = taskSources.find((s) => s.id === source)!.label;
   return (
     <Card>
       <p className="text-h2">Задание №{number}</p>
       <p className="text-body-sm text-secondary" style={{ marginTop: 'var(--space-1)' }}>
-        {subjectName} · доступно заданий этого номера: {summary.total}
+        {subjectName} · источник: {sourceLabel} · доступно заданий этого номера: {summary.total}
       </p>
       <div className={styles.topicDetailStats}>
         <span className="text-body-sm text-secondary">
@@ -416,6 +449,155 @@ function TaskNumberDetail({
       </div>
       <Button variant="primary" onClick={onStart} style={{ marginTop: 'var(--space-4)' }}>
         Начать тренировку по №{number} <Icon name="arrowRight" size={16} />
+      </Button>
+    </Card>
+  );
+}
+
+function RandomModeCard({
+  source,
+  onSourceChange,
+  onStart,
+}: {
+  source: TaskSourceId;
+  onSourceChange: (source: TaskSourceId) => void;
+  onStart: () => void;
+}) {
+  return (
+    <Card className={styles.placeholderCard}>
+      <span className={styles.placeholderIcon}>
+        <Icon name="smart" size={28} />
+      </span>
+      <p className="text-h3">Случайные задания</p>
+      <p className="text-body-sm text-secondary">
+        Тренировка вперемешку по всем темам — источник задаёт, откуда они берутся
+      </p>
+      <div className={styles.sourceSelect} style={{ marginTop: 'var(--space-4)' }}>
+        <span className="text-body-sm text-secondary">Источник:</span>
+        <Select
+          options={sourceOptions}
+          value={source}
+          onChange={(value) => onSourceChange(value as TaskSourceId)}
+          sheetTitle="Источник"
+        />
+      </div>
+      <Button variant="primary" onClick={onStart} style={{ marginTop: 'var(--space-4)' }}>
+        Начать случайное задание <Icon name="arrowRight" size={16} />
+      </Button>
+    </Card>
+  );
+}
+
+function VariantBuilder({
+  taskNumberCount,
+  onStart,
+}: {
+  taskNumberCount: number;
+  onStart: (firstNumber: number) => void;
+}) {
+  const allNumbers = Array.from({ length: taskNumberCount }, (_, i) => i + 1);
+  const [source, setSource] = useState<TaskSourceId>('fipi');
+  const [selected, setSelected] = useState<ReadonlySet<number>>(new Set());
+  const activeSource = taskSources.find((s) => s.id === source)!;
+
+  function toggleNumber(number: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(number)) {
+        next.delete(number);
+      } else {
+        next.add(number);
+      }
+      return next;
+    });
+  }
+
+  function selectAll() {
+    setSelected(new Set(allNumbers));
+  }
+
+  function reset() {
+    setSelected(new Set());
+  }
+
+  const allSelected = selected.size === allNumbers.length;
+  const sortedSelected = [...selected].sort((a, b) => a - b);
+
+  return (
+    <Card>
+      <p className="text-h3">Полные варианты ЕГЭ</p>
+      <p className="text-body-sm text-secondary">
+        Собери собственный вариант из нужных заданий и источников
+      </p>
+
+      <p className={styles.builderStepLabel}>1. Выбери источник</p>
+      <div className={styles.sourceGrid}>
+        {taskSources.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={clsx(styles.sourceCard, source === item.id && styles.sourceCardActive)}
+            onClick={() => setSource(item.id)}
+          >
+            <Icon name={sourceGlyphIcon[item.glyph]} size={20} />
+            <span className="text-body-sm" style={{ fontWeight: 700 }}>
+              {item.cardTitle}
+            </span>
+            <span className="text-body-sm text-secondary">{item.cardCaption}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className={styles.builderStepHeader}>
+        <p className={styles.builderStepLabel}>2. Выбери номера заданий</p>
+        <button
+          type="button"
+          className={styles.selectAllRow}
+          onClick={() => (allSelected ? reset() : selectAll())}
+        >
+          <span className={clsx(styles.checkbox, allSelected && styles.checkboxChecked)}>
+            {allSelected && <Icon name="check" size={14} />}
+          </span>
+          Выбрать всё
+        </button>
+      </div>
+      <div className={styles.numberChipGrid}>
+        {allNumbers.map((number) => (
+          <button
+            key={number}
+            type="button"
+            className={clsx(styles.numberChip, selected.has(number) && styles.numberChipActive)}
+            onClick={() => toggleNumber(number)}
+          >
+            {number}
+          </button>
+        ))}
+      </div>
+
+      <div className={styles.builderSummary}>
+        <Icon name="variant" size={18} />
+        <span className={styles.builderSummaryBody}>
+          <p className="text-body-sm" style={{ fontWeight: 700 }}>
+            Выбрано {selected.size} заданий
+          </p>
+          <p className="text-body-sm text-secondary">
+            {selected.size > 0 ? `Номера: ${sortedSelected.join(', ')}` : 'Номера не выбраны'} ·
+            Источник: {activeSource.cardTitle}
+          </p>
+        </span>
+        <Button variant="secondary" onClick={reset} disabled={selected.size === 0}>
+          <Icon name="retry" size={16} /> Сбросить
+        </Button>
+      </div>
+
+      <Button
+        variant="primary"
+        fullWidth
+        disabled={selected.size === 0}
+        onClick={() => onStart(sortedSelected[0]!)}
+        style={{ marginTop: 'var(--space-4)' }}
+      >
+        <Icon name="play" size={16} /> Собрать вариант и начать решать
       </Button>
     </Card>
   );

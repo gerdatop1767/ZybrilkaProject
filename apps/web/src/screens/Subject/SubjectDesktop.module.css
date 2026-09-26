@@ -273,6 +273,137 @@
   color: var(--color-accent-primary);
 }
 
+.numberGridHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.sourceSelect {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.sourceSelect > div:last-child {
+  width: 13rem;
+}
+
+.builderStepLabel {
+  margin: var(--space-5) 0 var(--space-3);
+  font-weight: var(--font-weight-bold);
+}
+
+.sourceGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.sourceCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.sourceCard:hover {
+  background: var(--color-bg-elevated);
+}
+
+.sourceCardActive {
+  border-color: var(--color-accent-primary);
+  background: color-mix(in srgb, var(--color-accent-primary) 16%, var(--color-bg-surface));
+}
+
+.builderStepHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.selectAllRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: none;
+  background: none;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body-sm);
+  cursor: pointer;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 4px;
+  border: 1.5px solid var(--color-border-subtle);
+  color: #fff;
+}
+
+.checkboxChecked {
+  background: var(--color-accent-primary);
+  border-color: var(--color-accent-primary);
+}
+
+.numberChipGrid {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.numberChip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.numberChip:hover {
+  background: var(--color-bg-elevated);
+}
+
+.numberChipActive {
+  border-color: var(--color-accent-primary);
+  background: var(--gradient-primary);
+  color: #fff;
+}
+
+.builderSummary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-bg-elevated);
+}
+
+.builderSummaryBody {
+  flex: 1;
+  min-width: 0;
+}
+
 @media (max-width: 1440px) {
   .modes {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -280,6 +411,14 @@
 
   .numberGrid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .sourceGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .numberChipGrid {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
   }
 }
 
@@ -312,5 +451,26 @@
 
   .numberGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .numberGridHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sourceSelect > div:last-child {
+    width: 100%;
+  }
+
+  .sourceGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .numberChipGrid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .builderSummary {
+    flex-wrap: wrap;
   }
 }

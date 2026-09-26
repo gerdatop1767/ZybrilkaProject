@@ -12,6 +12,7 @@ import { AboutDesktop } from './screens/About/AboutDesktop.js';
 import { LearningCenterDesktop } from './screens/LearningCenter/LearningCenterDesktop.js';
 import { SubjectCatalogDesktop } from './screens/SubjectCatalog/SubjectCatalogDesktop.js';
 import { SubjectDesktop } from './screens/Subject/SubjectDesktop.js';
+import { ProfileDesktop } from './screens/Profile/ProfileDesktop.js';
 
 /** Screens whose approved desktop composition has no left sidebar. */
 const noSidebarScreens = new Set(['home', 'task', 'result']);
@@ -77,6 +78,7 @@ export function AppDesktop() {
         {overlay.screen === 'notifications' && (
           <WipPlaceholder title="Уведомления" note="Экран в разработке — следующий блок." />
         )}
+        {overlay.screen === 'profile' && <ProfileDesktop from={overlay.from} />}
       </DesktopShell>
     );
   }
@@ -92,9 +94,6 @@ export function AppDesktop() {
       )}
       {tab === 'statistics' && <StatisticsDesktop />}
       {tab === 'achievements' && <AchievementsDesktop />}
-      {tab === 'profile' && (
-        <WipPlaceholder title="Профиль" note="Экран в разработке — следующий блок." />
-      )}
     </DesktopShell>
   );
 }

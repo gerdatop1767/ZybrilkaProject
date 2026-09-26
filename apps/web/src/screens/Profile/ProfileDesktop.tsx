@@ -1,0 +1,213 @@
+import { useState } from 'react';
+import { useNavigation, getRouteLabel, type Route } from '../../lib/navigation.js';
+import { userStats } from '../../data/sampleProgress.js';
+import { BackRow } from '../../ui/BackRow/BackRow.js';
+import { Card } from '../../ui/Card/Card.js';
+import { Button } from '../../ui/Button/Button.js';
+import { Icon } from '../../ui/Icon/Icon.js';
+import type { IconName } from '../../ui/Icon/icons.js';
+import { clsx } from '../../lib/clsx.js';
+import styles from './ProfileDesktop.module.css';
+
+interface ProfileRow {
+  id: string;
+  icon: IconName;
+  label: string;
+  value: string;
+  onClick?: () => void;
+}
+
+/**
+ * Desktop "Мой профиль" (approved reference: 03_PROFILE.jpeg) —
+ * personal data + account/study settings, deliberately NOT a second
+ * copy of Статистика/Достижения/Рейтинг/Мои ошибки: no progress ring,
+ * no achievement list, no heatmap, no leaderboard position. Those
+ * already have their own screens; duplicating them here would just
+ * drift out of sync with them.
+ */
+export interface ProfileDesktopProps {
+  from?: Route;
+}
+
+export function ProfileDesktop({ from }: ProfileDesktopProps) {
+  const { navigate } = useNavigation();
+  const [darkTheme, setDarkTheme] = useState(true);
+
+  const basicInfo: readonly ProfileRow[] = [
+    { id: 'username', icon: 'profile', label: 'Имя пользователя', value: 'ZybrilkaUser' },
+    { id: 'bio', icon: 'chat', label: 'О себе', value: 'Учусь, развиваюсь и готовлюсь к ЕГЭ 🚀' },
+    { id: 'avatar', icon: 'palette', label: 'Аватар', value: 'Изменить фото профиля' },
+  ];
+
+  const studySettings: readonly ProfileRow[] = [
+    {
+      id: 'subjects',
+      icon: 'topic',
+      label: 'Предметы ЕГЭ',
+      value: 'Выбранные предметы, порядок, цели',
+      onClick: () => navigate({ screen: 'subjectCatalog' }),
+    },
+    {
+      id: 'level',
+      icon: 'shield',
+      label: 'Уровень подготовки',
+      value: 'Укажи текущий уровень',
+    },
+    { id: 'goals', icon: 'target', label: 'Цели', value: 'Настрой свои цели по каждому предмету' },
+  ];
+
+  const accountActions: readonly ProfileRow[] = [
+    {
+      id: 'notifications',
+      icon: 'notifications',
+      label: 'Уведомления',
+      value: 'Напоминания, серия, обновления',
+      onClick: () => navigate({ screen: 'notifications' }),
+    },
+    { id: 'language', icon: 'language', label: 'Язык', value: 'Русский' },
+    {
+      id: 'privacy',
+      icon: 'shield',
+      label: 'Конфиденциальность',
+      value: 'Данные и безопасность',
+    },
+  ];
+
+  const helpActions: readonly ProfileRow[] = [
+    {
+      id: 'help',
+      icon: 'faq',
+      label: 'Помощь',
+      value: 'Ответы на вопросы',
+      onClick: () => navigate({ screen: 'help' }),
+    },
+    { id: 'feedback', icon: 'chat', label: 'Обратная связь', value: 'Предложения и сообщения' },
+  ];
+
+  return (
+    <div>
+      <BackRow to={from} label={from && getRouteLabel(from)} />
+
+      <div className={styles.headRow}>
+        <h1 className="text-h1">Мой профиль</h1>
+      </div>
+      <p className="text-body-sm text-secondary">Твои данные и настройки аккаунта</p>
+
+      <Card className={styles.hero}>
+        <div className={styles.identity}>
+          <span className={styles.avatarWrap}>
+            <img
+              src="/branding/v2/logo-icon-desktop.png"
+              alt=""
+              className={styles.avatar}
+              aria-hidden="true"
+            />
+            <span className={styles.avatarBadge} aria-hidden="true">
+              <Icon name="palette" size={12} />
+            </span>
+          </span>
+          <div>
+            <div className={styles.nameRow}>
+              <p className="text-h3">ZybrilkaUser</p>
+              <span className={styles.levelBadge}>Уровень {userStats.level}</span>
+            </div>
+            <p className="text-body-sm text-secondary">Учусь, развиваюсь и готовлюсь к ЕГЭ 🚀</p>
+            <Button variant="secondary" className={styles.editButton}>
+              <Icon name="palette" size={16} /> Изменить профиль
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      <div className={styles.columns}>
+        <div className={styles.column}>
+          <Card>
+            <p className="text-h3">Основная информация</p>
+            <RowList rows={basicInfo} />
+          </Card>
+          <Card>
+            <p className="text-h3">Учебные настройки</p>
+            <RowList rows={studySettings} />
+          </Card>
+        </div>
+
+        <div className={styles.column}>
+          <Card>
+            <p className="text-h3">Настройки аккаунта</p>
+            <div className={styles.rowList}>
+              {accountActions.map((row) =>
+                row.id === 'language' ? (
+                  <button key={row.id} type="button" className={styles.row} onClick={row.onClick}>
+                    <Icon name={row.icon} size={18} />
+                    <span className={styles.rowBody}>
+                      <p className="text-body-sm" style={{ fontWeight: 700 }}>
+                        {row.label}
+                      </p>
+                    </span>
+                    <span className="text-body-sm text-secondary">{row.value}</span>
+                    <Icon name="chevronRight" size={16} className={styles.rowArrow} />
+                  </button>
+                ) : (
+                  <ProfileRowButton key={row.id} row={row} />
+                ),
+              )}
+              <div className={clsx(styles.row, styles.rowStatic)}>
+                <Icon name="theme" size={18} />
+                <span className={styles.rowBody}>
+                  <p className="text-body-sm" style={{ fontWeight: 700 }}>
+                    Оформление
+                  </p>
+                  <p className="text-body-sm text-secondary">Тёмная тема</p>
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={darkTheme}
+                  aria-label="Тёмная тема"
+                  className={clsx(styles.toggle, darkTheme && styles.toggleOn)}
+                  onClick={() => setDarkTheme((v) => !v)}
+                >
+                  <span className={styles.toggleThumb} />
+                </button>
+              </div>
+            </div>
+          </Card>
+
+          <Card>
+            <p className="text-h3">Действия</p>
+            <RowList rows={helpActions} />
+          </Card>
+
+          <button type="button" className={styles.logoutButton}>
+            <Icon name="logout" size={18} /> Выйти из аккаунта
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RowList({ rows }: { rows: readonly ProfileRow[] }) {
+  return (
+    <div className={styles.rowList}>
+      {rows.map((row) => (
+        <ProfileRowButton key={row.id} row={row} />
+      ))}
+    </div>
+  );
+}
+
+function ProfileRowButton({ row }: { row: ProfileRow }) {
+  return (
+    <button type="button" className={styles.row} onClick={row.onClick}>
+      <Icon name={row.icon} size={18} />
+      <span className={styles.rowBody}>
+        <p className="text-body-sm" style={{ fontWeight: 700 }}>
+          {row.label}
+        </p>
+        <p className="text-body-sm text-secondary">{row.value}</p>
+      </span>
+      <Icon name="chevronRight" size={16} className={styles.rowArrow} />
+    </button>
+  );
+}

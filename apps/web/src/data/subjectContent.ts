@@ -608,17 +608,81 @@ export interface SubjectTaskNumberSummary {
 }
 
 /**
- * Generic `subject → taskNumber → tasks` mechanism for "Задания по
- * номерам" (Design references, section 5): every subject gets a
- * numbered list of EGE task slots, not just Математика — the count
- * varies per subject (`taskNumberCount`) but the mechanism doesn't.
- * Seeded deterministically per (subject, number) — demo content.
+ * Where a task's content originally comes from (approved reference:
+ * 01_SUBJECT_BY_NUMBER_WITH_SOURCE_FILTER.jpeg / 02_FULL_VARIANT_
+ * BUILDER.jpeg). Fixed for the whole app — not per-subject — so a
+ * source picker anywhere (по номерам, случайные задания, варианты)
+ * reads from this one list. `glyph` follows the same
+ * decoupled-from-Icon pattern as `SubjectGlyph` in data/subjects.ts:
+ * the data layer names a shape, not a lucide icon, so a UI component
+ * maps it to whichever `Icon` fits.
  */
-export function getTaskNumbers(subjectId: string): readonly SubjectTaskNumberSummary[] {
+export type TaskSourceId = 'fipi' | 'openBank' | 'collections' | 'author';
+export type TaskSourceGlyph = 'document' | 'bank' | 'book' | 'star';
+
+export interface TaskSource {
+  id: TaskSourceId;
+  /** Compact label — the "Источник: ФИПИ" selector and its options. */
+  label: string;
+  /** Variant builder's source card title/caption (a bit more descriptive). */
+  cardTitle: string;
+  cardCaption: string;
+  glyph: TaskSourceGlyph;
+}
+
+export const taskSources: readonly TaskSource[] = [
+  {
+    id: 'fipi',
+    label: 'ФИПИ',
+    cardTitle: 'Официальные ФИПИ',
+    cardCaption: 'Реальные варианты',
+    glyph: 'document',
+  },
+  {
+    id: 'openBank',
+    label: 'Открытый банк',
+    cardTitle: 'Открытый банк',
+    cardCaption: 'Все задания ЕГЭ',
+    glyph: 'bank',
+  },
+  {
+    id: 'collections',
+    label: 'Сборники (Ященко и др.)',
+    cardTitle: 'Сборники',
+    cardCaption: 'Ященко и др.',
+    glyph: 'book',
+  },
+  {
+    id: 'author',
+    label: 'Авторские варианты',
+    cardTitle: 'Авторские варианты',
+    cardCaption: 'Для тренировки',
+    glyph: 'star',
+  },
+];
+
+export function getTaskSource(id: TaskSourceId): TaskSource {
+  return taskSources.find((source) => source.id === id) ?? taskSources[0]!;
+}
+
+/**
+ * Generic `subject → taskNumber → source → tasks` mechanism for
+ * "Задания по номерам" / "Случайные задания" / "Варианты" (Design
+ * references, section 5): every subject gets a numbered list of EGE
+ * task slots, not just Математика — the count varies per subject
+ * (`taskNumberCount`) but the mechanism doesn't, and switching source
+ * re-seeds the same numbers with different demo counts rather than
+ * hardcoding one source. Seeded deterministically per
+ * (subject, number, source) — demo content, not a real task bank yet.
+ */
+export function getTaskNumbers(
+  subjectId: string,
+  sourceId: TaskSourceId = 'fipi',
+): readonly SubjectTaskNumberSummary[] {
   const content = getSubjectContent(subjectId);
   return Array.from({ length: content.taskNumberCount }, (_, index) => {
     const number = index + 1;
-    const seed = hashString(`${subjectId}:${number}`);
+    const seed = hashString(`${subjectId}:${number}:${sourceId}`);
     const total = 12 + (seed % 18);
     const solved = Math.round(total * (0.3 + ((seed >>> 4) % 60) / 100));
     return { number, solved, total };

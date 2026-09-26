@@ -7,7 +7,6 @@ const tabLabels: Record<MainTabId, string> = {
   training: 'Тренировка',
   statistics: 'Статистика',
   achievements: 'Достижения',
-  profile: 'Профиль',
 };
 
 export interface BackRowProps {

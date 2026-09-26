@@ -86,6 +86,7 @@ import {
   Leaf,
   Landmark,
   Bell,
+  Shield,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -185,6 +186,9 @@ export const icons = {
   subjectBiology: Leaf,
   subjectHistory: Landmark,
   notifications: Bell,
+  bank: Landmark,
+  shield: Shield,
+  language: Globe,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof icons;

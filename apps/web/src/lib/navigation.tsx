@@ -8,16 +8,14 @@ import { createContext, useCallback, useContext, useState, type ReactNode } from
  * fixed set, so this uses the pattern that recurs across the most
  * screens. Мои ошибки / Рейтинг / О проекте stay reachable from Home
  * and the Menu overlay rather than living in the tab bar itself.
+ * Профиль is an overlay (see `OverlayRoute`), not a tab — it opens
+ * from Menu on top of whichever tab is underneath, the same as every
+ * other Menu destination, so BackRow returns there correctly instead
+ * of always landing on Home.
  */
-export type MainTabId = 'home' | 'training' | 'statistics' | 'achievements' | 'profile';
+export type MainTabId = 'home' | 'training' | 'statistics' | 'achievements';
 
-export const mainTabIds: readonly MainTabId[] = [
-  'home',
-  'training',
-  'statistics',
-  'achievements',
-  'profile',
-];
+export const mainTabIds: readonly MainTabId[] = ['home', 'training', 'statistics', 'achievements'];
 
 /**
  * Full-screen overlays reached from a tab. Task/Result hide the tab
@@ -59,9 +57,37 @@ export type OverlayRoute =
   | { screen: 'friends' }
   | { screen: 'settings' }
   | { screen: 'help' }
-  | { screen: 'notifications' };
+  | { screen: 'notifications' }
+  | {
+      screen: 'profile';
+      /** The full previous route (tab or overlay), so BackRow can
+       * restore it exactly — Menu replaces whatever overlay was
+       * showing when it opens Профиль (this router has no general
+       * back-stack), so without this the "previous screen" is gone
+       * before BackRow ever runs. */
+      from?: Route;
+    };
 
 export type Route = { screen: MainTabId } | OverlayRoute;
+
+const routeLabels: Partial<Record<Route['screen'], string>> = {
+  home: 'Главная',
+  training: 'Тренировка',
+  statistics: 'Статистика',
+  achievements: 'Достижения',
+  learningCenter: 'Учебный центр',
+  subjectCatalog: 'Предметы',
+  mistakes: 'Мои ошибки',
+  rating: 'Рейтинг',
+  about: 'О проекте',
+};
+
+/** A human label for any route, used by BackRow to name where it's
+ * going back to. Falls back to "Главная" for routes with no fixed
+ * name (task/result/subject carry their own context instead). */
+export function getRouteLabel(route: Route): string {
+  return routeLabels[route.screen] ?? 'Главная';
+}
 
 interface NavigationContextValue {
   /** The currently selected tab (persists under an open overlay). */

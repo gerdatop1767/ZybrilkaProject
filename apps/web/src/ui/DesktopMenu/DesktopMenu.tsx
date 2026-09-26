@@ -2,7 +2,12 @@ import { useState } from 'react';
 import { Overlay } from '../Overlay/Overlay.js';
 import { Icon } from '../Icon/Icon.js';
 import type { IconName } from '../Icon/icons.js';
-import { useNavigation, type MainTabId, type OverlayRoute } from '../../lib/navigation.js';
+import {
+  useNavigation,
+  type MainTabId,
+  type OverlayRoute,
+  type Route,
+} from '../../lib/navigation.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './DesktopMenu.module.css';
 
@@ -42,11 +47,15 @@ export interface DesktopMenuProps {
  * fake sign-out would be dishonest UI rather than a placeholder.
  */
 export function DesktopMenu({ open, onClose }: DesktopMenuProps) {
-  const { navigate } = useNavigation();
+  const { tab, overlay, navigate } = useNavigation();
   const [darkTheme, setDarkTheme] = useState(true);
+  // The screen Menu is layered over, captured before any item can
+  // replace it — Профиль needs this to hand BackRow a real "previous
+  // screen" (see Route['from'] on the 'profile' overlay).
+  const currentRoute: Route = overlay ?? { screen: tab };
 
   function go(route: MenuRoute) {
-    navigate(route);
+    navigate(route.screen === 'profile' ? { screen: 'profile', from: currentRoute } : route);
     onClose();
   }
 

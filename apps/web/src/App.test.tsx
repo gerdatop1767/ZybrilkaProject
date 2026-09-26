@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App.js';
 import { NavigationProvider } from './lib/navigation.js';
@@ -120,6 +120,22 @@ describe('App — desktop', () => {
       'aria-current',
       'page',
     );
+    restore();
+  });
+
+  it('opens Профиль from Menu and BackRow returns to the real screen underneath, not Home', async () => {
+    const restore = mockDesktop(true);
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getByRole('button', { name: /Начать бесплатно/ }));
+    await user.click(screen.getByRole('button', { name: 'О проекте' }));
+    await user.click(screen.getByRole('button', { name: 'Меню' }));
+    await user.click(screen.getByRole('button', { name: 'Профиль' }));
+    expect(screen.getByText('Мой профиль')).toBeInTheDocument();
+
+    const backRow = within(screen.getByRole('main')).getByRole('button', { name: 'О проекте' });
+    await user.click(backRow);
+    expect(screen.getByText('Наши принципы')).toBeInTheDocument();
     restore();
   });
 });
