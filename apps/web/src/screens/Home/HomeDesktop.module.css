@@ -70,6 +70,7 @@
   position: relative;
   aspect-ratio: 1 / 1;
   margin: -1.5rem -1.5rem -1.5rem 0.5rem;
+  overflow: hidden;
   mask-image: radial-gradient(ellipse 68% 68% at 50% 48%, #000 58%, transparent 100%);
   -webkit-mask-image: radial-gradient(ellipse 68% 68% at 50% 48%, #000 58%, transparent 100%);
 }
