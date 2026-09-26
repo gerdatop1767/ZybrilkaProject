@@ -12,7 +12,6 @@ interface SidebarItem {
 }
 
 const sidebarItems: readonly SidebarItem[] = [
-  { id: 'home', label: 'Главная', icon: 'home', route: { screen: 'home' } },
   {
     id: 'learningCenter',
     label: 'Учебный центр',
@@ -38,11 +37,10 @@ const sidebarItems: readonly SidebarItem[] = [
 ];
 
 /**
- * Desktop's persistent left sidebar (S1 Block 6, approved design) —
- * every desktop screen except Home/Subject-catalog's marketing top
- * bar uses this. "Учебный центр" routes to the still-unreferenced
- * screen and renders the neutral fallback until its screenshot
- * arrives (see screens/LearningCenter/DesktopFallback.tsx).
+ * Desktop's persistent left sidebar. Home has no entry here (the
+ * approved reference dropped it — the user is already on a screen,
+ * so a link back to the marketing landing page is redundant); it's
+ * still reachable as the tab underneath every overlay and via BackRow.
  */
 export function DesktopSidebar() {
   const { tab, overlay, navigate } = useNavigation();

@@ -91,4 +91,35 @@ describe('App — desktop', () => {
     expect(screen.getByRole('navigation', { name: 'Zybrilka' })).toBeInTheDocument();
     restore();
   });
+
+  it('opens the desktop Menu over the current screen and closes it on Escape', async () => {
+    const restore = mockDesktop(true);
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getByRole('button', { name: /Начать бесплатно/ }));
+    await user.click(screen.getByRole('button', { name: 'Меню' }));
+    const dialog = screen.getByRole('dialog', { name: 'Меню' });
+    expect(dialog).toBeInTheDocument();
+    // The screen underneath (the sidebar) stays mounted — Menu is a
+    // panel over it, not a route replacing it.
+    expect(screen.getByRole('navigation', { name: 'Zybrilka' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Меню' })).not.toBeInTheDocument();
+    restore();
+  });
+
+  it('navigating from the desktop Menu closes it and switches screen', async () => {
+    const restore = mockDesktop(true);
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getByRole('button', { name: /Начать бесплатно/ }));
+    await user.click(screen.getByRole('button', { name: 'Меню' }));
+    await user.click(screen.getByRole('button', { name: 'Моя статистика' }));
+    expect(screen.queryByRole('dialog', { name: 'Меню' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Статистика' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    restore();
+  });
 });

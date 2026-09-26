@@ -48,7 +48,9 @@ export type OverlayRoute =
   | { screen: 'mockExams' }
   | { screen: 'topics' }
   | { screen: 'friends' }
-  | { screen: 'settings' };
+  | { screen: 'settings' }
+  | { screen: 'help' }
+  | { screen: 'notifications' };
 
 export type Route = { screen: MainTabId } | OverlayRoute;
 

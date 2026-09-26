@@ -28,12 +28,6 @@ export function AppDesktop() {
     const header = 'status';
     return (
       <DesktopShell header={header} sidebar={sidebar}>
-        {overlay.screen === 'menu' && (
-          <WipPlaceholder
-            title="Меню"
-            note="Утверждённый референс для десктоп-меню ещё не получен."
-          />
-        )}
         {overlay.screen === 'subjectCatalog' && <SubjectCatalogDesktop />}
         {overlay.screen === 'subject' && (
           <WipPlaceholder title="Предмет" note="Экран в разработке — следующий блок." />
@@ -75,6 +69,12 @@ export function AppDesktop() {
         )}
         {overlay.screen === 'settings' && (
           <WipPlaceholder title="Настройки" note="Экран в разработке — следующий блок." />
+        )}
+        {overlay.screen === 'help' && (
+          <WipPlaceholder title="Помощь" note="Экран в разработке — следующий блок." />
+        )}
+        {overlay.screen === 'notifications' && (
+          <WipPlaceholder title="Уведомления" note="Экран в разработке — следующий блок." />
         )}
       </DesktopShell>
     );

@@ -85,6 +85,7 @@ import {
   FlaskConical,
   Leaf,
   Landmark,
+  Bell,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -183,6 +184,7 @@ export const icons = {
   subjectChemistry: FlaskConical,
   subjectBiology: Leaf,
   subjectHistory: Landmark,
+  notifications: Bell,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof icons;

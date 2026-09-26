@@ -1,10 +1,11 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import { Logo } from '../Logo/Logo.js';
 import { StatusChips } from '../StatusChips/StatusChips.js';
 import { Button } from '../Button/Button.js';
 import { Icon } from '../Icon/Icon.js';
 import { DesktopSidebar } from './DesktopSidebar.js';
+import { DesktopMenu } from '../DesktopMenu/DesktopMenu.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './DesktopShell.module.css';
 
@@ -31,6 +32,7 @@ export interface DesktopShellProps {
  */
 export function DesktopShell({ header = 'status', sidebar = true, children }: DesktopShellProps) {
   const { navigate, tab, overlay } = useNavigation();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Each screen starts scrolled to its top, never wherever the
   // previous screen happened to be left scrolled.
@@ -55,7 +57,7 @@ export function DesktopShell({ header = 'status', sidebar = true, children }: De
               type="button"
               className={styles.menuButton}
               aria-label="Меню"
-              onClick={() => navigate({ screen: 'menu' })}
+              onClick={() => setMenuOpen(true)}
             >
               <Icon name="menu" size={20} />
             </button>
@@ -66,6 +68,11 @@ export function DesktopShell({ header = 'status', sidebar = true, children }: De
         {sidebar && <DesktopSidebar />}
         <main className={styles.content}>{children}</main>
       </div>
+      {/* Local panel state (not the shared tab/overlay route mobile's
+       * own Menu uses): it layers over whichever screen is already
+       * showing instead of replacing it, matching the approved
+       * reference where the page stays visible behind the panel. */}
+      <DesktopMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
     </div>
   );
 }
