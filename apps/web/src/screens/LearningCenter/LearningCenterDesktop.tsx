@@ -4,38 +4,32 @@ import { BackRow } from '../../ui/BackRow/BackRow.js';
 import { Card } from '../../ui/Card/Card.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import type { IconName } from '../../ui/Icon/icons.js';
-import { SubjectTile } from '../../ui/SubjectTile/SubjectTile.js';
 import styles from './LearningCenterDesktop.module.css';
 
 interface LearningSection {
-  icon: IconName;
-  color: string;
+  image: string;
   title: string;
   description: string;
 }
 
 const sections: readonly LearningSection[] = [
   {
-    icon: 'variant',
-    color: 'var(--color-accent-primary)',
+    image: '/branding/v2/learning/theory.png',
     title: 'Теория',
     description: 'Краткие и понятные конспекты по всем темам ЕГЭ',
   },
   {
-    icon: 'checklist',
-    color: 'var(--color-accent-secondary)',
+    image: '/branding/v2/learning/practice.png',
     title: 'Практика',
     description: 'Разборы заданий и примеры решений',
   },
   {
-    icon: 'analysis',
-    color: 'var(--color-error)',
+    image: '/branding/v2/learning/strategy.png',
     title: 'Стратегии',
     description: 'Советы, лайфхаки и эффективные методики',
   },
   {
-    icon: 'progress',
-    color: 'var(--color-success)',
+    image: '/branding/v2/learning/useful-materials.png',
     title: 'Полезные материалы',
     description: 'Сборники, файлы и дополнительные ресурсы',
   },
@@ -105,17 +99,16 @@ export function LearningCenterDesktop() {
       <div className={styles.sectionsGrid}>
         {sections.map((section) => (
           <Card key={section.title} className={styles.sectionCard}>
-            <span className={styles.sectionIcon} style={{ background: section.color }}>
-              <Icon name={section.icon} size={22} />
-            </span>
-            <p className="text-body" style={{ fontWeight: 700 }}>
-              {section.title}
-            </p>
-            <p className="text-body-sm text-secondary">{section.description}</p>
+            <img src={section.image} alt="" aria-hidden="true" className={styles.sectionImg} />
+            <div className={styles.sectionBody}>
+              <p className="text-body" style={{ fontWeight: 700 }}>
+                {section.title}
+              </p>
+              <p className="text-body-sm text-secondary">{section.description}</p>
+            </div>
             <button
               type="button"
               className={styles.sectionArrow}
-              style={{ background: section.color }}
               aria-label={section.title}
               onClick={() => navigate({ screen: 'subjectCatalog' })}
             >
@@ -139,7 +132,12 @@ export function LearningCenterDesktop() {
               navigate({ screen: 'subject', subjectId: subject.id, from: 'learningCenter' })
             }
           >
-            <SubjectTile glyph={subject.glyph} color={subject.color} size={36} />
+            <img
+              src={`/branding/v2/subjects/${subject.id}.png`}
+              alt=""
+              aria-hidden="true"
+              className={styles.subjectIcon}
+            />
             <span className={styles.subjectName}>{subject.shortName}</span>
             <Icon name="arrowRight" size={16} className={styles.subjectArrow} />
           </button>

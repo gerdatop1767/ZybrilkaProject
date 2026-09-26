@@ -52,14 +52,10 @@
 }
 
 .statIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--radius-card);
-  color: #fff;
+  width: 2.75rem;
+  height: 2.75rem;
+  object-fit: contain;
 }
 
 .grid {

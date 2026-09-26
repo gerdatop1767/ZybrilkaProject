@@ -42,7 +42,7 @@ export function HomeDesktop() {
               Задания, тренировки, объяснения и статистика — всё для подготовки к ЕГЭ в одном месте.
             </p>
             <div className={styles.actions}>
-              <Button variant="primary" onClick={() => navigate({ screen: 'training' })}>
+              <Button variant="primary" onClick={() => navigate({ screen: 'learningCenter' })}>
                 Начать бесплатно <Icon name="arrowRight" size={18} />
               </Button>
               <Button variant="secondary" onClick={() => navigate({ screen: 'about' })}>

@@ -8,16 +8,18 @@ import styles from './SubjectCatalogDesktop.module.css';
 const totalTasks = subjects.reduce((sum, subject) => sum + subject.taskCount, 0);
 
 const stats = [
-  { icon: 'topic', color: 'var(--color-error)', label: 'предметов', value: `${subjects.length}` },
   {
-    icon: 'check',
-    color: 'var(--color-success)',
+    image: '/branding/v2/summary/subjects.png',
+    label: 'предметов',
+    value: `${subjects.length}`,
+  },
+  {
+    image: '/branding/v2/summary/tasks.png',
     label: 'заданий',
     value: `${totalTasks.toLocaleString('ru-RU')}+`,
   },
   {
-    icon: 'progress',
-    color: 'var(--color-accent-secondary)',
+    image: '/branding/v2/summary/full-statistics.png',
     label: 'статистика',
     value: 'Полная',
   },
@@ -53,9 +55,7 @@ export function SubjectCatalogDesktop() {
       <div className={styles.statsRow}>
         {stats.map((stat) => (
           <Card key={stat.label} className={styles.statCard}>
-            <span className={styles.statIcon} style={{ background: stat.color }}>
-              <Icon name={stat.icon} size={18} />
-            </span>
+            <img src={stat.image} alt="" aria-hidden="true" className={styles.statIcon} />
             <span>
               <strong className="text-body">{stat.value}</strong>
               <br />

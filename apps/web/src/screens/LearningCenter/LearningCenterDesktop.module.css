@@ -43,25 +43,28 @@
 }
 
 .sectionCard {
-  position: relative;
+  display: flex;
+  flex-direction: column;
   min-height: 10rem;
 }
 
-.sectionIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.sectionImg {
   width: 3rem;
   height: 3rem;
-  border-radius: var(--radius-card);
-  color: #fff;
+  object-fit: contain;
   margin-bottom: var(--space-3);
 }
 
+.sectionBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
 .sectionArrow {
-  position: absolute;
-  right: var(--space-4);
-  bottom: var(--space-4);
+  align-self: flex-end;
+  margin-top: auto;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -69,6 +72,7 @@
   height: 2.5rem;
   border-radius: 999px;
   border: none;
+  background: var(--gradient-primary);
   color: #fff;
   cursor: pointer;
 }
@@ -98,6 +102,13 @@
 
 .subjectRow:hover {
   background: var(--color-bg-elevated);
+}
+
+.subjectIcon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  object-fit: contain;
 }
 
 .subjectName {

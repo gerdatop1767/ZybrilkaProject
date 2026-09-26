@@ -31,11 +31,11 @@ describe('HomeDesktop', () => {
     expect(screen.getByText('заданий')).toBeInTheDocument();
   });
 
-  it('navigates to Training from the primary CTA', async () => {
+  it('navigates to Учебный центр from the primary CTA', async () => {
     const user = userEvent.setup();
     renderHome();
     await user.click(screen.getByRole('button', { name: /Начать бесплатно/ }));
-    expect(screen.getByTestId('overlay')).toHaveTextContent('training');
+    expect(screen.getByTestId('overlay')).toHaveTextContent('learningCenter');
   });
 
   it('navigates to About from the secondary CTA', async () => {

@@ -18,6 +18,17 @@ function renderSubject() {
   );
 }
 
+describe('SubjectDesktop — hero icon and glow', () => {
+  it('renders the real subject illustration instead of the old glyph tile', () => {
+    renderSubject();
+    const img = document.querySelector('img[src="/branding/v2/subjects/math.png"]');
+    expect(img).toBeInTheDocument();
+    // No leftover SubjectTile glyph (rendered as an inline SVG/lucide
+    // icon) inside the hero — the image itself carries the artwork now.
+    expect(img!.parentElement!.querySelector('svg')).not.toBeInTheDocument();
+  });
+});
+
 describe('SubjectDesktop — Задания по номерам source filter', () => {
   it('shows a ФИПИ source selector and switching source changes the grid counts', async () => {
     const user = userEvent.setup();

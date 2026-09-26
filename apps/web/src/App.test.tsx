@@ -156,7 +156,7 @@ describe('App — desktop', () => {
     await user.click(screen.getByRole('button', { name: 'Помощь' }));
     expect(screen.getByText('Нужна')).toBeInTheDocument();
 
-    const backRow = within(screen.getByRole('main')).getByRole('button', { name: /Тренировка/ });
+    const backRow = within(screen.getByRole('main')).getByRole('button', { name: /Главная/ });
     await user.click(backRow);
     expect(screen.queryByText('Нужна')).not.toBeInTheDocument();
     restore();
@@ -226,7 +226,7 @@ describe('App — URL routing is the source of truth', () => {
     renderApp();
 
     await user.click(screen.getByRole('button', { name: /Начать бесплатно/ }));
-    expect(window.location.pathname).toBe('/training');
+    expect(window.location.pathname).toBe('/learning');
 
     await user.click(screen.getByRole('button', { name: 'Предметы' }));
     expect(window.location.pathname).toBe('/subjects');

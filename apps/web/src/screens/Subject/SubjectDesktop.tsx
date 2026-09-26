@@ -17,7 +17,6 @@ import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import type { IconName } from '../../ui/Icon/icons.js';
 import { Select } from '../../ui/Select/Select.js';
-import { SubjectTile } from '../../ui/SubjectTile/SubjectTile.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { CircularProgress } from '../../ui/Progress/CircularProgress.js';
 import { clsx } from '../../lib/clsx.js';
@@ -101,7 +100,12 @@ export function SubjectDesktop({ subjectId, from }: SubjectDesktopProps) {
           className={styles.heroIllustration}
           style={{ ['--subject-accent' as string]: subject.color }}
         >
-          <SubjectTile glyph={subject.glyph} color={subject.color} size={72} />
+          <img
+            src={`/branding/v2/subjects/${subject.id}.png`}
+            alt=""
+            aria-hidden="true"
+            className={styles.heroImg}
+          />
         </div>
         <div className={styles.heroText}>
           <h1 className="text-h1">{subject.shortName}</h1>
