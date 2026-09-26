@@ -1,9 +1,144 @@
-import { jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 // Runtime key/value settings (feature flags, maintenance mode, etc.).
-// Product tables are added in their own stages; see docs/ARCHITECTURE.md §4.
 export const appSettings = pgTable('app_settings', {
   key: text('key').primaryKey(),
   value: jsonb('value').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Task engine (docs/ARCHITECTURE.md §4/§13 S2), trimmed to what the
+ * current stage needs. Full auth (S3) doesn't exist yet, so `users`
+ * here is intentionally minimal: just enough to give `attempts`/
+ * `mistakes` a stable owner. Rows are created lazily for a
+ * client-generated anonymous id (see apps/api's anon-user plugin) —
+ * this is not an auth system, it's the FK target auth will attach to
+ * later (`auth_identities` etc.), added when S3 actually lands.
+ */
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Matches apps/web's data/subjects.ts ids (math, russian, ...) so seed
+// content and the existing frontend subject list stay in sync.
+export const subjects = pgTable('subjects', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+});
+
+export const topics = pgTable(
+  'topics',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    subjectId: text('subject_id')
+      .notNull()
+      .references(() => subjects.id),
+    slug: text('slug').notNull(),
+    name: text('name').notNull(),
+  },
+  (table) => [uniqueIndex('topics_subject_slug_idx').on(table.subjectId, table.slug)],
+);
+
+export const taskAnswerTypes = ['short_answer', 'multiple_choice'] as const;
+export const taskStatuses = ['draft', 'published', 'archived'] as const;
+
+export const tasks = pgTable(
+  'tasks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    subjectId: text('subject_id')
+      .notNull()
+      .references(() => subjects.id),
+    /** The official EGE question number within the subject (1, 2, 3…). */
+    taskNumber: integer('task_number').notNull(),
+    topicId: uuid('topic_id').references(() => topics.id),
+    /** 1 = лёгкое, 2 = среднее, 3 = сложное. */
+    difficulty: integer('difficulty').notNull(),
+    conditionMd: text('condition_md').notNull(),
+    imageUrl: text('image_url'),
+    answerType: text('answer_type', { enum: taskAnswerTypes }).notNull().default('short_answer'),
+    /** Never sent to the client before an attempt exists for it — see modules/tasks/service.ts. */
+    correctAnswer: text('correct_answer').notNull(),
+    answerOptions: jsonb('answer_options').$type<readonly string[] | null>(),
+    explanationMd: text('explanation_md').notNull(),
+    source: text('source').notNull(),
+    sourceUrl: text('source_url'),
+    sourceYear: integer('source_year'),
+    tags: jsonb('tags').$type<readonly string[]>().notNull().default([]),
+    status: text('status', { enum: taskStatuses }).notNull().default('draft'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('tasks_subject_number_idx').on(table.subjectId, table.taskNumber),
+    index('tasks_status_idx').on(table.status),
+  ],
+);
+
+export const attempts = pgTable(
+  'attempts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id),
+    answerRaw: text('answer_raw').notNull(),
+    isCorrect: boolean('is_correct').notNull(),
+    timeSpentMs: integer('time_spent_ms'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('attempts_user_task_idx').on(table.userId, table.taskId),
+    index('attempts_task_idx').on(table.taskId),
+  ],
+);
+
+export const mistakeStatuses = ['open', 'resolved'] as const;
+
+/**
+ * One row per (user, task) ever answered wrong — never deleted, only
+ * updated. `timesWrong` and `firstAttemptId` are the permanent history;
+ * `status` flips to 'resolved' on a later correct attempt and back to
+ * 'open' if the user gets it wrong again, per CLAUDE.md's "Мои ошибки"
+ * spec (a real training mode, not just a log).
+ */
+export const mistakes = pgTable(
+  'mistakes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id),
+    firstAttemptId: uuid('first_attempt_id')
+      .notNull()
+      .references(() => attempts.id),
+    lastAttemptId: uuid('last_attempt_id')
+      .notNull()
+      .references(() => attempts.id),
+    timesWrong: integer('times_wrong').notNull().default(1),
+    status: text('status', { enum: mistakeStatuses }).notNull().default('open'),
+    explanationOpened: boolean('explanation_opened').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('mistakes_user_task_idx').on(table.userId, table.taskId)],
+);

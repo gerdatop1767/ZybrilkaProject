@@ -20,7 +20,9 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --conditions=@zybrilka/source src/migrate.ts",
-    "db:migrate:prod": "node dist/migrate.js"
+    "db:migrate:prod": "node dist/migrate.js",
+    "db:seed": "tsx --conditions=@zybrilka/source src/seed.ts",
+    "db:seed:prod": "node dist/seed.js"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.3",
