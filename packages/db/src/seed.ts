@@ -1,8 +1,8 @@
-import { fileURLToPath } from 'node:url';
 import { and, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import type { Database } from './client.js';
+import { isMainModule } from './isMainModule.js';
 import * as schema from './schema.js';
 
 /**
@@ -190,7 +190,7 @@ async function main() {
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isMainModule(import.meta.url)) {
   main().catch((error: unknown) => {
     console.error(error);
     process.exit(1);
