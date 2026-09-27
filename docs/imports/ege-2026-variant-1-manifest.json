@@ -136,8 +136,8 @@
       "part": 2,
       "sourcePage": 3,
       "hasImage": false,
-      "answerType": "short_answer",
-      "status": "needs_review",
+      "answerType": "interval",
+      "status": "published",
       "contentHash": "97c7af5d295d3a0516d5e517b32f671f45b0e3055d03b2fb39de0d8d9d3017d2"
     },
     {
@@ -172,8 +172,8 @@
       "part": 2,
       "sourcePage": 4,
       "hasImage": false,
-      "answerType": "short_answer",
-      "status": "needs_review",
+      "answerType": "multi_part",
+      "status": "published",
       "contentHash": "b70712cd8cfaf75fbe50a2979e1812be2eeed743d9589c595b06858b113310e8"
     }
   ]

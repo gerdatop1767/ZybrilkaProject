@@ -308,3 +308,61 @@ Each stage ends **tested + committed + pushed to GitHub**.
 ## 16. First steps
 
 S0 (foundation) → S1 (5 design concepts) → S2 (task engine) on a single subject.
+
+## 17. Answer engine — implemented answer types
+
+Beyond §4's aspirational schema, this is what the answer engine actually checks today
+(`packages/shared/src/{answerChecker,intervalAnswer,multiPartAnswer}.ts`, `tasks.answerType`).
+
+`tasks.answerType` is one of `short_answer | multiple_choice | interval | multi_part`.
+INTEGER/DECIMAL/FRACTION/FREE_TEXT are deliberately **not** separate types: `short_answer`'s
+existing checker already normalizes commas/dots, whitespace, ё/е, case, and multi-value order,
+so splitting them out would just duplicate that behavior with no difference in what's accepted.
+
+**`interval`** — `tasks.correctAnswer` stays a single TEXT column holding a plain interval-set
+string, e.g. `(-∞;3] ∪ (5;+∞)`. `checkIntervalAnswer` never compares strings directly: it parses
+both sides into a normalized `Interval[]` (`{left, leftClosed, right, rightClosed}`, `±Infinity`
+allowed) via a deterministic, non-`eval` recursive scanner — no `RegExp` spanning the whole
+bracket, since a bound can contain its own parentheses (`log_5(2)`) that would collide with the
+interval's own closing bracket. It accepts different bracket/separator/∪ vs `U`/spacing/negative
+number/decimal conventions as equivalent, and sorts intervals so union order doesn't matter. An
+unparseable string returns `null` from the parser and is graded incorrect — never a 500. Bounds
+support integers, decimals, unary sign, `a/b` fractions, `π`, `e`, `√n`/`sqrt(n)`, and `log_b(x)`.
+A "punctured" interval (one excluded point) has no special syntax — it's expressed as the union
+of the two open sub-intervals split at that point (see task 15 below).
+
+**`multi_part`** — reuses the same `tasks.correctAnswer` TEXT column, this time holding a
+JSON-encoded `MultiPartSpec { parts: [{id, label, answerType, correctAnswer}] }`
+(`serializeMultiPartSpec`/`parseMultiPartSpec`). `attempts.answerRaw` likewise holds a
+JSON-encoded `{[partId]: answer}` object instead of a plain string
+(`serializeMultiPartUserAnswer`/`parseMultiPartUserAnswer`) — no new tables for either. The
+public `TaskPublic` DTO gets one extra field, `answerParts: {id, label}[] | null`, so the client
+can render one input per part *before* an attempt exists, without ever exposing the correct
+answer early. `POST /tasks/:id/attempt`'s `answer` field is `string | Record<string, string>`
+(Zod union); the server infers which shape to expect from `answerType` and returns
+`400 invalid_answer_shape` (never 500) on a mismatch.
+
+**Partial correctness** — `gradeMultiPart` checks each part independently (each part's own
+`answerType`, `short_answer` or `interval`) and returns
+`{parts: [{id, label, correct}], correctParts, totalParts, status}` where `status` is
+`all_correct | partially_correct | all_incorrect`. One multi_part submission is still one
+attempt row — `POST /attempt` is called once with the whole answer object, not once per part —
+and `AttemptResult` carries the per-part breakdown as optional fields alongside the existing
+`correct`/`correctAnswer`/`explanation`, so every other answerType's response shape is untouched.
+No EGE point/balл scoring is implemented — deliberately out of scope for now.
+
+**Mistakes per part** — `mistakes` gained one nullable column, `wrongParts: string[] | null`
+(the ids of the parts that were wrong on the *last* attempt; `null` for every non-multi_part
+task). It's set on both the "first wrong attempt" and "wrong again" paths and left untouched
+when an attempt later resolves the mistake, matching the existing `lastAttemptId` convention of
+keeping a historical record of what was last wrong rather than clearing it on success. This is
+the hook a future adaptive engine can use to target specific weak parts, not just weak topics.
+
+**UI** — `interval` needs no UI changes: the existing single free-text input plus its
+∪/∩/∞ hint text already covers it. `multi_part` renders one labeled input per
+`task.answerParts` entry instead of the single field, with one shared "Проверить ответ" button
+(`apps/web/src/screens/Task/{TaskDesktop,TaskMobile}.tsx`); the Result screens re-run
+`gradeMultiPart` client-side (the task's `correctAnswer` and the JSON-encoded `userAnswer` are
+both already available through existing channels) to render each part's own
+correct/incorrect state and its own explanation section, split from `explanationMd` at its
+`### <heading>` markers (`apps/web/src/lib/taskAdapter.ts`'s `splitMultiPartExplanation`).
