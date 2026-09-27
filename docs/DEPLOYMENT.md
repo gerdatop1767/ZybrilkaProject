@@ -93,6 +93,20 @@ it only exists locally, never pushed anywhere.
   Docker build). Both Dockerfiles already pass `--legacy` to `deploy`
   for exactly this reason — if you see this error, check that flag
   wasn't dropped from `apps/api/Dockerfile` / `apps/worker/Dockerfile`.
+- **`https://zybrilka.ru/health` (or `/api/*`) returns the website
+  instead of the API response, even though `infra/Caddyfile` routes it
+  correctly** — the running `caddy` container is still serving an
+  older in-memory config from before that routing existed.
+  `infra/Caddyfile` is bind-mounted, not baked into the image, so a
+  plain `docker compose up -d` never notices its contents changed and
+  never restarts a `caddy` container whose own service definition
+  didn't change. The `caddy` service runs with `--watch` (see
+  **Caddy** above) specifically so this can't happen again once it's
+  running with that flag; if it's still happening, confirm the running
+  container's command actually includes `--watch`
+  (`docker compose -f infra/docker-compose.yml exec caddy pgrep -fa caddy`)
+  and if not, `docker compose -f infra/docker-compose.yml up -d caddy`
+  once to pick it up.
 
 ## Stop
 
@@ -187,6 +201,18 @@ Validate the file without starting anything:
 docker run --rm -v "$(pwd)/infra/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine \
   caddy validate --config /etc/caddy/Caddyfile
 ```
+
+`caddy`'s compose service runs with `--watch`, so once it's running
+with that flag it reloads automatically whenever `infra/Caddyfile`
+changes on disk — no container restart needed for a routing change to
+take effect (see the comment on that service in
+`infra/docker-compose.yml` for why this matters: it's a bind-mounted
+file, and `docker compose up -d` alone never notices its contents
+changed). If you're updating an existing deployment whose `caddy`
+container predates `--watch`, `docker compose up -d` still picks it up
+correctly on that one deploy — a `command:` change is a service
+definition change, so compose recreates the container for it exactly
+like it would for a new image tag.
 
 ## DNS requirements
 
