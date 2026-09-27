@@ -7,8 +7,8 @@
 #
 # Build context is the repo root (this is a pnpm workspace and the
 # build needs pnpm-lock.yaml + the other workspace package.json files
-# to resolve, even though @zybrilka/web itself has no workspace
-# dependencies):
+# to resolve, plus @zybrilka/shared's actual source — see the build
+# stage below):
 #
 #   docker build -f apps/web/Dockerfile -t zybrilka-web .
 #
@@ -33,8 +33,12 @@ COPY packages/db/package.json packages/db/package.json
 COPY packages/shared/package.json packages/shared/package.json
 RUN pnpm install --frozen-lockfile
 
-# --- build: only apps/web's own source is needed to build it ---
+# --- build: apps/web's own source, plus @zybrilka/shared's — vite.config.ts
+# resolves it via the @zybrilka/source condition straight to its .ts
+# source (same as every dev tool in this repo), so the compiled dist/
+# alone is not enough; the actual source has to be in the build context. ---
 FROM deps AS build
+COPY packages/shared packages/shared
 COPY apps/web apps/web
 RUN pnpm --filter @zybrilka/web build
 
