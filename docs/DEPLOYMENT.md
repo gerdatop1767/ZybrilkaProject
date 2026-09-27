@@ -1,18 +1,22 @@
 # Deployment
 
-Production deployment of `apps/web` (S1 static build) to a VPS:
+Production deployment of the full stack to a VPS:
+GitHub → Docker → Caddy → {Web, API} → PostgreSQL, plus a Worker.
 GitHub → Docker → Zybrilka Web → Caddy → HTTPS → `zybrilka.ru`.
 
-Only the web app is covered here. API/worker/Postgres/Redis/Telegram
-join in a later phase, as their own compose services.
+S3.2 added API/Worker/PostgreSQL as their own compose services next to
+the existing Web/Caddy — this file covers the whole stack now.
 
 ## Prerequisites
 
 - A VPS with Docker Engine + the Compose plugin installed (`docker compose version`).
-  Nothing else needs installing on the host — Node/pnpm only run inside the build.
+  Nothing else needs installing on the host — Node/pnpm only run inside builds.
 - DNS: `zybrilka.ru` and `www.zybrilka.ru` A/AAAA records pointing at the VPS's public IP.
 - Ports 80 and 443 open and free on the VPS (Caddy needs both for HTTP→HTTPS redirect and ACME).
 - A clone of this repo on the VPS, on the branch you intend to run.
+- `infra/.env` on the VPS only (copy from `infra/.env.example`, fill in
+  a real `POSTGRES_PASSWORD`) — **never commit this file.** Compose
+  loads it automatically because it sits next to `docker-compose.yml`.
 
 ## Build
 
@@ -21,21 +25,39 @@ git clone <repo-url> zybrilka && cd zybrilka
 docker compose -f infra/docker-compose.yml build
 ```
 
-Builds `apps/web/Dockerfile`: a Node 22 + pnpm 10.33.0 stage runs
-`pnpm install --frozen-lockfile` and `vite build`, then only the
-compiled `dist/` is copied into a minimal `nginx:1.27-alpine` runtime
-image — no Node, pnpm or dev dependencies ship in the final image.
+Builds four images:
+
+- `apps/web/Dockerfile` — a Node 22 + pnpm 10.33.0 stage runs
+  `pnpm install --frozen-lockfile` and `vite build`, then only the
+  compiled `dist/` is copied into a minimal `nginx:1.27-alpine` runtime
+  image — no Node, pnpm or dev dependencies ship in the final image.
+- `apps/api/Dockerfile` and `apps/worker/Dockerfile` — same shape: a
+  Node/pnpm builder compiles `@zybrilka/shared` → `@zybrilka/db` →
+  the app itself (dependency order via `pnpm --filter <name>... build`),
+  then `pnpm deploy --prod` produces a self-contained package directory
+  (workspace: deps resolved to real copied files) that a minimal
+  `node:22-alpine` runtime stage just runs — no pnpm or dev deps ship.
+- `postgres` and `caddy` use their official upstream images directly
+  (`postgres:16-alpine`, `caddy:2-alpine`), nothing to build.
 
 ## Start
 
 ```bash
-docker compose -f infra/docker-compose.yml up -d
+docker compose -f infra/docker-compose.yml up -d --build
 ```
 
-Starts two containers: `web` (nginx serving the static build,
-reachable only on the internal Docker network) and `caddy` (the only
-container publishing `80`/`443`), which reverse-proxies to `web` and
-obtains/renews its own TLS certificate automatically.
+Starts, in dependency order: `postgres` (with a persistent named
+volume, `postgres_data` — survives `down`/`up` and a container
+rebuild), a one-shot `migrate` job that applies any pending Drizzle
+migrations and exits, `api` and `worker` (both wait for `migrate` to
+finish successfully), `web`, and `caddy` (the only container
+publishing `80`/`443`), which reverse-proxies `/api/*` and `/health` to
+`api:3000` and everything else to `web:80`, obtaining/renewing its own
+TLS certificate automatically.
+
+Always pass `--build` on a fresh `up` — `migrate`/`api` share one image
+tag (`zybrilka-api:latest`); `--build` guarantees that tag exists
+before `migrate`'s container is created.
 
 ## Stop
 
@@ -43,43 +65,86 @@ obtains/renews its own TLS certificate automatically.
 docker compose -f infra/docker-compose.yml down
 ```
 
-Leaves the `caddy_data`/`caddy_config` volumes (and the built image)
-in place, so certificates aren't re-requested on the next `up`.
+Leaves every named volume (`caddy_data`, `caddy_config`,
+`postgres_data`) and the built images in place — certificates aren't
+re-requested and the database isn't touched on the next `up`. Add `-v`
+only if you explicitly want to destroy volumes too (never do this in
+production without a fresh backup — see **Backup** below).
 
 ## Restart
 
 ```bash
-docker compose -f infra/docker-compose.yml restart        # both
-docker compose -f infra/docker-compose.yml restart web    # just web
+docker compose -f infra/docker-compose.yml restart          # everything
+docker compose -f infra/docker-compose.yml restart api      # just one service
 ```
 
 ## Logs
 
 ```bash
+docker compose -f infra/docker-compose.yml logs -f api
+docker compose -f infra/docker-compose.yml logs -f worker
+docker compose -f infra/docker-compose.yml logs -f postgres
 docker compose -f infra/docker-compose.yml logs -f web
 docker compose -f infra/docker-compose.yml logs -f caddy
+```
+
+## Health check
+
+```bash
+docker compose -f infra/docker-compose.yml ps          # all services' health state
+curl -s https://zybrilka.ru/health                      # {"status":"ok","db":"ok",...}
+```
+
+`postgres` and `api` both carry a Docker `HEALTHCHECK`; `web` already
+had one. `503`/`{"db":"down"}` from `/health` means the API is up but
+can't reach Postgres — check `docker compose logs postgres` first.
+
+## Migrations
+
+Applied automatically by the `migrate` one-shot service on every
+`up --build` (see **Start** above) — safe to re-run: Drizzle tracks
+already-applied migrations in its own `__drizzle_migrations` table and
+skips them. Never runs `DROP DATABASE`/`DROP SCHEMA CASCADE` or any
+other destructive statement; migration files are plain, reviewable SQL
+under `packages/db/migrations/`.
+
+To run migrations manually (e.g. to watch the output live) instead of
+waiting for `up`:
+
+```bash
+docker compose -f infra/docker-compose.yml run --rm migrate
 ```
 
 ## Update from Git
 
 ```bash
-git fetch origin
+git fetch new-origin
 git checkout <branch>
-git pull
-docker compose -f infra/docker-compose.yml up -d --build web
+git pull new-origin <branch>
+docker compose -f infra/docker-compose.yml up -d --build
 ```
 
-Rebuilds only the `web` image from the new commit and replaces the
-running container; `caddy` is untouched.
+Rebuilds every image that changed, re-runs pending migrations via
+`migrate`, and replaces only the containers whose image actually
+changed — `postgres`'s data volume is never touched by this.
+
+To redeploy only one service (e.g. a web-only content fix):
+
+```bash
+docker compose -f infra/docker-compose.yml up -d --build web
+```
 
 ## Caddy
 
 `infra/Caddyfile` defines both hosts:
 
 - `www.zybrilka.ru` — permanent redirect to the apex domain.
-- `zybrilka.ru` — reverse-proxied to `web:80`, with gzip/zstd
-  encoding. Client-side route fallback (unknown paths → `index.html`)
-  is handled by `web`'s own nginx config, not by Caddy.
+- `zybrilka.ru` — `/api/*` and `/health` reverse-proxy to `api:3000`
+  with no path stripping (the API already registers those exact paths
+  itself, see `apps/api/src/app.ts`); everything else reverse-proxies
+  to `web:80`, with gzip/zstd encoding. Client-side route fallback
+  (unknown paths → `index.html`) is handled by `web`'s own nginx
+  config, not by Caddy.
 
 Validate the file without starting anything:
 
@@ -100,12 +165,50 @@ Fully automatic — Caddy requests and renews Let's Encrypt certificates
 for both hosts on first request and redirects HTTP → HTTPS by default.
 No manual certificate generation or renewal cron job needed.
 
+## Backup
+
+Manual `pg_dump` from the running container — safe to run any time,
+takes a consistent snapshot without stopping the stack:
+
+```bash
+docker compose -f infra/docker-compose.yml exec postgres \
+  pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom \
+  > "zybrilka-$(date +%Y%m%d-%H%M%S).dump"
+```
+
+No automated/off-box backup schedule is configured yet — that needs a
+separate, explicit decision (where dumps are stored, retention, who
+has access) before it's set up.
+
+## Restore
+
+**Destructive — only run this deliberately, never as part of a normal
+deploy, and take a fresh backup first if the current data has any value.**
+
+```bash
+# Stop writers so nothing races the restore.
+docker compose -f infra/docker-compose.yml stop api worker
+
+docker compose -f infra/docker-compose.yml exec -T postgres \
+  pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists \
+  < zybrilka-YYYYMMDD-HHMMSS.dump
+
+docker compose -f infra/docker-compose.yml start api worker
+```
+
+`--clean --if-exists` drops and recreates existing objects before
+restoring — this is the destructive part. Never run this against a
+database you haven't just backed up, and never automate it.
+
 ## Rollback
 
 ```bash
 git log --oneline -5                 # find the previous good commit
 git checkout <previous-commit-or-tag>
-docker compose -f infra/docker-compose.yml up -d --build web
+docker compose -f infra/docker-compose.yml up -d --build
 ```
 
-`caddy` and its certificates are unaffected by a `web` rollback.
+A schema rollback (undoing a migration) is not automated — Drizzle
+migrations are forward-only here. If a bad migration shipped, restore
+from a pre-migration backup instead of trying to hand-write a down
+migration.

@@ -1,11 +1,98 @@
-# Production stack: Caddy (public edge, TLS) -> web (internal only).
-# No API/worker/Postgres/Redis/Telegram yet — those join later
-# compose files as they're built.
+# Production stack: Caddy (public edge, TLS) -> web / api -> postgres,
+# plus a one-shot migrate job and a worker. See docs/DEPLOYMENT.md for
+# the full setup/backup/restore/deploy runbook.
 #
 # Usage (from repo root):
 #   docker compose -f infra/docker-compose.yml up -d --build
 #
+# Required env (see .env.example): POSTGRES_DB, POSTGRES_USER,
+# POSTGRES_PASSWORD, APP_VERSION. Never commit real values — this file
+# only references ${VAR} placeholders.
+#
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: zybrilka-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      # Named volume — survives `docker compose down`/`up` and a
+      # container rebuild; only `docker compose down -v` or an explicit
+      # `docker volume rm` would remove it.
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No `ports:` — reachable only from other containers on `internal`,
+    # never directly from the host/internet.
+
+  # One-shot: applies pending Drizzle migrations (idempotent — already
+  # applied ones are tracked and skipped) and exits. `api` waits for
+  # this to finish successfully before it starts, every deploy.
+  migrate:
+    image: zybrilka-api:latest
+    container_name: zybrilka-migrate
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    networks:
+      - internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ['node', 'node_modules/@zybrilka/db/dist/migrate.js']
+    restart: 'no'
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    image: zybrilka-api:latest
+    container_name: zybrilka-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      LOG_LEVEL: info
+      APP_VERSION: ${APP_VERSION:-prod}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    expose:
+      - '3000'
+    networks:
+      - internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    # No `ports:` — reachable only from Caddy, over `internal`.
+
+  worker:
+    build:
+      context: ..
+      dockerfile: apps/worker/Dockerfile
+    image: zybrilka-worker:latest
+    container_name: zybrilka-worker
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    networks:
+      - internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
   web:
     build:
       context: ..
@@ -41,6 +128,7 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  postgres_data:
 
 networks:
   internal:

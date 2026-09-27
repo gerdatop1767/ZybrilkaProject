@@ -11,8 +11,18 @@ www.zybrilka.ru {
 zybrilka.ru {
 	encode zstd gzip
 
-	# The web container already handles SPA client-side-route
-	# fallback (nginx `try_files ... /index.html`) — this is a plain
-	# reverse proxy to it.
-	reverse_proxy web:80
+	# The API registers its own routes at /api/v1/* and a separate
+	# top-level /health (see apps/api/src/app.ts) — proxied here with
+	# no path stripping, matching that layout exactly.
+	@api path /api/* /health
+	handle @api {
+		reverse_proxy api:3000
+	}
+
+	# Everything else: the web container already handles SPA
+	# client-side-route fallback (nginx `try_files ... /index.html`)
+	# — this is a plain reverse proxy to it.
+	handle {
+		reverse_proxy web:80
+	}
 }
