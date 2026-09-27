@@ -145,23 +145,25 @@ export function TaskMobile({ subjectId, taskNumber, taskId }: TaskMobileProps) {
           <img src={task.imageUrl} alt="Иллюстрация к заданию" className={styles.taskImage} />
         )}
 
-        <div className={styles.hintWrap}>
-          <button
-            type="button"
-            className={styles.hintSummary}
-            aria-expanded={hintOpen}
-            onClick={() => setHintOpen((v) => !v)}
-          >
-            <Icon name="hint" size={18} className={styles.hintIcon} />
-            <span className="text-body-sm" style={{ flex: 1, textAlign: 'left' }}>
-              Подсказка
-            </span>
-            <Icon name={hintOpen ? 'chevronUp' : 'chevronDown'} size={18} />
-          </button>
-          <Collapse open={hintOpen}>
-            <p className={clsx('text-body-sm', 'text-secondary', styles.hintText)}>{task.hint}</p>
-          </Collapse>
-        </div>
+        {task.hint && (
+          <div className={styles.hintWrap}>
+            <button
+              type="button"
+              className={styles.hintSummary}
+              aria-expanded={hintOpen}
+              onClick={() => setHintOpen((v) => !v)}
+            >
+              <Icon name="hint" size={18} className={styles.hintIcon} />
+              <span className="text-body-sm" style={{ flex: 1, textAlign: 'left' }}>
+                Подсказка
+              </span>
+              <Icon name={hintOpen ? 'chevronUp' : 'chevronDown'} size={18} />
+            </button>
+            <Collapse open={hintOpen}>
+              <p className={clsx('text-body-sm', 'text-secondary', styles.hintText)}>{task.hint}</p>
+            </Collapse>
+          </div>
+        )}
 
         {isMultiPart ? (
           <div className={styles.multiPartFields}>

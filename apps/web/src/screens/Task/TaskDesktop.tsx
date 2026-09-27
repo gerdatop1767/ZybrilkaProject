@@ -180,19 +180,25 @@ export function TaskDesktop({ subjectId, taskNumber, taskId }: TaskDesktopProps)
               <img src={task.imageUrl} alt="Иллюстрация к заданию" className={styles.taskImage} />
             )}
 
-            <button
-              type="button"
-              className={styles.hintToggle}
-              aria-expanded={hintOpen}
-              aria-label="Показать подсказку"
-              onClick={() => setHintOpen((v) => !v)}
-            >
-              <Icon name="hint" size={16} /> Подсказка
-              <Icon name={hintOpen ? 'chevronUp' : 'chevronDown'} size={16} />
-            </button>
-            <Collapse open={hintOpen}>
-              <p className={clsx('text-body-sm', 'text-secondary', styles.hintText)}>{task.hint}</p>
-            </Collapse>
+            {task.hint && (
+              <>
+                <button
+                  type="button"
+                  className={styles.hintToggle}
+                  aria-expanded={hintOpen}
+                  aria-label="Показать подсказку"
+                  onClick={() => setHintOpen((v) => !v)}
+                >
+                  <Icon name="hint" size={16} /> Подсказка
+                  <Icon name={hintOpen ? 'chevronUp' : 'chevronDown'} size={16} />
+                </button>
+                <Collapse open={hintOpen}>
+                  <p className={clsx('text-body-sm', 'text-secondary', styles.hintText)}>
+                    {task.hint}
+                  </p>
+                </Collapse>
+              </>
+            )}
 
             <div>
               <p

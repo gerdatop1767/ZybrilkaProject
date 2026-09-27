@@ -222,7 +222,14 @@ export function ResultMobile({
               : task.steps.map((step, i) => (
                   <div key={i} className={styles.solutionStep}>
                     <span className={styles.solutionStepIndex}>{i + 1}</span>
-                    <p className="text-body-sm">{step.text}</p>
+                    <div>
+                      {step.title && (
+                        <p className="text-body-sm" style={{ fontWeight: 700 }}>
+                          {step.title}
+                        </p>
+                      )}
+                      <p className="text-body-sm">{step.text}</p>
+                    </div>
                   </div>
                 ))}
           </div>

@@ -6,6 +6,8 @@
  * Demo/seed content for the UI only — not the real task database.
  */
 export interface SolutionStep {
+  /** Task-specific step name ("ОДЗ", "Считываем данные с графика", ...) — absent for the single-block fallback. */
+  title?: string;
   text: string;
 }
 

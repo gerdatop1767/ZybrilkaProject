@@ -279,7 +279,14 @@ export function ResultDesktop({
                       return (
                         <div key={stepNumber} className={styles.step}>
                           <span className={styles.stepIndex}>{stepNumber}</span>
-                          <p className="text-body-sm">{step.text}</p>
+                          <div>
+                            {step.title && (
+                              <p className="text-body-sm" style={{ fontWeight: 700 }}>
+                                {step.title}
+                              </p>
+                            )}
+                            <p className="text-body-sm">{step.text}</p>
+                          </div>
                         </div>
                       );
                     },
@@ -288,7 +295,7 @@ export function ResultDesktop({
               </>
             )}
 
-            {!correct && (
+            {!correct && task.hint && (
               <div className={styles.tipBox}>
                 <Icon name="hint" size={18} className={styles.tipIcon} />
                 <div>
