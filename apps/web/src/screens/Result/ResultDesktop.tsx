@@ -19,6 +19,7 @@ import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { useCountUp } from '../../lib/useCountUp.js';
 import { FadeIn } from '../../ui/motion/motion.js';
 import { InlineMathText, MathText } from '../../ui/MathText/MathText.js';
+import { TaskIllustration } from '../../ui/TaskIllustration/TaskIllustration.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './ResultDesktop.module.css';
 
@@ -158,9 +159,12 @@ export function ResultDesktop({
             <div className={clsx('text-task', styles.condition)}>
               <MathText text={task.condition} />
             </div>
-            {task.imageUrl && (
-              <img src={task.imageUrl} alt="Иллюстрация к заданию" className={styles.taskImage} />
-            )}
+            <TaskIllustration
+              subjectId={task.subjectId}
+              taskNumber={task.number}
+              imageUrl={task.imageUrl}
+              className={styles.taskImage}
+            />
 
             <div
               className={clsx(
