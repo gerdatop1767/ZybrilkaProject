@@ -52,7 +52,15 @@ export const tasksRoutes: FastifyPluginAsync<TasksRoutesOptions> = async (app, {
       return reply.code(400).send({ error: 'invalid_body', issues: body.error.issues });
     }
 
-    const result = await service.submitAttempt(db, params.data.id, request.userId, body.data);
+    let result;
+    try {
+      result = await service.submitAttempt(db, params.data.id, request.userId, body.data);
+    } catch (error) {
+      if (error instanceof service.InvalidAnswerShapeError) {
+        return reply.code(400).send({ error: 'invalid_answer_shape' });
+      }
+      throw error;
+    }
     if (!result) return reply.code(404).send({ error: 'task_not_found' });
     return result;
   });

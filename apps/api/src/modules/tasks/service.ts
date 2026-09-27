@@ -1,6 +1,10 @@
 import type { Database } from '@zybrilka/db';
 import {
   checkAnswer,
+  checkIntervalAnswer,
+  gradeMultiPart,
+  parseMultiPartSpec,
+  serializeMultiPartUserAnswer,
   type AttemptRequest,
   type AttemptResult,
   type RandomTaskQuery,
@@ -10,6 +14,13 @@ import {
   type TaskWithSolution,
 } from '@zybrilka/shared';
 import * as repo from './repo.js';
+
+/** Thrown when the request's `answer` shape doesn't match the task's answerType — the route maps this to a 400, never a 500. */
+export class InvalidAnswerShapeError extends Error {
+  constructor() {
+    super('answer shape does not match the task answerType');
+  }
+}
 
 function toPublicTask({ task, topicName }: repo.TaskWithTopic): TaskPublic {
   return {
@@ -78,8 +89,19 @@ export async function submitAttempt(
   if (!row) return undefined;
 
   // The only place correctness is decided — never trust a `correct`
-  // flag sent by the client.
-  const correct = checkAnswer(input.answer, row.task.correctAnswer);
+  // flag sent by the client. `answer` shape must match this task's
+  // answerType (object only for multi_part) or the request is rejected
+  // before anything is written.
+  if (row.task.answerType === 'multi_part') {
+    if (typeof input.answer !== 'object') throw new InvalidAnswerShapeError();
+    return submitMultiPartAttempt(db, row, userId, input.answer, input.timeSpentMs);
+  }
+  if (typeof input.answer !== 'string') throw new InvalidAnswerShapeError();
+
+  const correct =
+    row.task.answerType === 'interval'
+      ? checkIntervalAnswer(input.answer, row.task.correctAnswer)
+      : checkAnswer(input.answer, row.task.correctAnswer);
 
   const attempt = await repo.createAttempt(db, {
     userId,
@@ -93,6 +115,7 @@ export async function submitAttempt(
     taskId,
     attemptId: attempt.id,
     isCorrect: correct,
+    wrongParts: null,
   });
 
   return {
@@ -101,5 +124,48 @@ export async function submitAttempt(
     explanation: row.task.explanationMd,
     attemptId: attempt.id,
     mistakeId,
+  };
+}
+
+async function submitMultiPartAttempt(
+  db: Database,
+  row: repo.TaskWithTopic,
+  userId: string,
+  answer: Readonly<Record<string, string>>,
+  timeSpentMs: number | undefined,
+): Promise<AttemptResult> {
+  const spec = parseMultiPartSpec(row.task.correctAnswer);
+  // A malformed spec is a data problem on our side, not the user's —
+  // grade as "no parts correct" rather than crashing the request.
+  const grading = spec
+    ? gradeMultiPart(spec, answer)
+    : { parts: [], correctParts: 0, totalParts: 0, status: 'all_incorrect' as const };
+
+  const attempt = await repo.createAttempt(db, {
+    userId,
+    taskId: row.task.id,
+    answerRaw: serializeMultiPartUserAnswer(answer),
+    isCorrect: grading.status === 'all_correct',
+    timeSpentMs,
+  });
+  const wrongParts = grading.parts.filter((p) => !p.correct).map((p) => p.id);
+  const mistakeId = await repo.applyAttemptToMistakes(db, {
+    userId,
+    taskId: row.task.id,
+    attemptId: attempt.id,
+    isCorrect: grading.status === 'all_correct',
+    wrongParts: wrongParts.length > 0 ? wrongParts : null,
+  });
+
+  return {
+    correct: grading.status === 'all_correct',
+    correctAnswer: row.task.correctAnswer,
+    explanation: row.task.explanationMd,
+    attemptId: attempt.id,
+    mistakeId,
+    parts: [...grading.parts],
+    correctParts: grading.correctParts,
+    totalParts: grading.totalParts,
+    partStatus: grading.status,
   };
 }

@@ -120,7 +120,14 @@ export async function createAttempt(
  */
 export async function applyAttemptToMistakes(
   db: Database,
-  input: { userId: string; taskId: string; attemptId: string; isCorrect: boolean },
+  input: {
+    userId: string;
+    taskId: string;
+    attemptId: string;
+    isCorrect: boolean;
+    /** ids of the parts that were wrong on this attempt, for 'multi_part' tasks only; null otherwise or when fully correct. */
+    wrongParts: readonly string[] | null;
+  },
 ): Promise<string | null> {
   const [existing] = await db
     .select()
@@ -146,6 +153,7 @@ export async function applyAttemptToMistakes(
         status: 'open',
         lastAttemptId: input.attemptId,
         timesWrong: existing.timesWrong + 1,
+        wrongParts: input.wrongParts,
         updatedAt: new Date(),
       })
       .where(eq(schema.mistakes.id, existing.id));
@@ -159,6 +167,7 @@ export async function applyAttemptToMistakes(
       taskId: input.taskId,
       firstAttemptId: input.attemptId,
       lastAttemptId: input.attemptId,
+      wrongParts: input.wrongParts,
     })
     .returning();
   return created!.id;
