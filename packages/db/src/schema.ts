@@ -52,7 +52,18 @@ export const topics = pgTable(
   (table) => [uniqueIndex('topics_subject_slug_idx').on(table.subjectId, table.slug)],
 );
 
-export const taskAnswerTypes = ['short_answer', 'multiple_choice'] as const;
+/**
+ * 'interval' and 'multi_part' reuse the existing `correctAnswer`
+ * column: for 'interval' it's still a plain interval-set string (see
+ * @zybrilka/shared's intervalAnswer.ts); for 'multi_part' it's JSON
+ * (see multiPartAnswer.ts). No separate columns per type.
+ */
+export const taskAnswerTypes = [
+  'short_answer',
+  'multiple_choice',
+  'interval',
+  'multi_part',
+] as const;
 /**
  * 'needs_review' (S3 import pipeline): parsed/solved but not safe to show a
  * real student yet — a mismatched/uncertain answer, an unsupported answer
@@ -161,6 +172,14 @@ export const mistakes = pgTable(
       .references(() => attempts.id),
     timesWrong: integer('times_wrong').notNull().default(1),
     status: text('status', { enum: mistakeStatuses }).notNull().default('open'),
+    /**
+     * For 'multi_part' tasks only: ids of the parts that were wrong on
+     * the last attempt (e.g. ["b"]), so a future adaptive engine can
+     * tell "wrong on part б" from "wrong on the whole task" instead of
+     * only knowing the task as a whole was missed. Null for every other
+     * answer type.
+     */
+    wrongParts: jsonb('wrong_parts').$type<readonly string[] | null>(),
     explanationOpened: boolean('explanation_opened').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
