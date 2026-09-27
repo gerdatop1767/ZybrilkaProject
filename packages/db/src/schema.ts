@@ -53,7 +53,13 @@ export const topics = pgTable(
 );
 
 export const taskAnswerTypes = ['short_answer', 'multiple_choice'] as const;
-export const taskStatuses = ['draft', 'published', 'archived'] as const;
+/**
+ * 'needs_review' (S3 import pipeline): parsed/solved but not safe to show a
+ * real student yet — a mismatched/uncertain answer, an unsupported answer
+ * shape (e.g. multi-part a/b/v), or an explanation that failed its own
+ * validation pass. Never served by the public API alongside 'published'.
+ */
+export const taskStatuses = ['draft', 'published', 'archived', 'needs_review'] as const;
 
 export const tasks = pgTable(
   'tasks',
@@ -77,6 +83,24 @@ export const tasks = pgTable(
     source: text('source').notNull(),
     sourceUrl: text('source_url'),
     sourceYear: integer('source_year'),
+    /**
+     * S3 import provenance (docs/imports/ege-2026-variant-1-manifest.json)
+     * — which document/variant/page a task was transcribed from, kept
+     * separately from `source` (a short display label like "ФИПИ" or a
+     * publisher name) so audits can trace a task back to its exact page.
+     * Null for hand-seeded/demo tasks that predate the import pipeline.
+     */
+    sourceDocument: text('source_document'),
+    sourceVariant: integer('source_variant'),
+    sourcePage: integer('source_page'),
+    /**
+     * The condition exactly as transcribed from the source before any
+     * normalization/LaTeX cleanup — kept so a reviewer can always compare
+     * `conditionMd` back against what the document actually said.
+     */
+    rawStatement: text('raw_statement'),
+    /** Dedup fingerprint: hash(subjectId + taskNumber + normalized statement). */
+    contentHash: text('content_hash'),
     tags: jsonb('tags').$type<readonly string[]>().notNull().default([]),
     status: text('status', { enum: taskStatuses }).notNull().default('draft'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -85,6 +109,7 @@ export const tasks = pgTable(
   (table) => [
     index('tasks_subject_number_idx').on(table.subjectId, table.taskNumber),
     index('tasks_status_idx').on(table.status),
+    uniqueIndex('tasks_content_hash_idx').on(table.contentHash),
   ],
 );
 

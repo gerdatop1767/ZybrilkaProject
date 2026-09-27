@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const taskAnswerTypeSchema = z.enum(['short_answer', 'multiple_choice']);
 export type TaskAnswerType = z.infer<typeof taskAnswerTypeSchema>;
 
-export const taskStatusSchema = z.enum(['draft', 'published', 'archived']);
+export const taskStatusSchema = z.enum(['draft', 'published', 'archived', 'needs_review']);
 export type TaskStatus = z.infer<typeof taskStatusSchema>;
 
 /**
@@ -43,7 +43,10 @@ export const taskListQuerySchema = z.object({
   taskNumber: z.coerce.number().int().positive().optional(),
   topic: z.uuid().optional(),
   difficulty: z.coerce.number().int().min(1).max(3).optional(),
-  status: taskStatusSchema.optional(),
+  // 'needs_review' is deliberately excluded here — it must never be
+  // reachable through the public list endpoint, even by an explicit
+  // query param, unlike the other statuses this endpoint already allows.
+  status: z.enum(['draft', 'published', 'archived']).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   cursor: z.string().optional(),
 });
