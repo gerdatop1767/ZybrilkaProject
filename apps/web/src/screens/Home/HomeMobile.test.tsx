@@ -1,11 +1,35 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HomeMobile } from './HomeMobile.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
 import { userStats } from '../../data/sampleProgress.js';
 import { getStreakAsset, getLevelAsset } from '../../lib/rank.js';
+import * as api from '../../lib/api.js';
+
+vi.mock('../../lib/api.js', () => ({
+  getRandomTask: vi.fn(),
+}));
+
+const RANDOM_TASK = {
+  id: 'task-1',
+  subjectId: 'math',
+  taskNumber: 5,
+  topicId: null,
+  topicName: null,
+  difficulty: 2 as const,
+  conditionMd: 'Условие',
+  imageUrl: null,
+  answerType: 'short_answer' as const,
+  answerOptions: null,
+  answerParts: null,
+  source: 'ФИПИ',
+  sourceUrl: null,
+  sourceYear: 2026,
+  tags: [],
+  status: 'published' as const,
+};
 
 function OverlayMarker() {
   const { overlay } = useNavigation();
@@ -52,10 +76,13 @@ describe('HomeMobile', () => {
   });
 
   it('navigates to the continue-training task', async () => {
+    vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
     const user = userEvent.setup();
     renderHome();
     await user.click(screen.getByRole('button', { name: /Тренировка · 15 заданий/ }));
-    expect(screen.getByTestId('overlay')).toHaveTextContent('task');
+    await waitFor(() => {
+      expect(screen.getByTestId('overlay')).toHaveTextContent('task');
+    });
   });
 
   it('uses the shared LevelBadge/StreakBadge PNGs in the progress card, never an emoji', () => {

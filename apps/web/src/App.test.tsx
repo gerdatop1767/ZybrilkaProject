@@ -1,9 +1,35 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App.js';
 import { NavigationProvider } from './lib/navigation.js';
 import { ToastProvider } from './ui/Toast/ToastProvider.js';
+import * as api from './lib/api.js';
+import type * as ApiModule from './lib/api.js';
+
+vi.mock('./lib/api.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof ApiModule>()),
+  getRandomTask: vi.fn(),
+}));
+
+const RANDOM_TASK = {
+  id: 'task-1',
+  subjectId: 'math',
+  taskNumber: 5,
+  topicId: null,
+  topicName: null,
+  difficulty: 2 as const,
+  conditionMd: 'Условие',
+  imageUrl: null,
+  answerType: 'short_answer' as const,
+  answerOptions: null,
+  answerParts: null,
+  source: 'ФИПИ',
+  sourceUrl: null,
+  sourceYear: 2026,
+  tags: [],
+  status: 'published' as const,
+};
 
 function renderApp() {
   return render(
@@ -63,10 +89,13 @@ describe('App — mobile', () => {
   });
 
   it('hides the tab bar on an overlay screen', async () => {
+    vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
     const user = userEvent.setup();
     renderApp();
     await user.click(screen.getByRole('button', { name: /Тренировка · 15 заданий/ }));
-    expect(screen.queryByRole('button', { name: /Главная/ })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /Главная/ })).not.toBeInTheDocument();
+    });
   });
 });
 

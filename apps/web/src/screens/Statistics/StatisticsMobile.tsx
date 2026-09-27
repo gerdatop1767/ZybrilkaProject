@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
-import { sampleTask } from '../../data/sampleTask.js';
+import { startRealTask } from '../../lib/startTraining.js';
 import { userStats } from '../../data/sampleProgress.js';
 import {
   taskNumberProgress as mockTaskNumberProgress,
@@ -34,6 +34,12 @@ const subTabs = [
   { id: 'exams', label: 'Пробники' },
 ];
 
+const DEFAULT_SUBJECT_ID = 'math';
+// A representative task number for rows (e.g. a topic) not tied to a
+// specific one — startRealTask fetches a real task matching it rather
+// than navigating to a fixed id.
+const DEFAULT_TASK_NUMBER = 15;
+
 /**
  * Mobile Statistics (S1 Block 6, approved design —
  * mobile/07_statistics.png): the "Общая" sub-tab reproduces the
@@ -45,7 +51,7 @@ const subTabs = [
 export function StatisticsMobile() {
   const { navigate } = useNavigation();
   const [subTab, setSubTab] = useState('overview');
-  const subject = subjects.find((s) => s.id === sampleTask.subjectId) ?? subjects[0]!;
+  const subject = subjects.find((s) => s.id === DEFAULT_SUBJECT_ID) ?? subjects[0]!;
   const [realProgress, setRealProgress] = useState<ProgressSummary | null>(null);
 
   useEffect(() => {
@@ -77,12 +83,7 @@ export function StatisticsMobile() {
   );
 
   function openTask(taskNumber: number) {
-    navigate({
-      screen: 'task',
-      subjectId: sampleTask.subjectId,
-      taskNumber,
-      taskId: sampleTask.id,
-    });
+    startRealTask(navigate, { subject: subject.id, taskNumber });
   }
 
   return (
@@ -136,7 +137,7 @@ export function StatisticsMobile() {
                   icon={row.icon}
                   topic={row.topic}
                   masteryPercent={row.masteryPercent}
-                  onSelect={() => openTask(sampleTask.number)}
+                  onSelect={() => openTask(DEFAULT_TASK_NUMBER)}
                 />
               ))}
             </div>
@@ -258,7 +259,7 @@ export function StatisticsMobile() {
                   icon={row.icon}
                   topic={row.topic}
                   masteryPercent={row.masteryPercent}
-                  onSelect={() => openTask(sampleTask.number)}
+                  onSelect={() => openTask(DEFAULT_TASK_NUMBER)}
                 />
               ))}
             </div>

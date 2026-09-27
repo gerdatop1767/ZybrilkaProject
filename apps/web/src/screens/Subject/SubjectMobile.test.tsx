@@ -1,9 +1,33 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SubjectMobile } from './SubjectMobile.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
 import { getSubjectContent, getTaskNumbers } from '../../data/subjectContent.js';
+import * as api from '../../lib/api.js';
+
+vi.mock('../../lib/api.js', () => ({
+  getRandomTask: vi.fn(),
+}));
+
+const RANDOM_TASK = {
+  id: 'task-1',
+  subjectId: 'math',
+  taskNumber: 5,
+  topicId: null,
+  topicName: null,
+  difficulty: 2 as const,
+  conditionMd: 'Условие',
+  imageUrl: null,
+  answerType: 'short_answer' as const,
+  answerOptions: null,
+  answerParts: null,
+  source: 'ФИПИ',
+  sourceUrl: null,
+  sourceYear: 2026,
+  tags: [],
+  status: 'published' as const,
+};
 
 function OverlayMarker() {
   const { overlay } = useNavigation();
@@ -60,11 +84,14 @@ describe('SubjectMobile', () => {
   });
 
   it('starting a topic training session navigates to the task overlay', async () => {
+    vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
     const user = userEvent.setup();
     renderSubject();
     const content = getSubjectContent('math');
     await user.click(screen.getAllByText(content.topics[0]!.title)[0]!);
     await user.click(screen.getByRole('button', { name: /Начать тренировку/ }));
-    expect(screen.getByTestId('overlay')).toHaveTextContent('task');
+    await waitFor(() => {
+      expect(screen.getByTestId('overlay')).toHaveTextContent('task');
+    });
   });
 });

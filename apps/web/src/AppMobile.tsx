@@ -17,7 +17,7 @@ import { FriendsMobile } from './screens/Friends/FriendsMobile.js';
 import { FriendProfileMobile } from './screens/Friends/FriendProfileMobile.js';
 import { SubjectCatalogMobile } from './screens/SubjectCatalog/SubjectCatalogMobile.js';
 import { SubjectMobile } from './screens/Subject/SubjectMobile.js';
-import { getRandomTask } from './lib/api.js';
+import { startRealTask } from './lib/startTraining.js';
 
 /**
  * Mobile app tree (S1 Block 6, approved design). Screens not yet
@@ -42,14 +42,7 @@ export function AppMobile() {
     // live random task from the API, not the hardcoded design-mock
     // task this used to open).
     if (id === 'training') {
-      void getRandomTask({ subject: 'math' }).then((task) => {
-        navigate({
-          screen: 'task',
-          subjectId: task.subjectId,
-          taskNumber: task.taskNumber,
-          taskId: task.id,
-        });
-      });
+      startRealTask(navigate, { subject: 'math' });
       return;
     }
     // No approved "Профиль" screen exists yet, and the approved Menu

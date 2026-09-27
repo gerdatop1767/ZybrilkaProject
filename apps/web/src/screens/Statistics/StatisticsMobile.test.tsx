@@ -8,6 +8,7 @@ import * as api from '../../lib/api.js';
 
 vi.mock('../../lib/api.js', () => ({
   getProgressSummary: vi.fn(() => new Promise(() => {})),
+  getRandomTask: vi.fn(() => new Promise(() => {})),
 }));
 
 function renderWithNav() {
