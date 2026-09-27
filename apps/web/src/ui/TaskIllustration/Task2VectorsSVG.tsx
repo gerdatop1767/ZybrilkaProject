@@ -9,8 +9,8 @@ export function Task2VectorsSVG() {
       yMin={-10}
       yMax={3}
       vectors={[
-        { x: -3, y: 2, label: 'a(-3; 2)', color: '#2563eb' },
-        { x: -1, y: -9, label: 'b(-1; -9)', color: '#dc2626' },
+        { x: -3, y: 2, label: 'a(-3; 2)', color: 'var(--color-accent-secondary)' },
+        { x: -1, y: -9, label: 'b(-1; -9)', color: 'var(--color-gold)' },
       ]}
       ariaLabel="Векторы a(-3; 2) и b(-1; -9), отложенные от начала координат"
     />

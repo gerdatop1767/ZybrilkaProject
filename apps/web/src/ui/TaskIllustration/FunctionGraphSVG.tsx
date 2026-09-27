@@ -4,7 +4,8 @@ import { CoordinatePlaneBase, type CoordinateTransform } from './CoordinatePlane
 export interface FunctionGraphMarkedPoint {
   x: number;
   y: number;
-  label: string;
+  /** Optional text label — omit when the source graph marks the point with a bare dot only. */
+  label?: string;
   /** Label position relative to the point — avoids the label overlapping the curve/axis. */
   labelOffset?: { dx: number; dy: number };
 }
@@ -18,7 +19,9 @@ export interface FunctionGraphSVGProps {
   yMax: number;
   /** Grid line spacing on each axis (default 1). */
   gridStep?: number;
-  /** Points to mark on the curve/axes (roots, intercepts, ...) with a filled dot + label. */
+  /** 'unitOnly' matches a source graph that only labels 0 and the unit tick. */
+  tickLabels?: 'all' | 'unitOnly';
+  /** Points to mark on the curve/axes (roots, intercepts, ...) with a filled dot + optional label. */
   points?: readonly FunctionGraphMarkedPoint[];
   ariaLabel: string;
 }
@@ -37,6 +40,7 @@ export function FunctionGraphSVG({
   yMin,
   yMax,
   gridStep = 1,
+  tickLabels = 'all',
   points = [],
   ariaLabel,
 }: FunctionGraphSVGProps) {
@@ -47,6 +51,7 @@ export function FunctionGraphSVG({
       yMin={yMin}
       yMax={yMax}
       gridStep={gridStep}
+      tickLabels={tickLabels}
       ariaLabel={ariaLabel}
     >
       {({ toSvgX, toSvgY }: CoordinateTransform) => (
@@ -100,17 +105,20 @@ function Curve({
 
   return (
     <>
-      <path d={curvePath} fill="none" stroke="#111827" strokeWidth={2.5} />
+      <path d={curvePath} fill="none" stroke="var(--color-text-primary)" strokeWidth={2.5} />
       {points.map((p, i) => (
         <g key={i}>
-          <circle cx={toSvgX(p.x)} cy={toSvgY(p.y)} r={3.5} fill="#111827" />
-          <text
-            x={toSvgX(p.x) + (p.labelOffset?.dx ?? 6)}
-            y={toSvgY(p.y) + (p.labelOffset?.dy ?? -6)}
-            fontSize={12}
-          >
-            {p.label}
-          </text>
+          <circle cx={toSvgX(p.x)} cy={toSvgY(p.y)} r={3.5} fill="var(--color-accent-secondary)" />
+          {p.label && (
+            <text
+              x={toSvgX(p.x) + (p.labelOffset?.dx ?? 6)}
+              y={toSvgY(p.y) + (p.labelOffset?.dy ?? -6)}
+              fontSize={12}
+              fill="var(--color-text-primary)"
+            >
+              {p.label}
+            </text>
+          )}
         </g>
       ))}
     </>

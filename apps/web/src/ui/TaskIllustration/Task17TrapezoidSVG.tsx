@@ -54,41 +54,46 @@ export function Task17TrapezoidSVG() {
       aria-label="Прямоугольная трапеция ABCD с вписанной окружностью центра O, точкой касания G на AB и точкой N на BC"
       style={{ width: '100%', height: 'auto', display: 'block' }}
     >
-      <rect x={0} y={0} width={viewW} height={viewH} fill="white" />
-
-      {/* The kite BNOG referenced in part б, filled softly for context */}
-      <polygon
-        points={`${B.x},${B.y} ${N.x},${N.y} ${O.x},${O.y} ${G.x},${G.y}`}
-        fill="#2563eb"
-        fillOpacity={0.08}
-      />
-
       <polygon
         points={`${D.x},${D.y} ${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y}`}
         fill="none"
-        stroke="#111827"
+        stroke="var(--color-text-primary)"
         strokeWidth={2}
       />
 
-      <circle cx={O.x} cy={O.y} r={r} fill="none" stroke="#111827" strokeWidth={1.5} />
-      <circle cx={O.x} cy={O.y} r={2.5} fill="#111827" />
+      <circle
+        cx={O.x}
+        cy={O.y}
+        r={r}
+        fill="none"
+        stroke="var(--color-text-primary)"
+        strokeWidth={1.5}
+      />
+      <circle cx={O.x} cy={O.y} r={2.5} fill="var(--color-text-primary)" />
 
       {/* Right-angle marks at A and D */}
       <polyline
         points={`${A.x},${A.y - 12} ${A.x + 12},${A.y - 12} ${A.x + 12},${A.y}`}
         fill="none"
-        stroke="#111827"
+        stroke="var(--color-text-primary)"
         strokeWidth={1.2}
       />
       <polyline
         points={`${D.x},${D.y - 12} ${D.x + 12},${D.y - 12} ${D.x + 12},${D.y}`}
         fill="none"
-        stroke="#111827"
+        stroke="var(--color-text-primary)"
         strokeWidth={1.2}
       />
 
       {/* Bisector from D to N */}
-      <line x1={D.x} y1={D.y} x2={N.x} y2={N.y} stroke="#2563eb" strokeWidth={1.5} />
+      <line
+        x1={D.x}
+        y1={D.y}
+        x2={N.x}
+        y2={N.y}
+        stroke="var(--color-accent-secondary)"
+        strokeWidth={1.5}
+      />
 
       {/* Radius OG */}
       <line
@@ -96,11 +101,11 @@ export function Task17TrapezoidSVG() {
         y1={O.y}
         x2={G.x}
         y2={G.y}
-        stroke="#16a34a"
+        stroke="var(--color-success)"
         strokeWidth={1.3}
         strokeDasharray="3 3"
       />
-      <text x={O.x + 6} y={(O.y + G.y) / 2} fontSize={11} fill="#16a34a">
+      <text x={O.x + 6} y={(O.y + G.y) / 2} fontSize={11} fill="var(--color-success)">
         R
       </text>
 
@@ -114,8 +119,14 @@ export function Task17TrapezoidSVG() {
         { p: N, label: 'N', dx: 8, dy: 2 },
       ].map(({ p, label, dx, dy }) => (
         <g key={label}>
-          <circle cx={p.x} cy={p.y} r={2.2} fill="#111827" />
-          <text x={p.x + dx} y={p.y + dy} fontSize={14} fontStyle="italic">
+          <circle cx={p.x} cy={p.y} r={2.2} fill="var(--color-text-primary)" />
+          <text
+            x={p.x + dx}
+            y={p.y + dy}
+            fontSize={14}
+            fontStyle="italic"
+            fill="var(--color-text-primary)"
+          >
             {label}
           </text>
         </g>

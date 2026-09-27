@@ -16,6 +16,13 @@ export interface CoordinatePlaneBaseProps {
   yMax: number;
   /** Grid line spacing on each axis (default 1). */
   gridStep?: number;
+  /**
+   * 'all' numbers every grid line (needed when a task's own coordinates
+   * must be read precisely off the axes, e.g. plotted vectors). 'unitOnly'
+   * labels just 0 and the first unit tick on each axis — for tasks whose
+   * printed original only marks the unit length, not a numbered grid.
+   */
+  tickLabels?: 'all' | 'unitOnly';
   ariaLabel: string;
   /** Anything plotted on top of the grid/axes — a curve, vectors, points. */
   children: (transform: CoordinateTransform) => ReactNode;
@@ -34,6 +41,7 @@ export function CoordinatePlaneBase({
   yMin,
   yMax,
   gridStep = 1,
+  tickLabels = 'all',
   ariaLabel,
   children,
 }: CoordinatePlaneBaseProps) {
@@ -59,8 +67,6 @@ export function CoordinatePlaneBase({
       aria-label={ariaLabel}
       style={{ width: '100%', height: 'auto', display: 'block' }}
     >
-      <rect x={0} y={0} width={PLANE_VIEW_W} height={PLANE_VIEW_H} fill="white" />
-
       {verticalGridLines.map((x) => (
         <line
           key={`v${x}`}
@@ -68,7 +74,7 @@ export function CoordinatePlaneBase({
           y1={PLANE_PADDING}
           x2={toSvgX(x)}
           y2={PLANE_VIEW_H - PLANE_PADDING}
-          stroke="#dcdfe4"
+          stroke="var(--color-border-subtle)"
           strokeWidth={1}
         />
       ))}
@@ -79,14 +85,14 @@ export function CoordinatePlaneBase({
           y1={toSvgY(y)}
           x2={PLANE_VIEW_W - PLANE_PADDING}
           y2={toSvgY(y)}
-          stroke="#dcdfe4"
+          stroke="var(--color-border-subtle)"
           strokeWidth={1}
         />
       ))}
 
       <defs>
         <marker id="cp-arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
-          <path d="M0,0 L8,4 L0,8 Z" fill="#111827" />
+          <path d="M0,0 L8,4 L0,8 Z" fill="var(--color-text-primary)" />
         </marker>
       </defs>
 
@@ -95,7 +101,7 @@ export function CoordinatePlaneBase({
         y1={toSvgY(0)}
         x2={PLANE_VIEW_W - PLANE_PADDING}
         y2={toSvgY(0)}
-        stroke="#111827"
+        stroke="var(--color-text-primary)"
         strokeWidth={1.5}
         markerEnd="url(#cp-arrow)"
       />
@@ -104,7 +110,7 @@ export function CoordinatePlaneBase({
         y1={PLANE_VIEW_H - PLANE_PADDING}
         x2={toSvgX(0)}
         y2={PLANE_PADDING}
-        stroke="#111827"
+        stroke="var(--color-text-primary)"
         strokeWidth={1.5}
         markerEnd="url(#cp-arrow)"
       />
@@ -114,30 +120,53 @@ export function CoordinatePlaneBase({
         y={toSvgY(0) + 4}
         fontSize={13}
         fontStyle="italic"
+        fill="var(--color-text-secondary)"
       >
         x
       </text>
-      <text x={toSvgX(0) - 14} y={PLANE_PADDING - 8} fontSize={13} fontStyle="italic">
+      <text
+        x={toSvgX(0) - 14}
+        y={PLANE_PADDING - 8}
+        fontSize={13}
+        fontStyle="italic"
+        fill="var(--color-text-secondary)"
+      >
         y
       </text>
-      <text x={toSvgX(0) + 4} y={toSvgY(0) + 14} fontSize={11}>
+      <text x={toSvgX(0) + 4} y={toSvgY(0) + 14} fontSize={11} fill="var(--color-text-secondary)">
         0
       </text>
 
-      {verticalGridLines
-        .filter((x) => x !== 0)
-        .map((x) => (
-          <text key={`vx${x}`} x={toSvgX(x)} y={toSvgY(0) + 14} fontSize={11} textAnchor="middle">
-            {x}
-          </text>
-        ))}
-      {horizontalGridLines
-        .filter((y) => y !== 0)
-        .map((y) => (
-          <text key={`hy${y}`} x={toSvgX(0) - 8} y={toSvgY(y) + 4} fontSize={11} textAnchor="end">
-            {y}
-          </text>
-        ))}
+      {(tickLabels === 'all'
+        ? verticalGridLines.filter((x) => x !== 0)
+        : [1].filter((x) => x >= xMin && x <= xMax)
+      ).map((x) => (
+        <text
+          key={`vx${x}`}
+          x={toSvgX(x)}
+          y={toSvgY(0) + 14}
+          fontSize={11}
+          textAnchor="middle"
+          fill="var(--color-text-secondary)"
+        >
+          {x}
+        </text>
+      ))}
+      {(tickLabels === 'all'
+        ? horizontalGridLines.filter((y) => y !== 0)
+        : [1].filter((y) => y >= yMin && y <= yMax)
+      ).map((y) => (
+        <text
+          key={`hy${y}`}
+          x={toSvgX(0) - 8}
+          y={toSvgY(y) + 4}
+          fontSize={11}
+          textAnchor="end"
+          fill="var(--color-text-secondary)"
+        >
+          {y}
+        </text>
+      ))}
 
       {children({ toSvgX, toSvgY })}
     </svg>

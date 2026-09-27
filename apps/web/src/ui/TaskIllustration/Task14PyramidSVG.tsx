@@ -50,9 +50,13 @@ export function Task14PyramidSVG() {
   const Ks = shift(K);
   const Ns = shift(N);
 
-  const solid = { stroke: '#111827', strokeWidth: 1.8, fill: 'none' } as const;
+  const solid = {
+    stroke: 'var(--color-text-primary)',
+    strokeWidth: 1.8,
+    fill: 'none',
+  } as const;
   const hidden = {
-    stroke: '#9ca3af',
+    stroke: 'var(--color-text-secondary)',
     strokeWidth: 1.3,
     fill: 'none',
     strokeDasharray: '4 3',
@@ -61,9 +65,23 @@ export function Task14PyramidSVG() {
   function leaderLabel(p: { x: number; y: number }, label: string, lx: number, ly: number) {
     return (
       <g key={label}>
-        <circle cx={p.x} cy={p.y} r={2.4} fill="#111827" />
-        <line x1={p.x} y1={p.y} x2={lx} y2={ly} stroke="#9ca3af" strokeWidth={0.8} />
-        <text x={lx} y={ly} fontSize={13} fontStyle="italic" textAnchor="middle">
+        <circle cx={p.x} cy={p.y} r={2.4} fill="var(--color-text-primary)" />
+        <line
+          x1={p.x}
+          y1={p.y}
+          x2={lx}
+          y2={ly}
+          stroke="var(--color-text-secondary)"
+          strokeWidth={0.8}
+        />
+        <text
+          x={lx}
+          y={ly}
+          fontSize={13}
+          fontStyle="italic"
+          textAnchor="middle"
+          fill="var(--color-text-primary)"
+        >
           {label}
         </text>
       </g>
@@ -77,8 +95,6 @@ export function Task14PyramidSVG() {
       aria-label="Пирамида SABCD с квадратным основанием ABCD, высотой SA, точкой K — серединой SB, и точкой N пересечения DK с плоскостью SAC"
       style={{ width: '100%', height: 'auto', display: 'block' }}
     >
-      <rect x={0} y={0} width={viewW} height={viewH} fill="white" />
-
       {/* Hidden (back) base edges + diagonal AC */}
       <line x1={Bs.x} y1={Bs.y} x2={Cs.x} y2={Cs.y} {...hidden} />
       <line x1={Cs.x} y1={Cs.y} x2={Ds.x} y2={Ds.y} {...hidden} />
@@ -93,7 +109,14 @@ export function Task14PyramidSVG() {
       <line x1={Ss.x} y1={Ss.y} x2={Ds.x} y2={Ds.y} {...solid} />
 
       {/* DK with N marked on it */}
-      <line x1={Ds.x} y1={Ds.y} x2={Ks.x} y2={Ks.y} stroke="#2563eb" strokeWidth={1.6} />
+      <line
+        x1={Ds.x}
+        y1={Ds.y}
+        x2={Ks.x}
+        y2={Ks.y}
+        stroke="var(--color-accent-secondary)"
+        strokeWidth={1.6}
+      />
 
       {leaderLabel(As, 'A', As.x - 16, As.y + 4)}
       {leaderLabel(Bs, 'B', Bs.x + 14, Bs.y + 4)}

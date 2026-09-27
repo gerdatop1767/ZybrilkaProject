@@ -1,4 +1,5 @@
 import { getCustomIllustration } from './illustrations.js';
+import styles from './TaskIllustration.module.css';
 
 export interface TaskIllustrationProps {
   subjectId: string;
@@ -27,7 +28,8 @@ export function TaskIllustration({
     return <div className={className}>{custom}</div>;
   }
   if (imageUrl) {
-    return <img src={imageUrl} alt="Иллюстрация к заданию" className={className} />;
+    const combinedClassName = className ? `${className} ${styles.pdfFallback}` : styles.pdfFallback;
+    return <img src={imageUrl} alt="Иллюстрация к заданию" className={combinedClassName} />;
   }
   return null;
 }
