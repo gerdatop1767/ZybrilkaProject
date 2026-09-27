@@ -12,6 +12,7 @@ import { SessionProgressCard } from '../../ui/Training/SessionProgressCard.js';
 import { SessionTaskListCard } from '../../ui/Training/SessionTaskListCard.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { Collapse, FadeIn } from '../../ui/motion/motion.js';
+import { MathText } from '../../ui/MathText/MathText.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './TaskDesktop.module.css';
 
@@ -175,7 +176,9 @@ export function TaskDesktop({ subjectId, taskNumber, taskId }: TaskDesktopProps)
             <p className="text-h3" style={{ marginTop: 'var(--space-2)' }}>
               Условие
             </p>
-            <p className={clsx('text-task', styles.condition)}>{task.condition}</p>
+            <div className={clsx('text-task', styles.condition)}>
+              <MathText text={task.condition} />
+            </div>
             {task.imageUrl && (
               <img src={task.imageUrl} alt="Иллюстрация к заданию" className={styles.taskImage} />
             )}
@@ -193,9 +196,9 @@ export function TaskDesktop({ subjectId, taskNumber, taskId }: TaskDesktopProps)
                   <Icon name={hintOpen ? 'chevronUp' : 'chevronDown'} size={16} />
                 </button>
                 <Collapse open={hintOpen}>
-                  <p className={clsx('text-body-sm', 'text-secondary', styles.hintText)}>
-                    {task.hint}
-                  </p>
+                  <div className={clsx('text-body-sm', 'text-secondary', styles.hintText)}>
+                    <MathText text={task.hint} />
+                  </div>
                 </Collapse>
               </>
             )}

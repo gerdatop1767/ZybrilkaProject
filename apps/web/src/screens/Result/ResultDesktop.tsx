@@ -18,6 +18,7 @@ import { SessionTaskListCard } from '../../ui/Training/SessionTaskListCard.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { useCountUp } from '../../lib/useCountUp.js';
 import { FadeIn } from '../../ui/motion/motion.js';
+import { InlineMathText, MathText } from '../../ui/MathText/MathText.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './ResultDesktop.module.css';
 
@@ -154,7 +155,9 @@ export function ResultDesktop({
           <div className={styles.card}>
             {!correct && <span className={styles.topicChip}>{task.topic}</span>}
             <p className="text-h3">Условие</p>
-            <p className={clsx('text-task', styles.condition)}>{task.condition}</p>
+            <div className={clsx('text-task', styles.condition)}>
+              <MathText text={task.condition} />
+            </div>
             {task.imageUrl && (
               <img src={task.imageUrl} alt="Иллюстрация к заданию" className={styles.taskImage} />
             )}
@@ -224,7 +227,7 @@ export function ResultDesktop({
                       )}
                     </div>
                     <p className="text-body-sm" style={{ marginTop: 'var(--space-2)' }}>
-                      {explanationForPart(explanationSections, part.label)}
+                      <InlineMathText text={explanationForPart(explanationSections, part.label)} />
                     </p>
                   </div>
                 ))}
@@ -282,10 +285,12 @@ export function ResultDesktop({
                           <div>
                             {step.title && (
                               <p className="text-body-sm" style={{ fontWeight: 700 }}>
-                                {step.title}
+                                <InlineMathText text={step.title} />
                               </p>
                             )}
-                            <p className="text-body-sm">{step.text}</p>
+                            <p className="text-body-sm">
+                              <InlineMathText text={step.text} />
+                            </p>
                           </div>
                         </div>
                       );
@@ -302,7 +307,9 @@ export function ResultDesktop({
                   <p className="text-body-sm" style={{ fontWeight: 600 }}>
                     Полезно знать
                   </p>
-                  <p className="text-body-sm text-secondary">{task.hint}</p>
+                  <p className="text-body-sm text-secondary">
+                    <InlineMathText text={task.hint} />
+                  </p>
                 </div>
               </div>
             )}

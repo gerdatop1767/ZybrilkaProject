@@ -12,6 +12,7 @@ import { TaskChrome } from '../../ui/Training/TaskChrome.js';
 import { ToolsPanelMobile, AnswerFieldTools } from '../../ui/Training/ToolsPanelMobile.js';
 import { OtherVariantsSection } from '../../ui/Training/OtherVariantsSection.js';
 import { Collapse, SlideUp } from '../../ui/motion/motion.js';
+import { MathText } from '../../ui/MathText/MathText.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './TaskMobile.module.css';
 
@@ -140,7 +141,9 @@ export function TaskMobile({ subjectId, taskNumber, taskId }: TaskMobileProps) {
           </span>
         </div>
 
-        <p className={clsx('text-task', styles.condition)}>{task.condition}</p>
+        <div className={clsx('text-task', styles.condition)}>
+          <MathText text={task.condition} />
+        </div>
         {task.imageUrl && (
           <img src={task.imageUrl} alt="Иллюстрация к заданию" className={styles.taskImage} />
         )}
@@ -160,7 +163,9 @@ export function TaskMobile({ subjectId, taskNumber, taskId }: TaskMobileProps) {
               <Icon name={hintOpen ? 'chevronUp' : 'chevronDown'} size={18} />
             </button>
             <Collapse open={hintOpen}>
-              <p className={clsx('text-body-sm', 'text-secondary', styles.hintText)}>{task.hint}</p>
+              <div className={clsx('text-body-sm', 'text-secondary', styles.hintText)}>
+                <MathText text={task.hint} />
+              </div>
             </Collapse>
           </div>
         )}

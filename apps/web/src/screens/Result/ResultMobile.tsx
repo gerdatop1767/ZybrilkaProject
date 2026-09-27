@@ -18,6 +18,7 @@ import { ToolsPanelMobile } from '../../ui/Training/ToolsPanelMobile.js';
 import { OtherVariantsSection } from '../../ui/Training/OtherVariantsSection.js';
 import { useCountUp } from '../../lib/useCountUp.js';
 import { Collapse, SlideUp } from '../../ui/motion/motion.js';
+import { InlineMathText } from '../../ui/MathText/MathText.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './ResultMobile.module.css';
 
@@ -215,7 +216,7 @@ export function ResultMobile({
                     <span className={styles.solutionStepIndex}>{i + 1}</span>
                     <p className="text-body-sm">
                       <strong>{part.label}) </strong>
-                      {explanationForPart(explanationSections, part.label)}
+                      <InlineMathText text={explanationForPart(explanationSections, part.label)} />
                     </p>
                   </div>
                 ))
@@ -225,10 +226,12 @@ export function ResultMobile({
                     <div>
                       {step.title && (
                         <p className="text-body-sm" style={{ fontWeight: 700 }}>
-                          {step.title}
+                          <InlineMathText text={step.title} />
                         </p>
                       )}
-                      <p className="text-body-sm">{step.text}</p>
+                      <p className="text-body-sm">
+                        <InlineMathText text={step.text} />
+                      </p>
                     </div>
                   </div>
                 ))}

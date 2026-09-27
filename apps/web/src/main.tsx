@@ -4,6 +4,7 @@ import { App } from './App.js';
 import { NavigationProvider } from './lib/navigation.js';
 import { ToastProvider } from './ui/Toast/ToastProvider.js';
 import { DesignExploration } from './design-exploration/DesignExploration.js';
+import 'katex/dist/katex.min.css';
 import './index.css';
 
 const root = document.getElementById('root');
