@@ -36,7 +36,18 @@ services:
   # One-shot: applies pending Drizzle migrations (idempotent — already
   # applied ones are tracked and skipped) and exits. `api` waits for
   # this to finish successfully before it starts, every deploy.
+  #
+  # Has its own `build:` (identical to `api`'s, cached by Docker after
+  # the first build — effectively free) rather than only referencing
+  # `image: zybrilka-api:latest`: a plain image reference with no
+  # `build:` makes some compose workflows (e.g. an explicit `pull`
+  # step some deploy scripts run) try to fetch that name from a
+  # registry, where it doesn't exist, and fail with
+  # "pull access denied for zybrilka-api".
   migrate:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
     image: zybrilka-api:latest
     container_name: zybrilka-migrate
     environment:

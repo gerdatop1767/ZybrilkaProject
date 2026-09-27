@@ -57,7 +57,32 @@ TLS certificate automatically.
 
 Always pass `--build` on a fresh `up` — `migrate`/`api` share one image
 tag (`zybrilka-api:latest`); `--build` guarantees that tag exists
-before `migrate`'s container is created.
+before `migrate`'s container is created. `migrate` also has its own
+`build:` block (identical to `api`'s, cached after the first build) so
+that a deploy workflow which runs an explicit `pull` step before
+building doesn't try to fetch `zybrilka-api:latest` from a registry —
+it only exists locally, never pushed anywhere.
+
+## Troubleshooting
+
+- **`pull access denied for zybrilka-api`** — some sort of `docker
+  compose pull` ran before the image was built locally. `postgres` and
+  `caddy` are the only services meant to be pulled; `web`/`api`/
+  `worker`/`migrate` are always built locally from this repo, never
+  pulled. If your deploy tooling runs `pull` as a separate step, make
+  sure it either skips these four services or runs after `build`.
+- **`POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB` "is not set,
+  defaulting to a blank string"** — `infra/.env` doesn't exist yet (or
+  isn't in `infra/`, next to `docker-compose.yml` — that's where
+  Compose looks for it regardless of the directory you invoke `docker
+  compose` from). Copy `infra/.env.example` to `infra/.env` on the VPS
+  and fill in real values; this file is gitignored and must be created
+  by hand on each server, once.
+- **A `vite build` failure resolving `@zybrilka/shared`** from
+  anywhere under `apps/web/src` — `apps/web/Dockerfile`'s build stage
+  must `COPY packages/shared packages/shared` before `apps/web`, since
+  `vite.config.ts` resolves that package via its `@zybrilka/source`
+  condition straight to `.ts` source, not just the compiled `dist/`.
 
 ## Stop
 
