@@ -18,7 +18,7 @@ export function Task11ParabolaSVG() {
       yMax={10}
       points={[
         { x: -4, y: 0, label: '(-4; 0)', labelOffset: { dx: -20, dy: -12 } },
-        { x: -1, y: 0, label: '(-1; 0)', labelOffset: { dx: 8, dy: -12 } },
+        { x: -1, y: 0, label: '(-1; 0)', labelOffset: { dx: -54, dy: -8 } },
         { x: 0, y: 4, label: '(0; 4)', labelOffset: { dx: 6, dy: -6 } },
       ]}
       ariaLabel="График функции f(x) = ax² + bx + c с корнями -4 и -1 и точкой (0; 4)"
