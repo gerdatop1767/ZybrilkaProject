@@ -44,3 +44,18 @@ export const variantDetailSchema = z.object({
   tasks: z.array(variantTaskItemSchema),
 });
 export type VariantDetail = z.infer<typeof variantDetailSchema>;
+
+/** GET /api/v1/collections response item — a collection plus its
+ * published variants (id/number/title only, no tasks) so a "Сборник"
+ * picker can list a collection's available variants without a second
+ * round-trip per collection. */
+export const collectionListItemSchema = z.object({
+  collection: collectionPublicSchema,
+  variants: z.array(variantPublicSchema),
+});
+export type CollectionListItem = z.infer<typeof collectionListItemSchema>;
+
+export const collectionListResponseSchema = z.object({
+  items: z.array(collectionListItemSchema),
+});
+export type CollectionListResponse = z.infer<typeof collectionListResponseSchema>;

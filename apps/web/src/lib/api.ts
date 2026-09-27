@@ -1,10 +1,12 @@
 import type {
   AttemptRequest,
   AttemptResult,
+  CollectionListItem,
   Mistake,
   ProgressSummary,
   TaskPublic,
   TaskWithSolution,
+  VariantDetail,
 } from '@zybrilka/shared';
 
 const ANON_ID_STORAGE_KEY = 'zybrilka_anon_id';
@@ -72,12 +74,26 @@ export function getTask(id: string): Promise<TaskPublic | TaskWithSolution> {
 export function getRandomTask(params: {
   subject?: string;
   taskNumber?: number;
+  /** Collection slug — restricts the random pick to that collection's tasks. */
+  collection?: string;
+  /** A specific variant's id — restricts the random pick to just that variant. */
+  variant?: string;
 }): Promise<TaskPublic> {
   const query = new URLSearchParams();
   if (params.subject) query.set('subject', params.subject);
   if (params.taskNumber) query.set('taskNumber', String(params.taskNumber));
+  if (params.collection) query.set('collection', params.collection);
+  if (params.variant) query.set('variant', params.variant);
   const qs = query.toString();
   return apiFetch(`/tasks/random${qs ? `?${qs}` : ''}`);
+}
+
+export function listCollections(): Promise<CollectionListItem[]> {
+  return apiFetch<{ items: CollectionListItem[] }>('/collections').then((r) => r.items);
+}
+
+export function getVariant(id: string): Promise<VariantDetail> {
+  return apiFetch(`/variants/${id}`);
 }
 
 export function listTasksByNumber(subject: string, taskNumber: number): Promise<TaskPublic[]> {

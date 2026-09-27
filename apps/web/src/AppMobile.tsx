@@ -17,7 +17,7 @@ import { FriendsMobile } from './screens/Friends/FriendsMobile.js';
 import { FriendProfileMobile } from './screens/Friends/FriendProfileMobile.js';
 import { SubjectCatalogMobile } from './screens/SubjectCatalog/SubjectCatalogMobile.js';
 import { SubjectMobile } from './screens/Subject/SubjectMobile.js';
-import { sampleTask } from './data/sampleTask.js';
+import { getRandomTask } from './lib/api.js';
 
 /**
  * Mobile app tree (S1 Block 6, approved design). Screens not yet
@@ -38,14 +38,17 @@ export function AppMobile() {
 
   function selectTab(id: string) {
     // The approved screenshots have no idle "Тренировка" tab screen —
-    // tapping it jumps straight into the active training session, the
-    // same real shortcut Home's own CTA uses.
+    // tapping it jumps straight into a real training task (S3.2: a
+    // live random task from the API, not the hardcoded design-mock
+    // task this used to open).
     if (id === 'training') {
-      navigate({
-        screen: 'task',
-        subjectId: sampleTask.subjectId,
-        taskNumber: sampleTask.number,
-        taskId: sampleTask.id,
+      void getRandomTask({ subject: 'math' }).then((task) => {
+        navigate({
+          screen: 'task',
+          subjectId: task.subjectId,
+          taskNumber: task.taskNumber,
+          taskId: task.id,
+        });
       });
       return;
     }

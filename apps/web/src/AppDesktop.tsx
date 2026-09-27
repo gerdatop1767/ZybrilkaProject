@@ -16,6 +16,7 @@ import { ProfileDesktop } from './screens/Profile/ProfileDesktop.js';
 import { HelpDesktop } from './screens/Help/HelpDesktop.js';
 import { FriendsDesktop } from './screens/Friends/FriendsDesktop.js';
 import { FriendProfileDesktop } from './screens/Friends/FriendProfileDesktop.js';
+import { Training } from './screens/Training/Training.js';
 
 /** Screens whose approved desktop composition has no left sidebar. */
 const noSidebarScreens = new Set(['home', 'task', 'result']);
@@ -100,9 +101,7 @@ export function AppDesktop() {
   return (
     <DesktopShell header={header} sidebar={sidebar}>
       {tab === 'home' && <HomeDesktop />}
-      {tab === 'training' && (
-        <WipPlaceholder title="Тренировка" note="Экран в разработке — следующий блок." />
-      )}
+      {tab === 'training' && <Training />}
       {tab === 'statistics' && <StatisticsDesktop />}
       {tab === 'achievements' && <AchievementsDesktop />}
     </DesktopShell>
