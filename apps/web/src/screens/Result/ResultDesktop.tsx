@@ -141,6 +141,9 @@ export function ResultDesktop({
             {!correct && <span className={styles.topicChip}>{task.topic}</span>}
             <p className="text-h3">Условие</p>
             <p className={clsx('text-task', styles.condition)}>{task.condition}</p>
+            {task.imageUrl && (
+              <img src={task.imageUrl} alt="Иллюстрация к заданию" className={styles.taskImage} />
+            )}
 
             <div
               className={clsx(

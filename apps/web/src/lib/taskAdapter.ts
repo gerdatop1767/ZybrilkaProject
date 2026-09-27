@@ -42,6 +42,7 @@ export function toSampleTask(
     source: task.source,
     code: shortCode(task.id),
     condition: task.conditionMd,
+    imageUrl: task.imageUrl,
     correctAnswer: hasSolution ? task.correctAnswer : '',
     explanation: hasSolution ? task.explanationMd : '',
     hint: 'Внимательно перечитай условие и вспомни формулы по теме задания.',

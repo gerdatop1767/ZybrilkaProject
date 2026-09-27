@@ -38,6 +38,8 @@ export interface SampleTask {
   source: string;
   code: string;
   condition: string;
+  /** A graph/figure required to solve the task (e.g. derivative or parabola graphs). */
+  imageUrl: string | null;
   /** Numeric/short-text answer tasks (most of EGE profile-math Part 1). */
   correctAnswer: string;
   explanation: string;
@@ -69,6 +71,7 @@ export const sampleTask: SampleTask = {
   source: 'ФИПИ',
   code: '#3214',
   condition: 'Решите неравенство: log₂(x² − 3x − 4) ≥ 1',
+  imageUrl: null,
   correctAnswer: '(−∞; −1] ∪ [2; +∞)',
   explanation:
     'log₂(x² − 3x − 4) ≥ 1 равносильно системе: x² − 3x − 4 ≥ 2 и x² − 3x − 4 > 0. Решая первое неравенство, получаем x² − 3x − 6 ≥ 0, откуда x ∈ (−∞; −1] ∪ [2; +∞) — это же множество удовлетворяет и области определения логарифма.',

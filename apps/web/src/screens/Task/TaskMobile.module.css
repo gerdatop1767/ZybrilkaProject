@@ -45,6 +45,13 @@
   color: var(--color-text-primary);
 }
 
+.taskImage {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
 .hintWrap {
   border-radius: var(--radius-input);
   background: color-mix(in srgb, var(--color-accent-primary) 10%, transparent);

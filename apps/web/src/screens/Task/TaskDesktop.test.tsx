@@ -158,4 +158,18 @@ describe('TaskDesktop', () => {
     await user.click(screen.getByRole('button', { name: 'Назад' }));
     expect(screen.getByTestId('overlay')).toHaveTextContent('none');
   });
+
+  it('renders the task image when the task has one (e.g. a derivative-graph task)', async () => {
+    const imageUrl = '/tasks/imports/ege-2026-variant-1/task-08-graph.png';
+    vi.mocked(api.getTask).mockResolvedValue({ ...baseTask, imageUrl });
+    renderTask();
+    const img = await screen.findByRole('img', { name: 'Иллюстрация к заданию' });
+    expect(img).toHaveAttribute('src', imageUrl);
+  });
+
+  it('renders no image element when the task has none', async () => {
+    renderTask();
+    await screen.findByText(CONDITION);
+    expect(screen.queryByRole('img', { name: 'Иллюстрация к заданию' })).not.toBeInTheDocument();
+  });
 });
