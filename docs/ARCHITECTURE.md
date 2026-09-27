@@ -366,3 +366,61 @@ the hook a future adaptive engine can use to target specific weak parts, not jus
 both already available through existing channels) to render each part's own
 correct/incorrect state and its own explanation section, split from `explanationMd` at its
 `### <heading>` markers (`apps/web/src/lib/taskAdapter.ts`'s `splitMultiPartExplanation`).
+
+## 18. Content model — Collections, Variants, membership (S3.2)
+
+A quick diagram lives in `docs/PRODUCTION_DATA_MODEL.md`; this is the detail behind it.
+
+**Ownership vs. membership.** A `Task` row is still owned by exactly `subjectId` + `topicId`,
+same as §4. `collections` and `variants` are a separate *membership* layer on top, joined via
+`variant_tasks` — a task never gets copied to also live "inside" a collection/variant/full-exam
+view. The same physical row is found through all of them at once:
+
+```
+collections (e.g. "ЕГЭ 2026 Ященко")
+      │ 1—N
+variants (e.g. "Вариант 1", "Вариант 2", …)
+      │ N—M, via variant_tasks(variantId, taskId, position)
+tasks (owned by subjects/topics, unchanged)
+```
+
+- `variant_tasks.position` is the task's 1-based slot inside that variant's full exam (1..19 for
+  Вариант 1) — the exam's own order, set once at import time, never touched by shuffle.
+- `UNIQUE(variantId, taskId)` prevents the same task being linked into one variant twice; nothing
+  stops the same task appearing in *two different* variants later (e.g. a repeated task across
+  Вариант 2 and Вариант 5) — that's one `tasks` row with two `variant_tasks` rows, not a copy.
+- **No `collection_tasks` table.** "Every task in a collection" is `variant_tasks` joined to
+  `variants` filtered by `collectionId` (`apps/api/src/modules/tasks/repo.ts`'s
+  `taskIdsForCollectionOrVariant`) — a separate table would just duplicate that membership.
+- `collections`/`variants` each have their own `status` (`draft | published | archived`, no
+  `needs_review` — review is per-task, not per-collection/variant). A collection or variant filter
+  only ever matches a *published* one; an archived/draft one silently returns no tasks rather than
+  leaking them, same "published-only, enforced server-side" rule as `tasks.status` in §4.
+
+**Filtering.** `GET /tasks` and `GET /tasks/random` accept optional `collection` (slug) and
+`variant` (id) query params, resolved to a task-id subquery scoped to a *published*
+variant/collection (`taskIdsForCollectionOrVariant`). "По заданиям" (a task number, optionally
+inside one collection) and "Сборник" (every task in a collection, across all its variants) are
+both this same filter — there's no separate "по заданиям" endpoint, just `taskNumber` +
+`collection` on the existing one.
+
+**Full variant.** `GET /api/v1/variants/:id` returns `{variant, collection, tasks: [{position,
+task}]}`, `tasks` ordered by `position` ascending — the exam's own order, always. Each `task` uses
+the exact same public shape as every other listing (never `correctAnswer`/`explanationMd` before
+an attempt exists). A missing, draft, archived, or needs_review-only variant is a 404. A separate
+`GET /api/v1/collections` lists published collections with their published variants nested (small,
+unpaginated by design — a "Сборник" picker needs the whole list at once, and the cardinality is
+tiny compared to tasks).
+
+**Ordered vs. shuffled.** `variant_tasks.position` is never reshuffled — "Полный вариант N" always
+opens/steps through tasks in that exact order. Shuffle only ever applies to
+`GET /tasks/random`'s own random pick (`ORDER BY random()` in `repo.ts`), which is a completely
+separate query path from the ordered variant endpoint; nothing in `GET /variants/:id` involves
+randomness. "Случайные N заданий №5 из Ященко" is `GET /tasks/random?collection=…&taskNumber=5`,
+repeated — never a variant lookup.
+
+**Deduplication is unchanged.** `tasks.contentHash` (hash of subjectId + taskNumber + normalized
+statement, unique-indexed — §4/§15) still decides whether an incoming task is new. Importing the
+same task into a second variant creates one new `variant_tasks` row against the *existing* task
+id, never a second `tasks` row — this is exactly what `importEge2026Variant1.ts` does today for
+Вариант 1's 19 tasks, and is the intended path for Вариант 2+ later (explicitly not started yet).
