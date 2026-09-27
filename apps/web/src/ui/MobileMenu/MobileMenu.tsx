@@ -6,7 +6,7 @@ import { SubjectTile } from '../SubjectTile/SubjectTile.js';
 import { Avatar } from '../Leaderboard/Avatar.js';
 import { ProgressBar } from '../Progress/ProgressBar.js';
 import { userStats } from '../../data/sampleProgress.js';
-import { sampleTask } from '../../data/sampleTask.js';
+import { startRealTask } from '../../lib/startTraining.js';
 import { useNavigation, type MainTabId, type OverlayRoute } from '../../lib/navigation.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './MobileMenu.module.css';
@@ -35,14 +35,11 @@ const primaryItems: readonly MenuItem[] = [
     icon: 'variant',
     color: 'var(--chart-1)',
     // The approved screenshots have no idle "Тренировка" screen —
-    // jump straight into the active session, same as the bottom nav's
-    // own shortcut (AppMobile's `selectTab`).
-    route: {
-      screen: 'task',
-      subjectId: sampleTask.subjectId,
-      taskNumber: sampleTask.number,
-      taskId: sampleTask.id,
-    },
+    // jump straight into a real task, same as the bottom nav's own
+    // shortcut (AppMobile's `selectTab`). The actual navigation is
+    // special-cased below (`startRealTask`); this route only needs a
+    // valid `screen` for the `isActive` highlight check.
+    route: { screen: 'training' },
   },
   {
     id: 'statistics',
@@ -211,7 +208,9 @@ export function MobileMenu({ open, onClose, activeTab }: MobileMenuProps) {
                   type="button"
                   className={clsx(styles.navItem, isActive && styles.navItemActive)}
                   aria-current={isActive ? 'page' : undefined}
-                  onClick={() => go(item.route)}
+                  onClick={() =>
+                    item.id === 'training' ? startRealTask(navigate) : go(item.route)
+                  }
                   style={{ ['--accent' as string]: item.color }}
                 >
                   <span className={styles.navIcon}>

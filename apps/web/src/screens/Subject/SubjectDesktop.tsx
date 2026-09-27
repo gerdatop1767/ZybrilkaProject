@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
+import { startRealTask } from '../../lib/startTraining.js';
 import {
   getSubjectContent,
   getTaskNumbers,
@@ -75,12 +76,7 @@ export function SubjectDesktop({ subjectId, from }: SubjectDesktopProps) {
   const taskNumbers = getTaskNumbers(subject.id, byNumberSource);
 
   function startTraining(taskNumber: number) {
-    navigate({
-      screen: 'task',
-      subjectId: subject.id,
-      taskNumber,
-      taskId: 'demo-3214',
-    });
+    startRealTask(navigate, { subject: subject.id, taskNumber });
   }
 
   const parentLabel = from === 'learningCenter' ? 'К учебному центру' : 'К предметам';

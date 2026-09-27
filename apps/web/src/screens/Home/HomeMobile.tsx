@@ -5,7 +5,7 @@ import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { StatRow } from '../../ui/StatRow/StatRow.js';
-import { sampleTask } from '../../data/sampleTask.js';
+import { startRealTask } from '../../lib/startTraining.js';
 import { StreakBadge } from '../../ui/RankBadge/StreakBadge.js';
 import { LevelBadge } from '../../ui/RankBadge/LevelBadge.js';
 import { SlideUp } from '../../ui/motion/motion.js';
@@ -170,14 +170,7 @@ export function HomeMobile() {
           type="button"
           className={styles.continueCard}
           style={{ ['--subject-accent' as string]: subjects[0]!.color }}
-          onClick={() =>
-            navigate({
-              screen: 'task',
-              subjectId: sampleTask.subjectId,
-              taskNumber: sampleTask.number,
-              taskId: sampleTask.id,
-            })
-          }
+          onClick={() => startRealTask(navigate, { subject: 'math' })}
         >
           <span className={styles.continueThumb}>
             <img
