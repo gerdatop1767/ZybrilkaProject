@@ -5,6 +5,7 @@ import { registerAnonUser } from './plugins/anonUser.js';
 import { mistakesRoutes } from './modules/mistakes/routes.js';
 import { progressRoutes } from './modules/progress/routes.js';
 import { tasksRoutes } from './modules/tasks/routes.js';
+import { variantsRoutes } from './modules/variants/routes.js';
 
 export interface AppOptions {
   logger?: FastifyServerOptions['logger'];
@@ -22,6 +23,7 @@ export function buildApp({ logger = false, version, checkDb, db }: AppOptions) {
   if (db) {
     void registerAnonUser(app, db);
     app.register(tasksRoutes, { db, prefix: '/api/v1' });
+    app.register(variantsRoutes, { db, prefix: '/api/v1' });
     app.register(mistakesRoutes, { db, prefix: '/api/v1' });
     app.register(progressRoutes, { db, prefix: '/api/v1' });
   }

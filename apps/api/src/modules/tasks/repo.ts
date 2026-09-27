@@ -1,7 +1,7 @@
 import type { Database } from '@zybrilka/db';
 import { schema } from '@zybrilka/db';
-import type { TaskListQuery } from '@zybrilka/shared';
-import { and, asc, count, eq, gt, or, sql } from 'drizzle-orm';
+import type { RandomTaskQuery, TaskListQuery } from '@zybrilka/shared';
+import { and, asc, count, eq, gt, inArray, or, sql } from 'drizzle-orm';
 
 type TaskRow = typeof schema.tasks.$inferSelect;
 
@@ -26,6 +26,46 @@ function encodeCursor(row: TaskRow): string {
   return Buffer.from(`${row.createdAt.toISOString()}|${row.id}`, 'utf8').toString('base64url');
 }
 
+/**
+ * Builds an `inArray(tasks.id, ...)` subquery scoping to a collection
+ * (any of its variants) or one specific variant — both only ever match
+ * a *published* variant/collection, so an archived/draft one silently
+ * yields no tasks rather than leaking them. Returns null when neither
+ * filter is given, so callers skip the condition entirely.
+ */
+function taskIdsForCollectionOrVariant(
+  db: Database,
+  filters: { collection?: string; variant?: string },
+) {
+  if (filters.variant) {
+    return db
+      .select({ id: schema.variantTasks.taskId })
+      .from(schema.variantTasks)
+      .innerJoin(schema.variants, eq(schema.variantTasks.variantId, schema.variants.id))
+      .where(
+        and(
+          eq(schema.variantTasks.variantId, filters.variant),
+          eq(schema.variants.status, 'published'),
+        ),
+      );
+  }
+  if (filters.collection) {
+    return db
+      .select({ id: schema.variantTasks.taskId })
+      .from(schema.variantTasks)
+      .innerJoin(schema.variants, eq(schema.variantTasks.variantId, schema.variants.id))
+      .innerJoin(schema.collections, eq(schema.variants.collectionId, schema.collections.id))
+      .where(
+        and(
+          eq(schema.collections.slug, filters.collection),
+          eq(schema.collections.status, 'published'),
+          eq(schema.variants.status, 'published'),
+        ),
+      );
+  }
+  return null;
+}
+
 export async function listTasks(
   db: Database,
   filters: TaskListQuery,
@@ -35,6 +75,8 @@ export async function listTasks(
   if (filters.taskNumber) conditions.push(eq(schema.tasks.taskNumber, filters.taskNumber));
   if (filters.topic) conditions.push(eq(schema.tasks.topicId, filters.topic));
   if (filters.difficulty) conditions.push(eq(schema.tasks.difficulty, filters.difficulty));
+  const scoped = taskIdsForCollectionOrVariant(db, filters);
+  if (scoped) conditions.push(inArray(schema.tasks.id, scoped));
 
   const cursor = filters.cursor ? decodeCursor(filters.cursor) : null;
   if (cursor) {
@@ -73,11 +115,13 @@ export async function getTaskById(db: Database, id: string): Promise<TaskWithTop
 
 export async function getRandomTask(
   db: Database,
-  filters: { subject?: string; taskNumber?: number },
+  filters: RandomTaskQuery,
 ): Promise<TaskWithTopic | undefined> {
   const conditions = [eq(schema.tasks.status, 'published' as const)];
   if (filters.subject) conditions.push(eq(schema.tasks.subjectId, filters.subject));
   if (filters.taskNumber) conditions.push(eq(schema.tasks.taskNumber, filters.taskNumber));
+  const scoped = taskIdsForCollectionOrVariant(db, filters);
+  if (scoped) conditions.push(inArray(schema.tasks.id, scoped));
 
   const [row] = await db
     .select({ task: schema.tasks, topicName: schema.topics.name })

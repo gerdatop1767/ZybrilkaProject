@@ -62,6 +62,10 @@ export const taskListQuerySchema = z.object({
   taskNumber: z.coerce.number().int().positive().optional(),
   topic: z.uuid().optional(),
   difficulty: z.coerce.number().int().min(1).max(3).optional(),
+  /** Collection slug (e.g. "ege-2026-yashchenko") — every published task linked to it via any variant. */
+  collection: z.string().optional(),
+  /** A specific variant's id — only that variant's own tasks. */
+  variant: z.uuid().optional(),
   // 'needs_review' is deliberately excluded here — it must never be
   // reachable through the public list endpoint, even by an explicit
   // query param, unlike the other statuses this endpoint already allows.
@@ -80,6 +84,10 @@ export type TaskListResponse = z.infer<typeof taskListResponseSchema>;
 export const randomTaskQuerySchema = z.object({
   subject: z.string().optional(),
   taskNumber: z.coerce.number().int().positive().optional(),
+  /** Collection slug — restrict the random pick to this collection's tasks (any of its variants). */
+  collection: z.string().optional(),
+  /** A specific variant's id — restrict the random pick to just that variant. */
+  variant: z.uuid().optional(),
 });
 export type RandomTaskQuery = z.infer<typeof randomTaskQuerySchema>;
 

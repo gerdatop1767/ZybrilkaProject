@@ -22,7 +22,8 @@ export class InvalidAnswerShapeError extends Error {
   }
 }
 
-function toPublicTask({ task, topicName }: repo.TaskWithTopic): TaskPublic {
+/** Exported for modules/variants/service.ts — the full variant view maps tasks through the exact same shape. */
+export function toPublicTask({ task, topicName }: repo.TaskWithTopic): TaskPublic {
   return {
     id: task.id,
     subjectId: task.subjectId,
