@@ -1,8 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StatisticsDesktop } from './StatisticsDesktop.js';
 import { NavigationProvider } from '../../lib/navigation.js';
+import * as api from '../../lib/api.js';
+
+vi.mock('../../lib/api.js', () => ({
+  getProgressSummary: vi.fn(() => new Promise(() => {})),
+}));
 
 function renderStatistics() {
   return render(
@@ -48,5 +53,23 @@ describe('StatisticsDesktop — period switching', () => {
     expect(screen.getByRole('img', { name: 'График активности по дням' }).children).toHaveLength(
       90,
     );
+  });
+});
+
+describe('StatisticsDesktop — real progress data', () => {
+  it('uses the real solved/correct counts once the API responds, not the hardcoded demo profile', async () => {
+    vi.mocked(api.getProgressSummary).mockResolvedValue({
+      solvedTotal: 3,
+      correctTotal: 2,
+      incorrectTotal: 1,
+      accuracyPercent: 66.7,
+      bySubject: [],
+      byTaskNumber: [],
+      byTopic: [],
+    });
+    renderStatistics();
+    // "N из M" is rendered as-is (not animated), so it reflects the
+    // real correct/solved counts as soon as the fetch resolves.
+    expect(await screen.findByText('2 из 3')).toBeInTheDocument();
   });
 });

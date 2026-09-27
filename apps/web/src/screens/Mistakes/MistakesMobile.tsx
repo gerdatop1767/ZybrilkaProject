@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
-import { mistakes, computeMistakesSummary, type Mistake } from '../../data/sampleMistakes.js';
+import { computeMistakesSummary, type Mistake } from '../../data/sampleMistakes.js';
+import { getMistakes } from '../../lib/api.js';
+import { toSampleMistake } from '../../lib/mistakeAdapter.js';
 import { Tabs } from '../../ui/Tabs/Tabs.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
@@ -32,9 +34,27 @@ export function MistakesMobile() {
   const [view, setView] = useState('all');
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [mistakes, setMistakes] = useState<readonly Mistake[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const summary = useMemo(() => computeMistakesSummary(), []);
-  const unsolved = useMemo(() => mistakes.filter((m) => m.status === 'unsolved'), []);
+  useEffect(() => {
+    let cancelled = false;
+    void getMistakes()
+      .then((items) => {
+        if (cancelled) return;
+        setMistakes(items.map(toSampleMistake));
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const summary = useMemo(() => computeMistakesSummary(mistakes), [mistakes]);
+  const unsolved = useMemo(() => mistakes.filter((m) => m.status === 'unsolved'), [mistakes]);
   const groups = useMemo(() => buildGroups(unsolved, view), [unsolved, view]);
 
   function toggleSelect(id: string) {
@@ -122,7 +142,9 @@ export function MistakesMobile() {
           </div>
         </div>
 
-        {groups.length === 0 ? (
+        {loading ? (
+          <p className="text-body-sm text-secondary">Загрузка ошибок…</p>
+        ) : groups.length === 0 ? (
           <FeedbackState
             variant="success"
             title="Все ошибки разобраны!"

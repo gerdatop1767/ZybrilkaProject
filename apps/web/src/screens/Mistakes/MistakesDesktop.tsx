@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
-import { mistakes, computeMistakesSummary, type Mistake } from '../../data/sampleMistakes.js';
+import { computeMistakesSummary, type Mistake } from '../../data/sampleMistakes.js';
+import { getMistakes } from '../../lib/api.js';
+import { toSampleMistake } from '../../lib/mistakeAdapter.js';
 import { formatDateShort } from '../../lib/formatDate.js';
 import { Card } from '../../ui/Card/Card.js';
 import { Chip } from '../../ui/Chip/Chip.js';
@@ -19,11 +21,12 @@ type FilterId = 'all' | 'unsolved' | 'byTopic' | 'byDate';
 
 /**
  * Desktop "Мои ошибки" (S1 Block 6, approved design —
- * desktop/08_mistakes.png). Every count (list length, "Неразобранные",
- * the donut, "Самые частые ошибки") is computed from the same
- * `mistakes` seed array, so filtering the list and its sidebar can
- * never drift apart. "Разобрать" opens the real Task → Result flow for
- * that mistake's task, not a static preview.
+ * desktop/08_mistakes.png), now backed by GET /api/v1/mistakes. Every
+ * count (list length, "Неразобранные", the donut, "Самые частые
+ * ошибки") is computed from the same fetched list, so filtering the
+ * list and its sidebar can never drift apart. "Разобрать" opens the
+ * real Task → Result flow for that mistake's task, not a static
+ * preview.
  */
 export function MistakesDesktop() {
   const { navigate } = useNavigation();
@@ -31,11 +34,29 @@ export function MistakesDesktop() {
   const [filter, setFilter] = useState<FilterId>('all');
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [favorited, setFavorited] = useState<ReadonlySet<string>>(new Set());
+  const [mistakes, setMistakes] = useState<readonly Mistake[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const summary = useMemo(() => computeMistakesSummary(), []);
+  useEffect(() => {
+    let cancelled = false;
+    void getMistakes()
+      .then((items) => {
+        if (cancelled) return;
+        setMistakes(items.map(toSampleMistake));
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const summary = useMemo(() => computeMistakesSummary(mistakes), [mistakes]);
   const unsolvedCount = summary.unsolvedCount;
 
-  const groups = useMemo(() => buildGroups(mistakes, filter), [filter]);
+  const groups = useMemo(() => buildGroups(mistakes, filter), [mistakes, filter]);
 
   function toggleSelect(id: string) {
     setSelected((prev) => toggleInSet(prev, id));
@@ -88,7 +109,8 @@ export function MistakesDesktop() {
 
       <div className={styles.grid}>
         <div className={styles.list}>
-          {groups.length === 0 && (
+          {loading && <p className="text-body-sm text-secondary">Загрузка ошибок…</p>}
+          {!loading && groups.length === 0 && (
             <FeedbackState
               variant="info"
               title="Здесь пока пусто"

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
 import {
@@ -9,6 +9,8 @@ import {
   type StatsPeriod,
 } from '../../data/sampleStatistics.js';
 import { computeMistakesSummary } from '../../data/sampleMistakes.js';
+import { getProgressSummary } from '../../lib/api.js';
+import type { ProgressSummary } from '@zybrilka/shared';
 import { Card } from '../../ui/Card/Card.js';
 import { Select } from '../../ui/Select/Select.js';
 import { Tabs } from '../../ui/Tabs/Tabs.js';
@@ -40,7 +42,34 @@ export function StatisticsDesktop() {
   const [subjectId, setSubjectId] = useState('math');
   const [period, setPeriod] = useState<StatsPeriod>('30d');
 
-  const summary = useMemo(() => computeStatisticsSummary(), []);
+  const [realProgress, setRealProgress] = useState<ProgressSummary | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getProgressSummary()
+      .then((data) => {
+        if (!cancelled) setRealProgress(data);
+      })
+      .catch(() => {
+        // No backend data yet (or the request failed) — screen stays on
+        // the demo profile numbers below.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const mockSummary = useMemo(() => computeStatisticsSummary(), []);
+  // Solved/correct counts are real attempt data; average time, level and
+  // XP have no backend yet in this phase and stay on the demo profile.
+  const summary = realProgress
+    ? {
+        ...mockSummary,
+        solvedTotal: realProgress.solvedTotal,
+        correctCount: realProgress.correctTotal,
+        correctPercent: Math.round(realProgress.accuracyPercent),
+      }
+    : mockSummary;
   const difficultTopics = useMemo(() => computeDifficultTopics(), []);
   const mistakesSummary = useMemo(() => computeMistakesSummary(), []);
   const points = useMemo(() => sliceByPeriod(dailyActivity, period), [period]);

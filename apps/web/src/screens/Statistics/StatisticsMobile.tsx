@@ -1,15 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
 import { sampleTask } from '../../data/sampleTask.js';
 import { userStats } from '../../data/sampleProgress.js';
 import {
-  taskNumberProgress,
+  taskNumberProgress as mockTaskNumberProgress,
   topicMasteryRows,
   mockExams,
-  computeStatisticsSummary,
   computeDifficultTopics,
 } from '../../data/sampleStatistics.js';
+import { getProgressSummary } from '../../lib/api.js';
+import { toTaskNumberProgress } from '../../lib/progressAdapter.js';
+import type { ProgressSummary } from '@zybrilka/shared';
 import { Card } from '../../ui/Card/Card.js';
 import { Tabs } from '../../ui/Tabs/Tabs.js';
 import { Icon } from '../../ui/Icon/Icon.js';
@@ -44,8 +46,32 @@ export function StatisticsMobile() {
   const { navigate } = useNavigation();
   const [subTab, setSubTab] = useState('overview');
   const subject = subjects.find((s) => s.id === sampleTask.subjectId) ?? subjects[0]!;
-  const summary = useMemo(() => computeStatisticsSummary(), []);
+  const [realProgress, setRealProgress] = useState<ProgressSummary | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getProgressSummary()
+      .then((data) => {
+        if (!cancelled) setRealProgress(data);
+      })
+      .catch(() => {
+        // No backend data yet (or the request failed) — screen stays on
+        // the demo profile numbers below.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const difficultTopics = useMemo(() => computeDifficultTopics(), []);
+  const taskNumberProgress = useMemo(
+    () => (realProgress ? toTaskNumberProgress(realProgress.byTaskNumber) : mockTaskNumberProgress),
+    [realProgress],
+  );
+  const solvedTotal = realProgress?.solvedTotal ?? userStats.solvedTotal;
+  const accuracyPercent = realProgress
+    ? Math.round(realProgress.accuracyPercent)
+    : userStats.accuracy;
   const avgExamPercent = Math.round(
     mockExams.reduce((sum, e) => sum + e.percent, 0) / mockExams.length,
   );
@@ -76,14 +102,14 @@ export function StatisticsMobile() {
       {subTab === 'byTask' && (
         <FadeIn className={styles.stack}>
           <Card className={styles.summaryCard}>
-            <CircularProgress value={summary.accuracyTotal} size={72} label="Твой прогресс">
+            <CircularProgress value={accuracyPercent} size={72} label="Твой прогресс">
               <span className="text-body" style={{ fontWeight: 700 }}>
-                {summary.accuracyTotal}%
+                {accuracyPercent}%
               </span>
             </CircularProgress>
             <div>
               <p className="text-body" style={{ fontWeight: 700 }}>
-                {summary.solvedTotal} из {subject.taskCount}
+                {solvedTotal} из {subject.taskCount}
               </p>
               <p className="text-body-sm text-secondary">заданий решено</p>
             </div>
@@ -180,16 +206,16 @@ export function StatisticsMobile() {
               icon="variant"
               iconColor="var(--color-accent-primary-end)"
               label="Решено заданий"
-              value={userStats.solvedTotal}
+              value={solvedTotal}
               deltaLabel={`из ${subject.taskCount}`}
             />
             <StatTile
               icon="progress"
               iconColor="var(--color-accent-secondary)"
               label="Точность"
-              value={userStats.accuracy}
+              value={accuracyPercent}
               suffix="%"
-              deltaLabel={`${Math.round((userStats.accuracy / 100) * userStats.solvedTotal)} верных`}
+              deltaLabel={`${realProgress?.correctTotal ?? Math.round((accuracyPercent / 100) * solvedTotal)} верных`}
             />
             <StatTile
               icon="xp"
