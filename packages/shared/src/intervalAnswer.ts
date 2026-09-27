@@ -1,0 +1,212 @@
+/**
+ * Interval-set answers (S3.1): "x ∈ (−∞;3] ∪ (5;+∞)" style answers,
+ * normalized into a structured representation before comparison so
+ * that equivalent notations ("," vs ";" separators, "U" vs "∪", ASCII
+ * "inf" vs "∞", extra whitespace, reordered union terms) are treated
+ * as the same answer. Deterministic, no `eval`, no arbitrary code
+ * execution — an unparseable string yields `null` (INVALID_ANSWER_FORMAT)
+ * rather than throwing.
+ */
+
+export interface Interval {
+  left: number; // -Infinity allowed
+  leftClosed: boolean;
+  right: number; // +Infinity allowed
+  rightClosed: boolean;
+}
+
+const EPSILON = 1e-9;
+
+/**
+ * Parses a single bound expression into a finite/infinite number.
+ * Supports: integers/decimals (comma or dot), unary minus, simple
+ * `a/b` fractions, `π`/`pi`, `√n`/`sqrt(n)`, `log_b(x)`/`log_b x`, and
+ * `±∞`/`±inf`/`±infinity`. Returns `null` if the token isn't a
+ * recognized numeric expression — never evaluates arbitrary code.
+ */
+export function parseBound(raw: string): number | null {
+  const token = raw
+    .trim()
+    .toLowerCase()
+    .replace(/−/g, '-') // U+2212 minus sign, common in typeset math, vs ASCII hyphen
+    .replace(/,/g, '.')
+    .replace(/\s+/g, '');
+  if (token === '') return null;
+
+  const infinityMatch = /^([+-]?)(infinity|inf|∞)$/.exec(token);
+  if (infinityMatch) {
+    return infinityMatch[1] === '-' ? -Infinity : Infinity;
+  }
+
+  return parseSignedExpression(token);
+}
+
+function parseSignedExpression(token: string): number | null {
+  if (token.startsWith('-')) {
+    const inner = parseSignedExpression(token.slice(1));
+    return inner === null ? null : -inner;
+  }
+  if (token.startsWith('+')) {
+    return parseSignedExpression(token.slice(1));
+  }
+  return parseUnsignedExpression(token);
+}
+
+function parseUnsignedExpression(token: string): number | null {
+  // Plain decimal, e.g. "5.4" or "3"
+  if (/^\d+(\.\d+)?$/.test(token)) {
+    return Number(token);
+  }
+
+  // Simple fraction "a/b"
+  const fraction = /^(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)$/.exec(token);
+  if (fraction) {
+    const numerator = Number(fraction[1]);
+    const denominator = Number(fraction[2]);
+    if (denominator === 0) return null;
+    return numerator / denominator;
+  }
+
+  if (token === 'pi' || token === 'π') return Math.PI;
+  if (token === 'e') return Math.E;
+
+  // √n or sqrt(n) or sqrt n
+  const sqrtMatch = /^(?:√|sqrt)\(?(\d+(?:\.\d+)?)\)?$/.exec(token);
+  if (sqrtMatch) {
+    const value = Number(sqrtMatch[1]);
+    return value < 0 ? null : Math.sqrt(value);
+  }
+
+  // log_b(x) or log_b x, base and argument each a plain positive number
+  const logMatch = /^log_?(\d+(?:\.\d+)?)\(?(\d+(?:\.\d+)?)\)?$/.exec(token);
+  if (logMatch) {
+    const base = Number(logMatch[1]);
+    const arg = Number(logMatch[2]);
+    if (base <= 0 || base === 1 || arg <= 0) return null;
+    return Math.log(arg) / Math.log(base);
+  }
+
+  return null;
+}
+
+const OPEN_BRACKETS = new Set(['(', '[']);
+const CLOSE_BRACKETS = new Set([')', ']']);
+
+/**
+ * Splits the interval's inner content ("a;b" or "a,b", where `a`/`b`
+ * may themselves contain parens, e.g. "log_5(2)") on the first
+ * top-level separator — one not nested inside a bound's own
+ * parentheses — rather than a naive regex that would misfire on
+ * nested brackets.
+ */
+function findTopLevelIndex(inner: string, separator: string): number {
+  let depth = 0;
+  for (let i = 0; i < inner.length; i++) {
+    const char = inner[i]!;
+    if (OPEN_BRACKETS.has(char)) depth++;
+    else if (CLOSE_BRACKETS.has(char)) depth--;
+    else if (depth === 0 && char === separator) return i;
+  }
+  return -1;
+}
+
+/**
+ * ';' is preferred (unambiguous with a decimal comma inside a bound,
+ * e.g. a fraction written "1,5"); ',' is only used as the separator
+ * when no ';' is present at all, matching the "(-∞,3]" notation some
+ * sources use instead of "(-∞;3]".
+ */
+function splitAtTopLevelSeparator(inner: string): [string, string] | null {
+  const semicolonAt = findTopLevelIndex(inner, ';');
+  if (semicolonAt >= 0) return [inner.slice(0, semicolonAt), inner.slice(semicolonAt + 1)];
+  const commaAt = findTopLevelIndex(inner, ',');
+  if (commaAt >= 0) return [inner.slice(0, commaAt), inner.slice(commaAt + 1)];
+  return null;
+}
+
+function parseSingleInterval(segment: string): Interval | null {
+  const trimmed = segment.trim();
+  if (trimmed.length < 3) return null;
+
+  const leftBracket = trimmed[0]!;
+  const rightBracket = trimmed[trimmed.length - 1]!;
+  if (!OPEN_BRACKETS.has(leftBracket) || !CLOSE_BRACKETS.has(rightBracket)) return null;
+
+  const inner = trimmed.slice(1, -1);
+  const parts = splitAtTopLevelSeparator(inner);
+  if (!parts) return null;
+  const [leftRaw, rightRaw] = parts;
+
+  const left = parseBound(leftRaw);
+  const right = parseBound(rightRaw);
+  if (left === null || right === null) return null;
+  if (left > right) return null;
+  // A closed bound at an infinite endpoint isn't a valid interval notation.
+  if (!Number.isFinite(left) && leftBracket === '[') return null;
+  if (!Number.isFinite(right) && rightBracket === ']') return null;
+
+  return {
+    left,
+    leftClosed: leftBracket === '[',
+    right,
+    rightClosed: rightBracket === ']',
+  };
+}
+
+/**
+ * Parses a full interval-set answer such as "(−∞;3] ∪ (5;+∞)" into a
+ * sorted list of intervals, or `null` if any segment is malformed
+ * (INVALID_ANSWER_FORMAT) — the caller treats `null` as simply
+ * "incorrect", never as a server error.
+ */
+export function parseIntervalSet(raw: string): readonly Interval[] | null {
+  const normalized = raw.trim();
+  if (normalized === '') return null;
+
+  const segments = normalized
+    .split(/∪|\bU\b/i)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (segments.length === 0) return null;
+
+  const intervals: Interval[] = [];
+  for (const segment of segments) {
+    const interval = parseSingleInterval(segment);
+    if (!interval) return null;
+    intervals.push(interval);
+  }
+
+  return [...intervals].sort((a, b) => a.left - b.left || a.right - b.right);
+}
+
+function boundsEqual(a: number, b: number): boolean {
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return a === b;
+  return Math.abs(a - b) < EPSILON;
+}
+
+/** Structural equality of two interval sets — order-independent (both are pre-sorted by parseIntervalSet). */
+export function intervalSetsEqual(a: readonly Interval[], b: readonly Interval[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((intervalA, i) => {
+    const intervalB = b[i]!;
+    return (
+      boundsEqual(intervalA.left, intervalB.left) &&
+      intervalA.leftClosed === intervalB.leftClosed &&
+      boundsEqual(intervalA.right, intervalB.right) &&
+      intervalA.rightClosed === intervalB.rightClosed
+    );
+  });
+}
+
+/**
+ * True when `userAnswer` denotes the same interval set as
+ * `correctAnswer`. An unparseable user answer is simply "incorrect",
+ * never a thrown error.
+ */
+export function checkIntervalAnswer(userAnswer: string, correctAnswer: string): boolean {
+  const userSet = parseIntervalSet(userAnswer);
+  if (userSet === null) return false;
+  const correctSet = parseIntervalSet(correctAnswer);
+  if (correctSet === null) return false;
+  return intervalSetsEqual(userSet, correctSet);
+}

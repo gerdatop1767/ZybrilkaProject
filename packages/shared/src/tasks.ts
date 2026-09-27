@@ -1,6 +1,21 @@
 import { z } from 'zod';
 
-export const taskAnswerTypeSchema = z.enum(['short_answer', 'multiple_choice']);
+/**
+ * `interval` and `multi_part` reuse the existing single
+ * `correctAnswer`/`answerRaw` TEXT columns by convention: for
+ * `interval` it's still a plain interval-set string (see
+ * intervalAnswer.ts); for `multi_part` it's JSON (see
+ * multiPartAnswer.ts). No separate INTEGER/DECIMAL/FRACTION/FREE_TEXT
+ * types — the existing answer checker already normalizes all of those
+ * identically, so splitting them out would just be duplication with no
+ * behavior difference.
+ */
+export const taskAnswerTypeSchema = z.enum([
+  'short_answer',
+  'multiple_choice',
+  'interval',
+  'multi_part',
+]);
 export type TaskAnswerType = z.infer<typeof taskAnswerTypeSchema>;
 
 export const taskStatusSchema = z.enum(['draft', 'published', 'archived', 'needs_review']);
@@ -64,11 +79,28 @@ export const randomTaskQuerySchema = z.object({
 });
 export type RandomTaskQuery = z.infer<typeof randomTaskQuerySchema>;
 
+/** A single string for short_answer/multiple_choice/interval tasks, or {partId: answer} for multi_part. */
+export const attemptAnswerSchema = z.union([
+  z.string().min(1).max(2000),
+  z.record(z.string().min(1), z.string().min(1).max(2000)),
+]);
+export type AttemptAnswer = z.infer<typeof attemptAnswerSchema>;
+
 export const attemptRequestSchema = z.object({
-  answer: z.string().min(1).max(2000),
+  answer: attemptAnswerSchema,
   timeSpentMs: z.number().int().nonnegative().optional(),
 });
 export type AttemptRequest = z.infer<typeof attemptRequestSchema>;
+
+export const multiPartStatusSchema = z.enum(['all_correct', 'partially_correct', 'all_incorrect']);
+export type MultiPartResultStatus = z.infer<typeof multiPartStatusSchema>;
+
+export const attemptPartResultSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  correct: z.boolean(),
+});
+export type AttemptPartResult = z.infer<typeof attemptPartResultSchema>;
 
 export const attemptResultSchema = z.object({
   correct: z.boolean(),
@@ -76,5 +108,10 @@ export const attemptResultSchema = z.object({
   explanation: z.string(),
   attemptId: z.uuid(),
   mistakeId: z.uuid().nullable(),
+  // Present only for multi_part tasks — per-part breakdown of a single logical attempt.
+  parts: z.array(attemptPartResultSchema).optional(),
+  correctParts: z.number().int().nonnegative().optional(),
+  totalParts: z.number().int().nonnegative().optional(),
+  partStatus: multiPartStatusSchema.optional(),
 });
 export type AttemptResult = z.infer<typeof attemptResultSchema>;
