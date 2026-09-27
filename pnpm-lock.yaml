@@ -111,6 +111,9 @@ importers:
 
   packages/db:
     dependencies:
+      '@zybrilka/shared':
+        specifier: workspace:*
+        version: link:../shared
       drizzle-orm:
         specifier: ^0.45.3
         version: 0.45.3(@electric-sql/pglite@0.5.8)(postgres@3.4.9)

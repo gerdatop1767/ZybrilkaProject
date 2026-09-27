@@ -1,3 +1,4 @@
+import { parseIntervalSet, parseMultiPartSpec } from '@zybrilka/shared';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import * as schema from './schema.js';
@@ -16,12 +17,12 @@ describe('importVariant1', () => {
     await testDb.close();
   });
 
-  it('imports all 19 task numbers with no gaps, 17 published and 2 needs_review', async () => {
+  it('imports all 19 task numbers with no gaps, all 19 now published (S3.1 closed the two S3 gaps)', async () => {
     const { db } = testDb;
     const result = await importVariant1(db);
     expect(result.total).toBe(19);
-    expect(result.published).toBe(17);
-    expect(result.needsReview).toBe(2);
+    expect(result.published).toBe(19);
+    expect(result.needsReview).toBe(0);
 
     const rows = await db
       .select()
@@ -31,23 +32,32 @@ describe('importVariant1', () => {
 
     const numbers = rows.map((r) => r.taskNumber).sort((a, b) => a - b);
     expect(numbers).toEqual(Array.from({ length: 19 }, (_, i) => i + 1));
+    expect(rows.every((r) => r.status === 'published')).toBe(true);
   });
 
-  it('marks task 15 (punctured interval) and task 19 (multi-part a/б/в) as needs_review, not published', async () => {
+  it('task 15 is now answerType=interval with a well-formed interval-set answer', async () => {
     const { db } = testDb;
     const rows = await db
       .select()
       .from(schema.tasks)
       .where(and(eq(schema.tasks.subjectId, 'math'), eq(schema.tasks.sourceVariant, 1)));
-    const byNumber = new Map(rows.map((r) => [r.taskNumber, r]));
-    expect(byNumber.get(15)?.status).toBe('needs_review');
-    expect(byNumber.get(19)?.status).toBe('needs_review');
-    // Every other task number is published.
-    for (const [number, row] of byNumber) {
-      if (number !== 15 && number !== 19) {
-        expect(row.status).toBe('published');
-      }
-    }
+    const task15 = rows.find((r) => r.taskNumber === 15);
+    expect(task15?.answerType).toBe('interval');
+    expect(parseIntervalSet(task15!.correctAnswer)).not.toBeNull();
+  });
+
+  it('task 19 is now answerType=multi_part with three well-formed parts (a/б/в)', async () => {
+    const { db } = testDb;
+    const rows = await db
+      .select()
+      .from(schema.tasks)
+      .where(and(eq(schema.tasks.subjectId, 'math'), eq(schema.tasks.sourceVariant, 1)));
+    const task19 = rows.find((r) => r.taskNumber === 19);
+    expect(task19?.answerType).toBe('multi_part');
+    const spec = parseMultiPartSpec(task19!.correctAnswer);
+    expect(spec).not.toBeNull();
+    expect(spec!.parts).toHaveLength(3);
+    expect(spec!.parts.map((p) => p.correctAnswer)).toEqual(['нет', '607', '1066']);
   });
 
   it('keeps full provenance for every imported task', async () => {

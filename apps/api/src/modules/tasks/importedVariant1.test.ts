@@ -6,11 +6,12 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../../app.js';
 
 /**
- * S3 — proves the real EGE-2026 Вариант 1 import (not just the demo
- * seed) flows through the exact same Task Engine as everything else:
- * GET /tasks(/:id)/random, POST /attempt, mistake creation, and —
- * critically — that 'needs_review' tasks (unverified answer format)
- * are never reachable through the public list/random endpoints.
+ * S3 / S3.1 — proves the real EGE-2026 Вариант 1 import (not just the
+ * demo seed) flows through the exact same Task Engine as everything
+ * else: GET /tasks(/:id)/random, POST /attempt, mistake creation, and
+ * that tasks 15 (interval) and 19 (multi_part) — needs_review in S3,
+ * published after S3.1 added those answer types — are now fully
+ * gradeable through the public API like any other task.
  */
 describe('imported EGE-2026 Variant 1 tasks via the real Task Engine', () => {
   let testDb: Awaited<ReturnType<typeof createImportedTestDb>>;
@@ -36,31 +37,61 @@ describe('imported EGE-2026 Variant 1 tasks via the real Task Engine', () => {
     expect(variantTask).not.toHaveProperty('correctAnswer');
   });
 
-  it('needs_review tasks (15 and 19) never appear in the public list, even filtered by their own number', async () => {
+  it('task 15 (interval) and task 19 (multi_part) are published and listed, not needs_review', async () => {
     for (const taskNumber of [15, 19]) {
       const res = await app.inject({
         method: 'GET',
         url: `/api/v1/tasks?subject=math&taskNumber=${taskNumber}`,
       });
       const body = res.json();
-      const leaked = body.items.some(
+      const variantTask = body.items.find(
         (t: { source: string }) => t.source === 'Ященко ЕГЭ 2026. Типовые экзаменационные варианты',
       );
-      expect(leaked).toBe(false);
+      expect(variantTask).toBeDefined();
     }
   });
 
-  it('needs_review tasks are never returned by GET /tasks/random for their task number', async () => {
-    for (const taskNumber of [15, 19]) {
-      const res = await app.inject({
-        method: 'GET',
-        url: `/api/v1/tasks/random?subject=math&taskNumber=${taskNumber}`,
-      });
-      // Only the demo-seeded tasks (numbers 1-5) exist as 'published' for
-      // most numbers; 15/19 have no published row at all in this import,
-      // so random must 404 rather than ever surface the needs_review row.
-      expect(res.statusCode).toBe(404);
-    }
+  it('task 15 grades an equivalent interval notation as correct', async () => {
+    const [task15] = await testDb.db
+      .select()
+      .from(schema.tasks)
+      .where(and(eq(schema.tasks.subjectId, 'math'), eq(schema.tasks.taskNumber, 15)));
+    expect(task15!.answerType).toBe('interval');
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/v1/tasks/${task15!.id}/attempt`,
+      headers: { 'x-anon-id': randomUUID() },
+      payload: { answer: '(log_5(2),log_5(8)) U (log_5(8),log_3(8)]' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().correct).toBe(true);
+  });
+
+  it('task 19 grades a partially-correct multi_part attempt and records the wrong part on the mistake', async () => {
+    const [task19] = await testDb.db
+      .select()
+      .from(schema.tasks)
+      .where(and(eq(schema.tasks.subjectId, 'math'), eq(schema.tasks.taskNumber, 19)));
+    expect(task19!.answerType).toBe('multi_part');
+    const anonId = randomUUID();
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/v1/tasks/${task19!.id}/attempt`,
+      headers: { 'x-anon-id': anonId },
+      payload: { answer: { a: 'нет', b: '607', c: 'wrong' } },
+    });
+    const body = res.json();
+    expect(body.correct).toBe(false);
+    expect(body.partStatus).toBe('partially_correct');
+    expect(body.correctParts).toBe(2);
+
+    const [mistake] = await testDb.db
+      .select()
+      .from(schema.mistakes)
+      .where(and(eq(schema.mistakes.userId, anonId), eq(schema.mistakes.taskId, task19!.id)));
+    expect(mistake?.wrongParts).toEqual(['c']);
   });
 
   it('a real imported task carries its graph image through the API', async () => {

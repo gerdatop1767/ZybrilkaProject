@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { and, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
+import { serializeMultiPartSpec } from '@zybrilka/shared';
 import type { Database } from './client.js';
 import * as schema from './schema.js';
 
@@ -15,15 +16,13 @@ import * as schema from './schema.js';
  * explanation status) behind every row below.
  *
  * Every task here was independently re-solved (not just transcribed)
- * before being marked 'published'; two — #15 (a punctured-interval
- * answer with no existing input convention) and #19 (three distinct
- * sub-answers a/б/в that don't fit the current single-input answer
- * field) — are intentionally 'needs_review' and excluded from the
- * public API by that status alone (see packages/shared/src/tasks.ts).
- *
- * Idempotent like seed.ts: re-running replaces only the rows this
- * import itself created (matched by `source` + `sourceVariant`),
- * never touching hand-seeded demo tasks or a later real admin edit.
+ * before being marked 'published'. #15 and #19 were originally
+ * 'needs_review' (S3) because their answer shape — a punctured
+ * interval, and three independent sub-answers а/б/в — had no home in
+ * the Task Engine yet; S3.1 added `interval`/`multi_part` answer
+ * types (packages/shared/src/{intervalAnswer,multiPartAnswer}.ts) and
+ * both are now re-verified and published (see the report for the
+ * re-derivation).
  */
 const SOURCE = 'Ященко ЕГЭ 2026. Типовые экзаменационные варианты';
 const SOURCE_DOCUMENT = 'ЕГЭ 2026 Ященко 36 вариантов';
@@ -32,6 +31,7 @@ const VARIANT = 1;
 const IMPORT_TAG = 'ege-2026-variant-1';
 
 type ImportStatus = 'published' | 'needs_review';
+type ImportAnswerType = 'short_answer' | 'interval' | 'multi_part';
 
 interface ImportTask {
   taskNumber: number;
@@ -42,6 +42,8 @@ interface ImportTask {
   rawStatement: string;
   conditionMd: string;
   imageUrl: string | null;
+  /** Defaults to 'short_answer' when omitted. */
+  answerType?: ImportAnswerType;
   correctAnswer: string;
   explanationMd: string;
   status: ImportStatus;
@@ -264,12 +266,18 @@ const importTasks: readonly ImportTask[] = [
     conditionMd:
       'Решите неравенство (9^x − 3^(x+2) + 8) / (log_(1/6)²(5^x−2) + log_(1/6)(5^x−2)² + 1) ≤ 0.',
     imageUrl: null,
-    correctAnswer: '(log_5 2; log_3 8] \\ {log_5 8}',
+    answerType: 'interval',
+    // A punctured interval (one excluded point) re-expressed as a union
+    // of two open-ended sub-intervals split at that point — the
+    // interval-set checker (packages/shared/src/intervalAnswer.ts)
+    // supports unions of plain intervals, so this needs no special
+    // "excluded point" syntax; re-verified numerically (sampled f(x)
+    // across the domain) that this union exactly matches the sign
+    // condition, see docs/imports/ege-2026-variant-1-report.md.
+    correctAnswer: '(log_5(2);log_5(8)) ∪ (log_5(8);log_3(8)]',
     explanationMd:
-      'Что дано: дробно-рациональное относительно показательных/логарифмических выражений неравенство.\n\nИдея: ОДЗ требует 5^x−2>0. Обозначим t=log_(1/6)(5^x−2); знаменатель раскладывается как полный квадрат (t+1)², то есть его знак всегда неотрицателен (и он не может быть равен нулю — это исключённая точка). Значит знак дроби целиком определяется числителем.\n\nШаг 1. ОДЗ: 5^x>2 → x>log_5 2. Знаменатель (t+1)²>0 при t≠−1, то есть 5^x−2 ≠ 6 → x ≠ log_5 8.\n\nШаг 2. Числитель: пусть u=3^x. 9^x=u², 3^(x+2)=9u. Получаем u²−9u+8≤0 → (u−1)(u−8)≤0 → 1≤u≤8 → 0≤x≤log_3 8.\n\nШаг 3. Пересекаем с ОДЗ (x>log_5 2≈0.43) и убираем исключённую точку x=log_5 8≈1.29 (которая лежит внутри промежутка).\n\nОтвет: x ∈ (log_5 2; log_3 8], x ≠ log_5 8.',
-    status: 'needs_review',
-    reviewNote:
-      'Математический ответ проверен независимо и корректен, но это "проколотый" промежуток (интервал с одной исключённой точкой) — в проекте пока нет согласованного текстового формата для такого ответа и наш answer-checker (packages/shared/answerChecker.ts) его не умеет надёжно сверять. Требуется либо расширить формат ответа, либо ввести отдельный тип для таких заданий, прежде чем публиковать.',
+      'Что дано: дробно-рациональное относительно показательных/логарифмических выражений неравенство.\n\nИдея: ОДЗ требует 5^x−2>0. Обозначим t=log_(1/6)(5^x−2); знаменатель раскладывается как полный квадрат (t+1)², то есть его знак всегда неотрицателен (и он не может быть равен нулю — это исключённая точка). Значит знак дроби целиком определяется числителем.\n\nШаг 1. ОДЗ: 5^x>2 → x>log_5 2. Знаменатель (t+1)²>0 при t≠−1, то есть 5^x−2 ≠ 6 → x ≠ log_5 8.\n\nШаг 2. Числитель: пусть u=3^x. 9^x=u², 3^(x+2)=9u. Получаем u²−9u+8≤0 → (u−1)(u−8)≤0 → 1≤u≤8 → 0≤x≤log_3 8.\n\nШаг 3. Пересекаем с ОДЗ (x>log_5 2≈0.43) и убираем исключённую точку x=log_5 8≈1.29 (которая лежит внутри промежутка) — это разбивает один промежуток на два: (log_5 2; log_5 8) ∪ (log_5 8; log_3 8].\n\nШаг 4 (независимая проверка). Численно проверено значение f(x) при x от 0 до 2.15 с шагом 0.05: знак f(x) отрицателен (или f не определена — ОДЗ/исключённая точка) везде и только там, где предсказывает это решение.\n\nОтвет: x ∈ (log₅2; log₅8) ∪ (log₅8; log₃8].',
+    status: 'published',
   },
   {
     taskNumber: 16,
@@ -326,12 +334,20 @@ const importTasks: readonly ImportTask[] = [
     conditionMd:
       'У Ивана Ильича есть коллекция монет. Если все его монеты разложить в одинаковые большие кляссеры, то потребуется k кляссеров, причём 5 ячеек в одном кляссере останутся пустыми. Если же их разложить в одинаковые маленькие кляссеры, то потребуется k+2 кляссеров и также 5 ячеек в одном кляссере останутся пустыми. Известно, что в большом кляссере больше 150, но меньше 160 ячеек, а в маленьком — больше 100, но меньше 120 ячеек. а) Может ли k быть равно 3? б) Какое наименьшее количество монет может быть в коллекции у Ивана Ильича? в) Какое наибольшее количество монет может быть в коллекции у Ивана Ильича?',
     imageUrl: null,
-    correctAnswer: 'а) нет; б) 607; в) 1066',
+    answerType: 'multi_part',
+    // Re-verified via a fresh exhaustive search over every integer
+    // (Б,М) pair in the allowed ranges (see the report) before
+    // publishing — not just re-using the S3 result unchecked.
+    correctAnswer: serializeMultiPartSpec({
+      parts: [
+        { id: 'a', label: 'а', answerType: 'short_answer', correctAnswer: 'нет' },
+        { id: 'b', label: 'б', answerType: 'short_answer', correctAnswer: '607' },
+        { id: 'c', label: 'в', answerType: 'short_answer', correctAnswer: '1066' },
+      ],
+    }),
     explanationMd:
-      'Что дано: N монет; N=k·Б−5 (Б — ячеек в большом кляссере, 150<Б<160) и N=(k+2)·М−5 (М — ячеек в маленьком, 100<М<120), Б и М — целые.\n\nИдея: приравнять оба выражения для N, получить k через Б и М, затем перебрать все целые Б∈[151,159], М∈[101,119] и проверить, при каких k получается целым и положительным.\n\nШаг 1. k·Б=(k+2)·М → k(Б−М)=2М → k=2М/(Б−М).\n\nШаг 2 (а). При k=3: 3Б=5М → Б=5М/3. При М от 101 до 119 (целые, кратные 3 для целого Б: 102,105,...,117) получаем Б от 170 до 195 — все значения больше 159, то есть вне допустимого диапазона большого кляссера. Значит k=3 невозможно.\n\nШаг 3 (перебор для б и в). Полным перебором целых Б∈[151,159], М∈[101,119] с условием, что 2М делится на (Б−М) нацело и k=2М/(Б−М)≥1, находятся все допустимые тройки (k,Б,М) и соответствующие N=k·Б−5: (k=4,Б=153,М=102,N=607), (k=4,Б=156,М=104,N=619), (k=4,Б=159,М=106,N=631), (k=5,Б=154,М=110,N=765), (k=6,Б=152,М=114,N=907), (k=6,Б=156,М=117,N=931), (k=7,Б=153,М=119,N=1066).\n\nШаг 4. Наименьшее N среди найденных — 607, наибольшее — 1066.\n\nОтвет: а) нет; б) 607; в) 1066.',
-    status: 'needs_review',
-    reviewNote:
-      'Все три под-ответа (a/б/в) независимо проверены (включая полный компьютерный перебор для б и в), но задание имеет три раздельных числовых ответа, а текущий Task Engine поддерживает только одно поле ввода на задание (unsupportedAnswerType). Нужно расширить UI/модель под составные ответы, прежде чем публиковать.',
+      'Что дано: N монет; N=k·Б−5 (Б — ячеек в большом кляссере, 150<Б<160) и N=(k+2)·М−5 (М — ячеек в маленьком, 100<М<120), Б и М — целые.\n\nИдея: приравнять оба выражения для N, получить k через Б и М, затем перебрать все целые Б∈[151,159], М∈[101,119] и проверить, при каких k получается целым и положительным.\n\nШаг 1. k·Б=(k+2)·М → k(Б−М)=2М → k=2М/(Б−М).\n\n### А\nПри k=3: 3Б=5М → Б=5М/3. При М от 101 до 119 (целые, кратные 3 для целого Б: 102,105,...,117) получаем Б от 170 до 195 — все значения больше 159, то есть вне допустимого диапазона большого кляссера. Значит k=3 невозможно.\n\nОтвет: нет.\n\n### Б и В\nПолным перебором целых Б∈[151,159], М∈[101,119] с условием, что 2М делится на (Б−М) нацело и k=2М/(Б−М)≥1, находятся все допустимые тройки (k,Б,М) и соответствующие N=k·Б−5: (k=4,Б=153,М=102,N=607), (k=4,Б=156,М=104,N=619), (k=4,Б=159,М=106,N=631), (k=5,Б=154,М=110,N=765), (k=6,Б=152,М=114,N=907), (k=6,Б=156,М=117,N=931), (k=7,Б=153,М=119,N=1066).\n\nНаименьшее N среди найденных — 607, наибольшее — 1066.\n\nОтвет: б) 607, в) 1066.',
+    status: 'published',
   },
 ];
 
@@ -396,6 +412,7 @@ export async function importVariant1(db: Database) {
     difficulty: difficultyForTaskNumber(t.taskNumber),
     conditionMd: t.conditionMd,
     imageUrl: t.imageUrl,
+    answerType: t.answerType ?? ('short_answer' as const),
     correctAnswer: t.correctAnswer,
     explanationMd: t.explanationMd,
     source: SOURCE,
