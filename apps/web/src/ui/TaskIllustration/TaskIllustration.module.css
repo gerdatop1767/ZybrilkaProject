@@ -1,0 +1,13 @@
+/**
+ * The task's own imageUrl fallback (a PDF-cropped scan: black ink on
+ * white paper) needs to sit on the dark card without a white box
+ * around it. invert() turns the white background black and the black
+ * ink white; mix-blend-mode: screen then drops that now-black
+ * background into the card's own dark color, leaving only the
+ * (now light) curve/grid/text visible — without touching the image
+ * file or the graph it shows.
+ */
+.pdfFallback {
+  filter: invert(1);
+  mix-blend-mode: screen;
+}

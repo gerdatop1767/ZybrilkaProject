@@ -15,9 +15,11 @@ function shortCode(id: string): string {
 /**
  * Maps a real API task (+ its siblings sharing the same task number, for
  * the "Другие задания" list and session strip) onto the `SampleTask`
- * shape the approved-design components already render. `steps`/`hint`
- * aren't modeled by the backend yet, so they get a single generic
- * explanation-based step rather than a fabricated multi-step solution.
+ * shape the approved-design components already render. `hint`/`steps`
+ * come straight from the task's own `hintMd`/`solutionSteps` — an empty
+ * hint hides the hint UI entirely (see TaskDesktop/TaskMobile) rather
+ * than falling back to a generic one, and a task with no `solutionSteps`
+ * falls back to one block holding the whole `explanationMd`.
  */
 export function toSampleTask(
   task: TaskPublic | TaskWithSolution,
@@ -47,8 +49,12 @@ export function toSampleTask(
     answerParts: task.answerParts,
     correctAnswer: hasSolution ? task.correctAnswer : '',
     explanation: hasSolution ? task.explanationMd : '',
-    hint: 'Внимательно перечитай условие и вспомни формулы по теме задания.',
-    steps: hasSolution ? [{ text: task.explanationMd }] : [],
+    hint: task.hintMd ?? '',
+    steps: hasSolution
+      ? (task.solutionSteps?.map((s) => ({ title: s.title, text: s.explanation })) ?? [
+          { text: task.explanationMd },
+        ])
+      : [],
     otherVariants: others.slice(0, 3).map((t) => ({
       id: t.id,
       code: shortCode(t.id),

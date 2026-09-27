@@ -18,6 +18,8 @@ import { SessionTaskListCard } from '../../ui/Training/SessionTaskListCard.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { useCountUp } from '../../lib/useCountUp.js';
 import { FadeIn } from '../../ui/motion/motion.js';
+import { InlineMathText, MathText } from '../../ui/MathText/MathText.js';
+import { TaskIllustration } from '../../ui/TaskIllustration/TaskIllustration.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './ResultDesktop.module.css';
 
@@ -154,10 +156,15 @@ export function ResultDesktop({
           <div className={styles.card}>
             {!correct && <span className={styles.topicChip}>{task.topic}</span>}
             <p className="text-h3">Условие</p>
-            <p className={clsx('text-task', styles.condition)}>{task.condition}</p>
-            {task.imageUrl && (
-              <img src={task.imageUrl} alt="Иллюстрация к заданию" className={styles.taskImage} />
-            )}
+            <div className={clsx('text-task', styles.condition)}>
+              <MathText text={task.condition} />
+            </div>
+            <TaskIllustration
+              subjectId={task.subjectId}
+              taskNumber={task.number}
+              imageUrl={task.imageUrl}
+              className={styles.taskImage}
+            />
 
             <div
               className={clsx(
@@ -224,7 +231,7 @@ export function ResultDesktop({
                       )}
                     </div>
                     <p className="text-body-sm" style={{ marginTop: 'var(--space-2)' }}>
-                      {explanationForPart(explanationSections, part.label)}
+                      <InlineMathText text={explanationForPart(explanationSections, part.label)} />
                     </p>
                   </div>
                 ))}
@@ -279,7 +286,16 @@ export function ResultDesktop({
                       return (
                         <div key={stepNumber} className={styles.step}>
                           <span className={styles.stepIndex}>{stepNumber}</span>
-                          <p className="text-body-sm">{step.text}</p>
+                          <div>
+                            {step.title && (
+                              <p className="text-body-sm" style={{ fontWeight: 700 }}>
+                                <InlineMathText text={step.title} />
+                              </p>
+                            )}
+                            <p className="text-body-sm">
+                              <InlineMathText text={step.text} />
+                            </p>
+                          </div>
                         </div>
                       );
                     },
@@ -288,14 +304,16 @@ export function ResultDesktop({
               </>
             )}
 
-            {!correct && (
+            {!correct && task.hint && (
               <div className={styles.tipBox}>
                 <Icon name="hint" size={18} className={styles.tipIcon} />
                 <div>
                   <p className="text-body-sm" style={{ fontWeight: 600 }}>
                     Полезно знать
                   </p>
-                  <p className="text-body-sm text-secondary">{task.hint}</p>
+                  <p className="text-body-sm text-secondary">
+                    <InlineMathText text={task.hint} />
+                  </p>
                 </div>
               </div>
             )}

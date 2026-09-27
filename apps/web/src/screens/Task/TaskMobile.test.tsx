@@ -30,6 +30,7 @@ const baseTask = {
   difficulty: 3 as const,
   conditionMd: CONDITION,
   imageUrl: null,
+  hintMd: 'Проверь область допустимых значений перед возведением в квадрат.',
   answerType: 'short_answer' as const,
   answerParts: null,
   answerOptions: null,

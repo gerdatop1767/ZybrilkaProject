@@ -91,6 +91,24 @@ export const tasks = pgTable(
     correctAnswer: text('correct_answer').notNull(),
     answerOptions: jsonb('answer_options').$type<readonly string[] | null>(),
     explanationMd: text('explanation_md').notNull(),
+    /**
+     * A short, task-specific nudge shown before an attempt exists (same
+     * visibility as `conditionMd`, never the answer) — points at the
+     * right method (ОДЗ, a theorem, what to read off a graph) without
+     * giving away the solution. Null for tasks that don't have one yet
+     * (never a generic fallback — see apps/web's toSampleTask).
+     */
+    hintMd: text('hint_md'),
+    /**
+     * The same content as `explanationMd`, broken into named steps for
+     * a step-by-step UI — titles are per-task ("ОДЗ", "Считываем данные
+     * с графика", "Теорема Пифагора", ...), never a fixed template.
+     * Only sent alongside `explanationMd` (post-attempt). Null falls
+     * back to rendering `explanationMd` as one block.
+     */
+    solutionSteps: jsonb('solution_steps').$type<
+      readonly { title: string; explanation: string }[] | null
+    >(),
     source: text('source').notNull(),
     sourceUrl: text('source_url'),
     sourceYear: integer('source_year'),

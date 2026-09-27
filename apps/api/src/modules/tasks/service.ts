@@ -33,6 +33,7 @@ export function toPublicTask({ task, topicName }: repo.TaskWithTopic): TaskPubli
     difficulty: task.difficulty,
     conditionMd: task.conditionMd,
     imageUrl: task.imageUrl,
+    hintMd: task.hintMd,
     answerType: task.answerType,
     answerOptions: task.answerOptions ? [...task.answerOptions] : null,
     answerParts:
@@ -55,6 +56,7 @@ function toTaskWithSolution(row: repo.TaskWithTopic): TaskWithSolution {
     ...toPublicTask(row),
     correctAnswer: row.task.correctAnswer,
     explanationMd: row.task.explanationMd,
+    solutionSteps: row.task.solutionSteps ? [...row.task.solutionSteps] : null,
   };
 }
 

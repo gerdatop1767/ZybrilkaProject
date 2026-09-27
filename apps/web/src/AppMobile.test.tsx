@@ -20,6 +20,7 @@ const RANDOM_TASK = {
   difficulty: 2 as const,
   conditionMd: 'Условие',
   imageUrl: null,
+  hintMd: null,
   answerType: 'short_answer' as const,
   answerOptions: null,
   answerParts: null,

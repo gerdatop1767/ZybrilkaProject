@@ -12,6 +12,8 @@ import { SessionProgressCard } from '../../ui/Training/SessionProgressCard.js';
 import { SessionTaskListCard } from '../../ui/Training/SessionTaskListCard.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { Collapse, FadeIn } from '../../ui/motion/motion.js';
+import { MathText } from '../../ui/MathText/MathText.js';
+import { TaskIllustration } from '../../ui/TaskIllustration/TaskIllustration.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './TaskDesktop.module.css';
 
@@ -175,24 +177,35 @@ export function TaskDesktop({ subjectId, taskNumber, taskId }: TaskDesktopProps)
             <p className="text-h3" style={{ marginTop: 'var(--space-2)' }}>
               Условие
             </p>
-            <p className={clsx('text-task', styles.condition)}>{task.condition}</p>
-            {task.imageUrl && (
-              <img src={task.imageUrl} alt="Иллюстрация к заданию" className={styles.taskImage} />
-            )}
+            <div className={clsx('text-task', styles.condition)}>
+              <MathText text={task.condition} />
+            </div>
+            <TaskIllustration
+              subjectId={task.subjectId}
+              taskNumber={task.number}
+              imageUrl={task.imageUrl}
+              className={styles.taskImage}
+            />
 
-            <button
-              type="button"
-              className={styles.hintToggle}
-              aria-expanded={hintOpen}
-              aria-label="Показать подсказку"
-              onClick={() => setHintOpen((v) => !v)}
-            >
-              <Icon name="hint" size={16} /> Подсказка
-              <Icon name={hintOpen ? 'chevronUp' : 'chevronDown'} size={16} />
-            </button>
-            <Collapse open={hintOpen}>
-              <p className={clsx('text-body-sm', 'text-secondary', styles.hintText)}>{task.hint}</p>
-            </Collapse>
+            {task.hint && (
+              <>
+                <button
+                  type="button"
+                  className={styles.hintToggle}
+                  aria-expanded={hintOpen}
+                  aria-label="Показать подсказку"
+                  onClick={() => setHintOpen((v) => !v)}
+                >
+                  <Icon name="hint" size={16} /> Подсказка
+                  <Icon name={hintOpen ? 'chevronUp' : 'chevronDown'} size={16} />
+                </button>
+                <Collapse open={hintOpen}>
+                  <div className={clsx('text-body-sm', 'text-secondary', styles.hintText)}>
+                    <MathText text={task.hint} />
+                  </div>
+                </Collapse>
+              </>
+            )}
 
             <div>
               <p

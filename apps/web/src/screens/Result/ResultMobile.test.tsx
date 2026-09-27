@@ -29,6 +29,7 @@ const baseTask = {
   difficulty: 3 as const,
   conditionMd: CONDITION,
   imageUrl: null,
+  hintMd: null,
   answerType: 'short_answer' as const,
   answerParts: null,
   answerOptions: null,
@@ -139,6 +140,7 @@ describe('ResultMobile — multi_part task', () => {
       ],
     }),
     explanationMd: '### А\nПояснение к а.\n\n### Б и В\nПояснение к б и в.',
+    solutionSteps: null,
   };
 
   it('shows per-part answer rows and per-part explanation once revealed', async () => {

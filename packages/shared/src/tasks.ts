@@ -36,6 +36,10 @@ export const taskPublicSchema = z.object({
   difficulty: z.number().int().min(1).max(3),
   conditionMd: z.string(),
   imageUrl: z.string().nullable(),
+  /** A short, task-specific nudge — same "before the attempt" visibility
+   * as `conditionMd`, never the answer. Null when the task doesn't have
+   * one yet (the client must not fall back to a generic hint). */
+  hintMd: z.string().nullable(),
   answerType: taskAnswerTypeSchema,
   answerOptions: z.array(z.string()).nullable(),
   /** For multi_part tasks: each part's id+label (never the correct
@@ -50,10 +54,20 @@ export const taskPublicSchema = z.object({
 });
 export type TaskPublic = z.infer<typeof taskPublicSchema>;
 
+export const solutionStepSchema = z.object({
+  title: z.string(),
+  explanation: z.string(),
+});
+export type SolutionStep = z.infer<typeof solutionStepSchema>;
+
 /** Same task, once the current user has attempted it — includes the answer key. */
 export const taskWithSolutionSchema = taskPublicSchema.extend({
   correctAnswer: z.string(),
   explanationMd: z.string(),
+  /** `explanationMd` broken into named, task-specific steps for a
+   * step-by-step UI. Null falls back to rendering `explanationMd` as
+   * one block — never a fabricated generic step split. */
+  solutionSteps: z.array(solutionStepSchema).nullable(),
 });
 export type TaskWithSolution = z.infer<typeof taskWithSolutionSchema>;
 

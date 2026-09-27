@@ -36,6 +36,13 @@
       "when": 1790497946517,
       "tag": "0004_collections_variants",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790531444891,
+      "tag": "0005_task_hint_solution_steps",
+      "breakpoints": true
     }
   ]
 }

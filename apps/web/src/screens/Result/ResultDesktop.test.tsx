@@ -28,6 +28,7 @@ const baseTask = {
   difficulty: 3 as const,
   conditionMd: CONDITION,
   imageUrl: null,
+  hintMd: 'Проверь область допустимых значений перед возведением в квадрат.',
   answerType: 'short_answer' as const,
   answerParts: null,
   answerOptions: null,
@@ -121,6 +122,7 @@ describe('ResultDesktop — multi_part task', () => {
       ],
     }),
     explanationMd: '### А\nПояснение к а.\n\n### Б и В\nПояснение к б и в.',
+    solutionSteps: null,
   };
 
   it('shows each part correct/incorrect with its own answer comparison and explanation section', async () => {
