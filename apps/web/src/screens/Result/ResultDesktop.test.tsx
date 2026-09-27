@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { serializeMultiPartSpec, serializeMultiPartUserAnswer } from '@zybrilka/shared';
 import { ResultDesktop } from './ResultDesktop.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
 import { userStats } from '../../data/sampleProgress.js';
@@ -28,6 +29,7 @@ const baseTask = {
   conditionMd: CONDITION,
   imageUrl: null,
   answerType: 'short_answer' as const,
+  answerParts: null,
   answerOptions: null,
   source: 'ФИПИ',
   sourceUrl: null,
@@ -99,6 +101,50 @@ describe('ResultDesktop — incorrect state', () => {
   it('shows the "Полезно знать" hint tip', async () => {
     renderResult(false);
     expect(await screen.findByText('Полезно знать')).toBeInTheDocument();
+  });
+});
+
+describe('ResultDesktop — multi_part task', () => {
+  const multiPartTask = {
+    ...baseTask,
+    answerType: 'multi_part' as const,
+    answerParts: [
+      { id: 'a', label: 'а' },
+      { id: 'b', label: 'б' },
+      { id: 'c', label: 'в' },
+    ],
+    correctAnswer: serializeMultiPartSpec({
+      parts: [
+        { id: 'a', label: 'а', answerType: 'short_answer', correctAnswer: 'нет' },
+        { id: 'b', label: 'б', answerType: 'short_answer', correctAnswer: '607' },
+        { id: 'c', label: 'в', answerType: 'short_answer', correctAnswer: '1066' },
+      ],
+    }),
+    explanationMd: '### А\nПояснение к а.\n\n### Б и В\nПояснение к б и в.',
+  };
+
+  it('shows each part correct/incorrect with its own answer comparison and explanation section', async () => {
+    const userAnswer = serializeMultiPartUserAnswer({ a: 'нет', b: '607', c: 'wrong' });
+    vi.mocked(api.getTask).mockResolvedValue(multiPartTask);
+    render(
+      <NavigationProvider>
+        <ResultDesktop
+          subjectId={multiPartTask.subjectId}
+          taskNumber={multiPartTask.taskNumber}
+          taskId={TASK_ID}
+          correct={false}
+          userAnswer={userAnswer}
+        />
+        <OverlayMarker />
+      </NavigationProvider>,
+    );
+
+    expect(await screen.findByText('а) Верно')).toBeInTheDocument();
+    expect(screen.getByText('б) Верно')).toBeInTheDocument();
+    expect(screen.getByText('в) Неверно')).toBeInTheDocument();
+    expect(screen.getByText('Пояснение к а.')).toBeInTheDocument();
+    expect(screen.getAllByText('Пояснение к б и в.')).toHaveLength(2);
+    expect(screen.getByText('1066')).toBeInTheDocument();
   });
 });
 

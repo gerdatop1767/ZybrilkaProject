@@ -29,6 +29,7 @@ const baseTask = {
   conditionMd: CONDITION,
   imageUrl: null,
   answerType: 'short_answer' as const,
+  answerParts: null,
   answerOptions: null,
   source: 'ФИПИ',
   sourceUrl: null,
@@ -76,7 +77,7 @@ describe('TaskDesktop', () => {
     vi.mocked(api.listTasksByNumber).mockResolvedValue(siblings);
     vi.mocked(api.submitAttempt).mockImplementation((_taskId, { answer }) =>
       Promise.resolve(
-        answer.trim() === CORRECT_ANSWER
+        typeof answer === 'string' && answer.trim() === CORRECT_ANSWER
           ? {
               correct: true,
               correctAnswer: CORRECT_ANSWER,
@@ -171,5 +172,55 @@ describe('TaskDesktop', () => {
     renderTask();
     await screen.findByText(CONDITION);
     expect(screen.queryByRole('img', { name: 'Иллюстрация к заданию' })).not.toBeInTheDocument();
+  });
+
+  describe('multi_part task', () => {
+    const multiPartTask = {
+      ...baseTask,
+      answerType: 'multi_part' as const,
+      answerParts: [
+        { id: 'a', label: 'а' },
+        { id: 'b', label: 'б' },
+        { id: 'c', label: 'в' },
+      ],
+    };
+
+    beforeEach(() => {
+      vi.mocked(api.getTask).mockResolvedValue(multiPartTask);
+      vi.mocked(api.listTasksByNumber).mockResolvedValue([multiPartTask]);
+    });
+
+    it('renders one labeled input per part instead of the single answer field', async () => {
+      renderTask();
+      await screen.findByText(CONDITION);
+      expect(screen.getByLabelText('Ответ а)')).toBeInTheDocument();
+      expect(screen.getByLabelText('Ответ б)')).toBeInTheDocument();
+      expect(screen.getByLabelText('Ответ в)')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Ответ')).not.toBeInTheDocument();
+    });
+
+    it('keeps Проверить disabled until every part has an answer, then submits one object payload', async () => {
+      const user = userEvent.setup();
+      renderTask();
+      const submit = await screen.findByRole('button', { name: /Проверить ответ/ });
+      expect(submit).toBeDisabled();
+
+      await user.click(screen.getByLabelText('Ответ а)'));
+      await user.paste('нет');
+      expect(submit).toBeDisabled();
+      await user.click(screen.getByLabelText('Ответ б)'));
+      await user.paste('607');
+      expect(submit).toBeDisabled();
+      await user.click(screen.getByLabelText('Ответ в)'));
+      await user.paste('1066');
+      expect(submit).toBeEnabled();
+
+      await user.click(submit);
+      await waitFor(() => {
+        expect(api.submitAttempt).toHaveBeenCalledWith(TASK_ID, {
+          answer: { a: 'нет', b: '607', c: '1066' },
+        });
+      });
+    });
   });
 });

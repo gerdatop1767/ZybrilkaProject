@@ -38,6 +38,10 @@ export const taskPublicSchema = z.object({
   imageUrl: z.string().nullable(),
   answerType: taskAnswerTypeSchema,
   answerOptions: z.array(z.string()).nullable(),
+  /** For multi_part tasks: each part's id+label (never the correct
+   * answer) so the client can render one input per part before an
+   * attempt exists. Null for every other answerType. */
+  answerParts: z.array(z.object({ id: z.string(), label: z.string() })).nullable(),
   source: z.string(),
   sourceUrl: z.string().nullable(),
   sourceYear: z.number().int().nullable(),

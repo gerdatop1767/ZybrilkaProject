@@ -34,6 +34,13 @@ function toPublicTask({ task, topicName }: repo.TaskWithTopic): TaskPublic {
     imageUrl: task.imageUrl,
     answerType: task.answerType,
     answerOptions: task.answerOptions ? [...task.answerOptions] : null,
+    answerParts:
+      task.answerType === 'multi_part'
+        ? (parseMultiPartSpec(task.correctAnswer)?.parts.map((p) => ({
+            id: p.id,
+            label: p.label,
+          })) ?? null)
+        : null,
     source: task.source,
     sourceUrl: task.sourceUrl,
     sourceYear: task.sourceYear,

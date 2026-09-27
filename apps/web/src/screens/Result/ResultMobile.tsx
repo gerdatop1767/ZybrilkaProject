@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
+import { gradeMultiPart, parseMultiPartSpec, parseMultiPartUserAnswer } from '@zybrilka/shared';
 import { getTask, listTasksByNumber } from '../../lib/api.js';
-import { toSampleTask } from '../../lib/taskAdapter.js';
+import {
+  explanationForPart,
+  splitMultiPartExplanation,
+  toSampleTask,
+} from '../../lib/taskAdapter.js';
 import type { SampleTask, TaskVariant } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { userStats } from '../../data/sampleProgress.js';
@@ -97,6 +102,15 @@ export function ResultMobile({
     });
   }
 
+  const multiPartSpec =
+    task.answerType === 'multi_part' ? parseMultiPartSpec(task.correctAnswer) : null;
+  const multiPartUserAnswer = multiPartSpec ? parseMultiPartUserAnswer(userAnswer) : null;
+  const multiPartGrade =
+    multiPartSpec && multiPartUserAnswer
+      ? gradeMultiPart(multiPartSpec, multiPartUserAnswer)
+      : null;
+  const explanationSections = multiPartGrade ? splitMultiPartExplanation(task.explanation) : null;
+
   function handleSelectVariant(variant: TaskVariant) {
     if (!task) return;
     navigate({
@@ -145,38 +159,72 @@ export function ResultMobile({
           </span>
         </div>
 
-        <div className={styles.answerBlock}>
-          <p className="text-body-sm text-secondary">Твой ответ:</p>
-          <p
-            className={clsx(
-              styles.answerBox,
-              correct ? styles.answerBoxCorrect : styles.answerBoxWrong,
+        {multiPartGrade && multiPartUserAnswer ? (
+          <div className={styles.answerBlock}>
+            {multiPartGrade.parts.map((part) => (
+              <div key={part.id}>
+                <p className="text-body-sm text-secondary">{part.label}) Твой ответ:</p>
+                <p
+                  className={clsx(
+                    styles.answerBox,
+                    part.correct ? styles.answerBoxCorrect : styles.answerBoxWrong,
+                  )}
+                >
+                  {multiPartUserAnswer[part.id] || '—'}
+                  <Icon name={part.correct ? 'check' : 'close'} size={18} />
+                </p>
+                {!part.correct && (
+                  <p className={clsx(styles.answerBox, styles.answerBoxReference)}>
+                    {multiPartSpec!.parts.find((p) => p.id === part.id)?.correctAnswer}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={styles.answerBlock}>
+            <p className="text-body-sm text-secondary">Твой ответ:</p>
+            <p
+              className={clsx(
+                styles.answerBox,
+                correct ? styles.answerBoxCorrect : styles.answerBoxWrong,
+              )}
+            >
+              {userAnswer || '—'}
+              <Icon name={correct ? 'check' : 'close'} size={18} />
+            </p>
+            {!correct && (
+              <>
+                <p className="text-body-sm text-secondary">Правильный ответ:</p>
+                <p className={clsx(styles.answerBox, styles.answerBoxReference)}>
+                  {task.correctAnswer}
+                </p>
+              </>
             )}
-          >
-            {userAnswer || '—'}
-            <Icon name={correct ? 'check' : 'close'} size={18} />
-          </p>
-          {!correct && (
-            <>
-              <p className="text-body-sm text-secondary">Правильный ответ:</p>
-              <p className={clsx(styles.answerBox, styles.answerBoxReference)}>
-                {task.correctAnswer}
-              </p>
-            </>
-          )}
-        </div>
+          </div>
+        )}
 
         <Button variant="primary" fullWidth onClick={() => setSolutionOpen((v) => !v)}>
           <Icon name="showSolution" size={18} /> Показать решение
         </Button>
         <Collapse open={solutionOpen}>
           <div className={styles.solutionSteps}>
-            {task.steps.map((step, i) => (
-              <div key={i} className={styles.solutionStep}>
-                <span className={styles.solutionStepIndex}>{i + 1}</span>
-                <p className="text-body-sm">{step.text}</p>
-              </div>
-            ))}
+            {multiPartGrade && explanationSections
+              ? multiPartGrade.parts.map((part, i) => (
+                  <div key={part.id} className={styles.solutionStep}>
+                    <span className={styles.solutionStepIndex}>{i + 1}</span>
+                    <p className="text-body-sm">
+                      <strong>{part.label}) </strong>
+                      {explanationForPart(explanationSections, part.label)}
+                    </p>
+                  </div>
+                ))
+              : task.steps.map((step, i) => (
+                  <div key={i} className={styles.solutionStep}>
+                    <span className={styles.solutionStepIndex}>{i + 1}</span>
+                    <p className="text-body-sm">{step.text}</p>
+                  </div>
+                ))}
           </div>
         </Collapse>
 

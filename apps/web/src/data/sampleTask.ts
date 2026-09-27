@@ -23,6 +23,11 @@ export interface SessionTask {
   status: SessionTaskStatus;
 }
 
+export interface SampleTaskAnswerPart {
+  id: string;
+  label: string;
+}
+
 export interface SampleTask {
   id: string;
   subjectId: string;
@@ -40,7 +45,13 @@ export interface SampleTask {
   condition: string;
   /** A graph/figure required to solve the task (e.g. derivative or parabola graphs). */
   imageUrl: string | null;
-  /** Numeric/short-text answer tasks (most of EGE profile-math Part 1). */
+  /** 'short_answer' unless the backend says otherwise — most tasks need no UI branch at all. */
+  answerType: 'short_answer' | 'multiple_choice' | 'interval' | 'multi_part';
+  /** Non-null only for multi_part tasks — one input per part, no answers included. */
+  answerParts: readonly SampleTaskAnswerPart[] | null;
+  /** Numeric/short-text answer tasks (most of EGE profile-math Part 1). For
+   * multi_part this is a JSON-encoded MultiPartSpec (see @zybrilka/shared),
+   * not a display string — never render it directly. */
   correctAnswer: string;
   explanation: string;
   hint: string;
@@ -72,6 +83,8 @@ export const sampleTask: SampleTask = {
   code: '#3214',
   condition: 'Решите неравенство: log₂(x² − 3x − 4) ≥ 1',
   imageUrl: null,
+  answerType: 'short_answer',
+  answerParts: null,
   correctAnswer: '(−∞; −1] ∪ [2; +∞)',
   explanation:
     'log₂(x² − 3x − 4) ≥ 1 равносильно системе: x² − 3x − 4 ≥ 2 и x² − 3x − 4 > 0. Решая первое неравенство, получаем x² − 3x − 6 ≥ 0, откуда x ∈ (−∞; −1] ∪ [2; +∞) — это же множество удовлетворяет и области определения логарифма.',

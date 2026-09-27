@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
+import { gradeMultiPart, parseMultiPartSpec, parseMultiPartUserAnswer } from '@zybrilka/shared';
 import { getTask, listTasksByNumber } from '../../lib/api.js';
-import { toSampleTask } from '../../lib/taskAdapter.js';
+import {
+  explanationForPart,
+  splitMultiPartExplanation,
+  toSampleTask,
+} from '../../lib/taskAdapter.js';
 import type { SampleTask } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { userStats } from '../../data/sampleProgress.js';
@@ -86,6 +91,15 @@ export function ResultDesktop({
 
   const progressPercent = (task.indexInSession / task.totalInSession) * 100;
   const displayedAnswer = userAnswer || '—';
+
+  const multiPartSpec =
+    task.answerType === 'multi_part' ? parseMultiPartSpec(task.correctAnswer) : null;
+  const multiPartUserAnswer = multiPartSpec ? parseMultiPartUserAnswer(userAnswer) : null;
+  const multiPartGrade =
+    multiPartSpec && multiPartUserAnswer
+      ? gradeMultiPart(multiPartSpec, multiPartUserAnswer)
+      : null;
+  const explanationSections = multiPartGrade ? splitMultiPartExplanation(task.explanation) : null;
 
   function goToNext() {
     if (!task) return;
@@ -183,58 +197,96 @@ export function ResultDesktop({
               )}
             </div>
 
-            <div className={styles.answerCompare}>
-              <span className="text-body-sm text-secondary">Твой ответ:</span>
-              <p
-                className={clsx(
-                  styles.answerValue,
-                  correct ? styles.answerValueCorrect : styles.answerValueWrong,
-                )}
-              >
-                {displayedAnswer}
-              </p>
-              {!correct && (
-                <>
-                  <span className="text-body-sm text-secondary">Правильный ответ:</span>
-                  <p className={clsx(styles.answerValue, styles.answerValueReference)}>
-                    {task.correctAnswer}
-                  </p>
-                </>
-              )}
-            </div>
-
-            <div className={styles.solutionHeader}>
-              <p className="text-h3">{correct ? 'Пошаговое решение' : 'Решение'}</p>
-              {!correct && (
-                <div className={styles.solutionToggle}>
-                  <button
-                    type="button"
-                    className={clsx(!detailedSolution && styles.solutionToggleActive)}
-                    onClick={() => setDetailedSolution(false)}
-                  >
-                    Краткое решение
-                  </button>
-                  <button
-                    type="button"
-                    className={clsx(detailedSolution && styles.solutionToggleActive)}
-                    onClick={() => setDetailedSolution(true)}
-                  >
-                    Подробное решение
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className={styles.steps}>
-              {(correct || detailedSolution ? task.steps : task.steps.slice(-1)).map((step, i) => {
-                const stepNumber = correct || detailedSolution ? i + 1 : task.steps.length;
-                return (
-                  <div key={stepNumber} className={styles.step}>
-                    <span className={styles.stepIndex}>{stepNumber}</span>
-                    <p className="text-body-sm">{step.text}</p>
+            {multiPartGrade && explanationSections ? (
+              <div className={styles.steps}>
+                {multiPartGrade.parts.map((part) => (
+                  <div key={part.id} className={styles.card} style={{ padding: 'var(--space-4)' }}>
+                    <div className={styles.answerCompare}>
+                      <span className="text-body-sm" style={{ fontWeight: 700 }}>
+                        {part.label}) {part.correct ? 'Верно' : 'Неверно'}
+                      </span>
+                      <span className="text-body-sm text-secondary">Твой ответ:</span>
+                      <p
+                        className={clsx(
+                          styles.answerValue,
+                          part.correct ? styles.answerValueCorrect : styles.answerValueWrong,
+                        )}
+                      >
+                        {multiPartUserAnswer?.[part.id] || '—'}
+                      </p>
+                      {!part.correct && (
+                        <>
+                          <span className="text-body-sm text-secondary">Правильный ответ:</span>
+                          <p className={clsx(styles.answerValue, styles.answerValueReference)}>
+                            {multiPartSpec!.parts.find((p) => p.id === part.id)?.correctAnswer}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                    <p className="text-body-sm" style={{ marginTop: 'var(--space-2)' }}>
+                      {explanationForPart(explanationSections, part.label)}
+                    </p>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className={styles.answerCompare}>
+                  <span className="text-body-sm text-secondary">Твой ответ:</span>
+                  <p
+                    className={clsx(
+                      styles.answerValue,
+                      correct ? styles.answerValueCorrect : styles.answerValueWrong,
+                    )}
+                  >
+                    {displayedAnswer}
+                  </p>
+                  {!correct && (
+                    <>
+                      <span className="text-body-sm text-secondary">Правильный ответ:</span>
+                      <p className={clsx(styles.answerValue, styles.answerValueReference)}>
+                        {task.correctAnswer}
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                <div className={styles.solutionHeader}>
+                  <p className="text-h3">{correct ? 'Пошаговое решение' : 'Решение'}</p>
+                  {!correct && (
+                    <div className={styles.solutionToggle}>
+                      <button
+                        type="button"
+                        className={clsx(!detailedSolution && styles.solutionToggleActive)}
+                        onClick={() => setDetailedSolution(false)}
+                      >
+                        Краткое решение
+                      </button>
+                      <button
+                        type="button"
+                        className={clsx(detailedSolution && styles.solutionToggleActive)}
+                        onClick={() => setDetailedSolution(true)}
+                      >
+                        Подробное решение
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className={styles.steps}>
+                  {(correct || detailedSolution ? task.steps : task.steps.slice(-1)).map(
+                    (step, i) => {
+                      const stepNumber = correct || detailedSolution ? i + 1 : task.steps.length;
+                      return (
+                        <div key={stepNumber} className={styles.step}>
+                          <span className={styles.stepIndex}>{stepNumber}</span>
+                          <p className="text-body-sm">{step.text}</p>
+                        </div>
+                      );
+                    },
+                  )}
+                </div>
+              </>
+            )}
 
             {!correct && (
               <div className={styles.tipBox}>
@@ -261,7 +313,27 @@ export function ResultDesktop({
         </div>
 
         <div className={styles.sidebar}>
-          <ResultCard correct={correct} userAnswer={displayedAnswer} task={task} xp={xp} />
+          <ResultCard
+            correct={correct}
+            userAnswer={
+              multiPartGrade && multiPartUserAnswer
+                ? multiPartGrade.parts
+                    .map((p) => `${p.label}) ${multiPartUserAnswer[p.id] || '—'}`)
+                    .join(', ')
+                : displayedAnswer
+            }
+            correctAnswer={
+              multiPartSpec
+                ? multiPartSpec.parts.map((p) => `${p.label}) ${p.correctAnswer}`).join(', ')
+                : task.correctAnswer
+            }
+            resultSummary={
+              multiPartGrade
+                ? `${multiPartGrade.correctParts} из ${multiPartGrade.totalParts}`
+                : null
+            }
+            xp={xp}
+          />
           {correct ? (
             <SessionTaskListCard
               title="Задания в теме"
@@ -287,12 +359,15 @@ export function ResultDesktop({
 function ResultCard({
   correct,
   userAnswer,
-  task,
+  correctAnswer,
+  resultSummary,
   xp,
 }: {
   correct: boolean;
   userAnswer: string;
-  task: SampleTask;
+  correctAnswer: string;
+  /** "2 из 3" for a multi_part task, shown next to the headline instead of plain correct/incorrect. */
+  resultSummary: string | null;
   xp: number;
 }) {
   return (
@@ -310,7 +385,11 @@ function ResultCard({
             {correct ? 'Правильно!' : 'Неверно'}
           </p>
           <p className="text-body-sm text-secondary">
-            {correct ? 'Верный ответ' : 'Попробуй ещё раз'}
+            {resultSummary
+              ? `Верно частей: ${resultSummary}`
+              : correct
+                ? 'Верный ответ'
+                : 'Попробуй ещё раз'}
           </p>
         </div>
       </div>
@@ -321,7 +400,7 @@ function ResultCard({
         </div>
         <div className={styles.resultRow}>
           <span className="text-body-sm text-secondary">Правильный ответ</span>
-          <span className="text-body-sm">{task.correctAnswer}</span>
+          <span className="text-body-sm">{correctAnswer}</span>
         </div>
         <div className={styles.resultRow}>
           <span className="text-body-sm text-secondary">Получено опыта</span>

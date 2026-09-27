@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import type { TaskPublic } from '@zybrilka/shared';
+import { serializeMultiPartUserAnswer } from '@zybrilka/shared';
 import { getTask, listTasksByNumber, submitAttempt } from '../../lib/api.js';
 import { toSampleTask } from '../../lib/taskAdapter.js';
 import { subjects } from '../../data/subjects.js';
@@ -38,6 +39,7 @@ export function TaskDesktop({ subjectId, taskNumber, taskId }: TaskDesktopProps)
   const [siblings, setSiblings] = useState<readonly TaskPublic[]>([]);
   const [loadError, setLoadError] = useState(false);
   const [answer, setAnswer] = useState('');
+  const [partAnswers, setPartAnswers] = useState<Record<string, string>>({});
   const [checking, setChecking] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -69,14 +71,20 @@ export function TaskDesktop({ subjectId, taskNumber, taskId }: TaskDesktopProps)
     });
   }
 
-  const canSubmit = answer.trim().length > 0 && !checking && task !== null;
+  const isMultiPart = task?.answerType === 'multi_part' && task.answerParts !== null;
+  const canSubmit = isMultiPart
+    ? task!.answerParts!.every((p) => (partAnswers[p.id] ?? '').trim().length > 0) && !checking
+    : answer.trim().length > 0 && !checking && task !== null;
   const progressPercent = task ? (task.indexInSession / task.totalInSession) * 100 : 0;
 
   function handleCheck() {
     if (!canSubmit || !task) return;
     setChecking(true);
-    const trimmedAnswer = answer.trim();
-    void submitAttempt(task.id, { answer: trimmedAnswer })
+    const submittedAnswer = isMultiPart ? { ...partAnswers } : answer.trim();
+    const userAnswerForResult = isMultiPart
+      ? serializeMultiPartUserAnswer(submittedAnswer as Record<string, string>)
+      : (submittedAnswer as string);
+    void submitAttempt(task.id, { answer: submittedAnswer })
       .then((result) => {
         navigate({
           screen: 'result',
@@ -84,7 +92,7 @@ export function TaskDesktop({ subjectId, taskNumber, taskId }: TaskDesktopProps)
           taskNumber: task.number,
           taskId: task.id,
           correct: result.correct,
-          userAnswer: trimmedAnswer,
+          userAnswer: userAnswerForResult,
         });
       })
       .finally(() => setChecking(false));
@@ -193,31 +201,54 @@ export function TaskDesktop({ subjectId, taskNumber, taskId }: TaskDesktopProps)
               >
                 Введите ответ
               </p>
-              <div className={styles.answerRow}>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  className={styles.answerInput}
-                  placeholder="Ваш ответ..."
-                  value={answer}
-                  onChange={(e) => setAnswer(e.target.value)}
-                  disabled={checking}
-                  aria-label="Ответ"
-                />
-                <button
-                  type="button"
-                  className={styles.keyboardButton}
-                  aria-label="Клавиатура"
-                  onClick={() => inputRef.current?.focus()}
-                >
-                  <Icon name="keyboard" size={18} />
-                </button>
-              </div>
-              <p className={clsx('text-body-sm', 'text-secondary', styles.answerHelp)}>
-                Можно использовать: ∪ для объединения, ∩ для пересечения, ∞, дроби, скобки.
-                <br />
-                Например: (−∞; 1] ∪ [3; ∞)
-              </p>
+              {isMultiPart ? (
+                <div className={styles.multiPartFields}>
+                  {task.answerParts!.map((part) => (
+                    <div key={part.id} className={styles.answerRow}>
+                      <span className={styles.multiPartLabel}>{part.label})</span>
+                      <input
+                        type="text"
+                        className={styles.answerInput}
+                        placeholder="Ваш ответ..."
+                        value={partAnswers[part.id] ?? ''}
+                        onChange={(e) =>
+                          setPartAnswers((prev) => ({ ...prev, [part.id]: e.target.value }))
+                        }
+                        disabled={checking}
+                        aria-label={`Ответ ${part.label})`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <div className={styles.answerRow}>
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      className={styles.answerInput}
+                      placeholder="Ваш ответ..."
+                      value={answer}
+                      onChange={(e) => setAnswer(e.target.value)}
+                      disabled={checking}
+                      aria-label="Ответ"
+                    />
+                    <button
+                      type="button"
+                      className={styles.keyboardButton}
+                      aria-label="Клавиатура"
+                      onClick={() => inputRef.current?.focus()}
+                    >
+                      <Icon name="keyboard" size={18} />
+                    </button>
+                  </div>
+                  <p className={clsx('text-body-sm', 'text-secondary', styles.answerHelp)}>
+                    Можно использовать: ∪ для объединения, ∩ для пересечения, ∞, дроби, скобки.
+                    <br />
+                    Например: (−∞; 1] ∪ [3; ∞)
+                  </p>
+                </>
+              )}
             </div>
 
             <div className={styles.actions}>

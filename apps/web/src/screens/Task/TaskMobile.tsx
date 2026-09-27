@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
+import { serializeMultiPartUserAnswer } from '@zybrilka/shared';
 import { getTask, listTasksByNumber, submitAttempt } from '../../lib/api.js';
 import { toSampleTask } from '../../lib/taskAdapter.js';
 import type { TaskVariant } from '../../data/sampleTask.js';
@@ -38,6 +39,7 @@ export function TaskMobile({ subjectId, taskNumber, taskId }: TaskMobileProps) {
   const [task, setTask] = useState<ReturnType<typeof toSampleTask> | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [answer, setAnswer] = useState('');
+  const [partAnswers, setPartAnswers] = useState<Record<string, string>>({});
   const [checking, setChecking] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
   const [fxOpen, setFxOpen] = useState(false);
@@ -60,13 +62,19 @@ export function TaskMobile({ subjectId, taskNumber, taskId }: TaskMobileProps) {
     };
   }, [taskId, subjectId, taskNumber]);
 
-  const canSubmit = answer.trim().length > 0 && !checking && task !== null;
+  const isMultiPart = task?.answerType === 'multi_part' && task.answerParts !== null;
+  const canSubmit = isMultiPart
+    ? task!.answerParts!.every((p) => (partAnswers[p.id] ?? '').trim().length > 0) && !checking
+    : answer.trim().length > 0 && !checking && task !== null;
 
   function handleCheck() {
     if (!canSubmit || !task) return;
     setChecking(true);
-    const trimmedAnswer = answer.trim();
-    void submitAttempt(task.id, { answer: trimmedAnswer })
+    const submittedAnswer = isMultiPart ? { ...partAnswers } : answer.trim();
+    const userAnswerForResult = isMultiPart
+      ? serializeMultiPartUserAnswer(submittedAnswer as Record<string, string>)
+      : (submittedAnswer as string);
+    void submitAttempt(task.id, { answer: submittedAnswer })
       .then((result) => {
         navigate({
           screen: 'result',
@@ -74,7 +82,7 @@ export function TaskMobile({ subjectId, taskNumber, taskId }: TaskMobileProps) {
           taskNumber: task.number,
           taskId: task.id,
           correct: result.correct,
-          userAnswer: trimmedAnswer,
+          userAnswer: userAnswerForResult,
         });
       })
       .finally(() => setChecking(false));
@@ -155,42 +163,65 @@ export function TaskMobile({ subjectId, taskNumber, taskId }: TaskMobileProps) {
           </Collapse>
         </div>
 
-        <div className={styles.answerRow}>
-          <input
-            ref={inputRef}
-            type="text"
-            className={styles.answerInput}
-            placeholder="Введите ответ..."
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-            disabled={checking}
-            aria-label="Ответ"
-          />
-          <AnswerFieldTools
-            fxOpen={fxOpen}
-            onToggleFx={() => setFxOpen((v) => !v)}
-            toolsOpen={toolsOpen}
-            onToggleTools={() => setToolsOpen((v) => !v)}
-          />
-        </div>
-        <Collapse open={fxOpen}>
-          <div className={styles.symbolRow}>
-            {mathSymbols.map((symbol) => (
-              <button
-                key={symbol}
-                type="button"
-                className={styles.symbolButton}
-                onClick={() => insertSymbol(symbol)}
-              >
-                {symbol}
-              </button>
+        {isMultiPart ? (
+          <div className={styles.multiPartFields}>
+            {task.answerParts!.map((part) => (
+              <div key={part.id} className={styles.answerRow}>
+                <span className={styles.multiPartLabel}>{part.label})</span>
+                <input
+                  type="text"
+                  className={styles.answerInput}
+                  placeholder="Ваш ответ..."
+                  value={partAnswers[part.id] ?? ''}
+                  onChange={(e) =>
+                    setPartAnswers((prev) => ({ ...prev, [part.id]: e.target.value }))
+                  }
+                  disabled={checking}
+                  aria-label={`Ответ ${part.label})`}
+                />
+              </div>
             ))}
           </div>
-        </Collapse>
-        <p className={clsx('text-body-sm', 'text-secondary', styles.answerHelp)}>
-          Ответ можно вводить в виде интервала, объединения интервалов или чисел, например: (−∞; −1]
-          ∪ [2; +∞)
-        </p>
+        ) : (
+          <>
+            <div className={styles.answerRow}>
+              <input
+                ref={inputRef}
+                type="text"
+                className={styles.answerInput}
+                placeholder="Введите ответ..."
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                disabled={checking}
+                aria-label="Ответ"
+              />
+              <AnswerFieldTools
+                fxOpen={fxOpen}
+                onToggleFx={() => setFxOpen((v) => !v)}
+                toolsOpen={toolsOpen}
+                onToggleTools={() => setToolsOpen((v) => !v)}
+              />
+            </div>
+            <Collapse open={fxOpen}>
+              <div className={styles.symbolRow}>
+                {mathSymbols.map((symbol) => (
+                  <button
+                    key={symbol}
+                    type="button"
+                    className={styles.symbolButton}
+                    onClick={() => insertSymbol(symbol)}
+                  >
+                    {symbol}
+                  </button>
+                ))}
+              </div>
+            </Collapse>
+            <p className={clsx('text-body-sm', 'text-secondary', styles.answerHelp)}>
+              Ответ можно вводить в виде интервала, объединения интервалов или чисел, например: (−∞;
+              −1] ∪ [2; +∞)
+            </p>
+          </>
+        )}
 
         <Button
           variant="primary"
