@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
+import { isMainModule } from './isMainModule.js';
 
 export const migrationsFolder = fileURLToPath(new URL('../migrations', import.meta.url));
 
@@ -19,7 +20,7 @@ async function main() {
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isMainModule(import.meta.url)) {
   main().catch((error: unknown) => {
     console.error(error);
     process.exit(1);
