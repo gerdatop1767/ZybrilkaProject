@@ -29,6 +29,13 @@
       "when": 1790495253265,
       "tag": "0003_interval_multipart_answers",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790497946517,
+      "tag": "0004_collections_variants",
+      "breakpoints": true
     }
   ]
 }

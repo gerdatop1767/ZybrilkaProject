@@ -124,6 +124,89 @@ export const tasks = pgTable(
   ],
 );
 
+/**
+ * S3.2 content model (docs/PRODUCTION_DATA_MODEL.md): a `Task` stays a
+ * single row owned by `subjects`/`topics` as before; `collections` and
+ * `variants` are a separate membership layer on top via `variantTasks`
+ * — a task never gets duplicated to appear in a collection/variant, a
+ * full exam variant, and the "по заданиям" number filter at once.
+ * `draft`/`archived` mirror `tasks.status` but there is no
+ * `needs_review` here — review happens per-task, not per-collection.
+ */
+export const contentStatuses = ['draft', 'published', 'archived'] as const;
+
+export const collections = pgTable(
+  'collections',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    subjectId: text('subject_id')
+      .notNull()
+      .references(() => subjects.id),
+    slug: text('slug').notNull(),
+    title: text('title').notNull(),
+    /** Display label for the publisher/author, e.g. "Ященко". Never baked into a Task row directly. */
+    publisher: text('publisher'),
+    year: integer('year'),
+    description: text('description'),
+    status: text('status', { enum: contentStatuses }).notNull().default('published'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('collections_slug_idx').on(table.slug)],
+);
+
+export const variants = pgTable(
+  'variants',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    collectionId: uuid('collection_id')
+      .notNull()
+      .references(() => collections.id),
+    variantNumber: integer('variant_number').notNull(),
+    title: text('title').notNull(),
+    year: integer('year'),
+    status: text('status', { enum: contentStatuses }).notNull().default('published'),
+    sourceFile: text('source_file'),
+    sourcePageStart: integer('source_page_start'),
+    sourcePageEnd: integer('source_page_end'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('variants_collection_number_idx').on(table.collectionId, table.variantNumber),
+  ],
+);
+
+/**
+ * Task <-> Variant membership, many-to-many in shape even though today
+ * every task belongs to exactly one variant: the same Task row (found
+ * by dedup fingerprint, `tasks.contentHash`) can later gain a second
+ * `variantTasks` row for a different variant without ever being
+ * copied. `position` is the task's 1-based order within that variant's
+ * full exam (never touched by shuffle — see modules/tasks). Listing
+ * "every task in a collection" joins this table to `variants` and
+ * filters by `collectionId`, rather than adding a separate
+ * `collection_tasks` table that would just duplicate this membership.
+ */
+export const variantTasks = pgTable(
+  'variant_tasks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    variantId: uuid('variant_id')
+      .notNull()
+      .references(() => variants.id),
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id),
+    position: integer('position').notNull(),
+  },
+  (table) => [
+    uniqueIndex('variant_tasks_variant_task_idx').on(table.variantId, table.taskId),
+    index('variant_tasks_variant_position_idx').on(table.variantId, table.position),
+    index('variant_tasks_task_idx').on(table.taskId),
+  ],
+);
+
 export const attempts = pgTable(
   'attempts',
   {

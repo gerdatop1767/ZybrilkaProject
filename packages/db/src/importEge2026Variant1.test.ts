@@ -118,6 +118,77 @@ describe('importVariant1', () => {
     expect(demoAfter.length).toBe(demoBefore.length);
   });
 
+  it('creates exactly one collection and one variant with 19 ordered variant_tasks (S3.2)', async () => {
+    const { db } = testDb;
+    const result = await importVariant1(db);
+
+    const collections = await db
+      .select()
+      .from(schema.collections)
+      .where(eq(schema.collections.slug, 'ege-2026-yashchenko'));
+    expect(collections).toHaveLength(1);
+    expect(collections[0]!.id).toBe(result.collectionId);
+    expect(collections[0]!.status).toBe('published');
+
+    const variants = await db
+      .select()
+      .from(schema.variants)
+      .where(eq(schema.variants.collectionId, result.collectionId));
+    expect(variants).toHaveLength(1);
+    expect(variants[0]!.id).toBe(result.variantId);
+    expect(variants[0]!.variantNumber).toBe(1);
+    expect(variants[0]!.status).toBe('published');
+
+    const members = await db
+      .select()
+      .from(schema.variantTasks)
+      .where(eq(schema.variantTasks.variantId, result.variantId))
+      .orderBy(schema.variantTasks.position);
+    expect(members).toHaveLength(19);
+    expect(members.map((m) => m.position)).toEqual(Array.from({ length: 19 }, (_, i) => i + 1));
+
+    // No duplicate task ids in the membership, and position N matches
+    // taskNumber N — this is the exam's own order, not an arbitrary one.
+    const taskIds = new Set(members.map((m) => m.taskId));
+    expect(taskIds.size).toBe(19);
+    const tasksById = new Map(
+      (
+        await db
+          .select()
+          .from(schema.tasks)
+          .where(and(eq(schema.tasks.subjectId, 'math'), eq(schema.tasks.sourceVariant, 1)))
+      ).map((t) => [t.id, t]),
+    );
+    for (const member of members) {
+      expect(tasksById.get(member.taskId)?.taskNumber).toBe(member.position);
+      expect(tasksById.get(member.taskId)?.status).toBe('published');
+    }
+  });
+
+  it('re-running keeps one collection, one variant, and 19 variant_tasks (no duplicate membership)', async () => {
+    const { db } = testDb;
+    await importVariant1(db);
+    const result = await importVariant1(db);
+
+    const collections = await db
+      .select()
+      .from(schema.collections)
+      .where(eq(schema.collections.slug, 'ege-2026-yashchenko'));
+    expect(collections).toHaveLength(1);
+
+    const variants = await db
+      .select()
+      .from(schema.variants)
+      .where(eq(schema.variants.collectionId, result.collectionId));
+    expect(variants).toHaveLength(1);
+
+    const members = await db
+      .select()
+      .from(schema.variantTasks)
+      .where(eq(schema.variantTasks.variantId, result.variantId));
+    expect(members).toHaveLength(19);
+  });
+
   it('derives Часть 1 / Часть 2 from task number (1-12 vs 13-19)', () => {
     expect(partForTaskNumber(1)).toBe(1);
     expect(partForTaskNumber(12)).toBe(1);

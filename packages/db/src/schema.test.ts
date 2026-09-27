@@ -136,3 +136,139 @@ describe('task engine schema', () => {
     ).rejects.toThrow();
   });
 });
+
+describe('collections / variants / variant_tasks (S3.2)', () => {
+  let testDb: Awaited<ReturnType<typeof createTestDb>>;
+
+  beforeAll(async () => {
+    testDb = await createTestDb();
+    await testDb.db.insert(schema.subjects).values({ id: 'math', name: 'Математика' });
+  });
+
+  afterAll(async () => {
+    await testDb.close();
+  });
+
+  it('links two existing tasks into one variant, ordered by position, without duplicating the tasks', async () => {
+    const { db } = testDb;
+    const [collection] = await db
+      .insert(schema.collections)
+      .values({
+        subjectId: 'math',
+        slug: 'ege-2026-yashchenko',
+        title: 'ЕГЭ 2026 Ященко',
+        year: 2026,
+      })
+      .returning();
+    const [variant] = await db
+      .insert(schema.variants)
+      .values({ collectionId: collection!.id, variantNumber: 1, title: 'Вариант 1' })
+      .returning();
+
+    const [taskA] = await db
+      .insert(schema.tasks)
+      .values({
+        subjectId: 'math',
+        taskNumber: 101,
+        difficulty: 1,
+        conditionMd: 'A',
+        correctAnswer: '1',
+        explanationMd: 'A.',
+        source: 'demo',
+        status: 'published',
+      })
+      .returning();
+    const [taskB] = await db
+      .insert(schema.tasks)
+      .values({
+        subjectId: 'math',
+        taskNumber: 102,
+        difficulty: 1,
+        conditionMd: 'B',
+        correctAnswer: '2',
+        explanationMd: 'B.',
+        source: 'demo',
+        status: 'published',
+      })
+      .returning();
+
+    await db.insert(schema.variantTasks).values([
+      { variantId: variant!.id, taskId: taskA!.id, position: 1 },
+      { variantId: variant!.id, taskId: taskB!.id, position: 2 },
+    ]);
+
+    const members = await db
+      .select()
+      .from(schema.variantTasks)
+      .where(eq(schema.variantTasks.variantId, variant!.id))
+      .orderBy(schema.variantTasks.position);
+    expect(members).toHaveLength(2);
+    expect(members.map((m) => m.taskId)).toEqual([taskA!.id, taskB!.id]);
+
+    // Total tasks table is unaffected in count — no copies were created.
+    const allTasks = await db.select().from(schema.tasks).where(eq(schema.tasks.subjectId, 'math'));
+    expect(allTasks.filter((t) => t.id === taskA!.id || t.id === taskB!.id)).toHaveLength(2);
+  });
+
+  it('rejects a duplicate (variantId, taskId) membership row', async () => {
+    const { db } = testDb;
+    const [collection] = await db
+      .insert(schema.collections)
+      .values({ subjectId: 'math', slug: 'dup-collection', title: 'Dup' })
+      .returning();
+    const [variant] = await db
+      .insert(schema.variants)
+      .values({ collectionId: collection!.id, variantNumber: 1, title: 'V1' })
+      .returning();
+    const [task] = await db
+      .insert(schema.tasks)
+      .values({
+        subjectId: 'math',
+        taskNumber: 103,
+        difficulty: 1,
+        conditionMd: 'C',
+        correctAnswer: '3',
+        explanationMd: 'C.',
+        source: 'demo',
+        status: 'published',
+      })
+      .returning();
+
+    await db
+      .insert(schema.variantTasks)
+      .values({ variantId: variant!.id, taskId: task!.id, position: 1 });
+    await expect(
+      db
+        .insert(schema.variantTasks)
+        .values({ variantId: variant!.id, taskId: task!.id, position: 2 }),
+    ).rejects.toThrow();
+  });
+
+  it('rejects a duplicate variantNumber within the same collection', async () => {
+    const { db } = testDb;
+    const [collection] = await db
+      .insert(schema.collections)
+      .values({ subjectId: 'math', slug: 'dup-variant-number', title: 'Dup2' })
+      .returning();
+    await db
+      .insert(schema.variants)
+      .values({ collectionId: collection!.id, variantNumber: 1, title: 'V1' });
+    await expect(
+      db
+        .insert(schema.variants)
+        .values({ collectionId: collection!.id, variantNumber: 1, title: 'V1 again' }),
+    ).rejects.toThrow();
+  });
+
+  it('rejects a duplicate collection slug', async () => {
+    const { db } = testDb;
+    await db
+      .insert(schema.collections)
+      .values({ subjectId: 'math', slug: 'dup-slug', title: 'First' });
+    await expect(
+      db
+        .insert(schema.collections)
+        .values({ subjectId: 'math', slug: 'dup-slug', title: 'Second' }),
+    ).rejects.toThrow();
+  });
+});

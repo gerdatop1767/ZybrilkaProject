@@ -30,6 +30,22 @@ const SOURCE_YEAR = 2026;
 const VARIANT = 1;
 const IMPORT_TAG = 'ege-2026-variant-1';
 
+/**
+ * S3.2: this Variant 1 also becomes a `variants` row inside a
+ * `collections` row (docs/PRODUCTION_DATA_MODEL.md), linked to the
+ * existing 19 Task rows via `variantTasks` — never a second copy of
+ * them. `slug`/`variantNumber` are the upsert keys, so re-running this
+ * import (idempotent, like the rest of it) updates the same collection
+ * and variant rows instead of creating duplicates.
+ */
+const COLLECTION_SLUG = 'ege-2026-yashchenko';
+const COLLECTION_TITLE = 'ЕГЭ 2026 Ященко';
+const COLLECTION_PUBLISHER = 'Ященко';
+const VARIANT_TITLE = 'ЕГЭ 2026 — Ященко — Вариант 1';
+const SOURCE_FILE = 'ЕГЭ_2026_Ященко_Вариант_1.pdf';
+const SOURCE_PAGE_START = 1;
+const SOURCE_PAGE_END = 4;
+
 type ImportStatus = 'published' | 'needs_review';
 type ImportAnswerType = 'short_answer' | 'interval' | 'multi_part';
 
@@ -395,6 +411,51 @@ export async function importVariant1(db: Database) {
     topicIdBySlug.set(slug, topic!.id);
   }
 
+  const [collection] = await db
+    .insert(schema.collections)
+    .values({
+      subjectId: 'math',
+      slug: COLLECTION_SLUG,
+      title: COLLECTION_TITLE,
+      publisher: COLLECTION_PUBLISHER,
+      year: SOURCE_YEAR,
+      status: 'published',
+    })
+    .onConflictDoUpdate({
+      target: schema.collections.slug,
+      set: { title: COLLECTION_TITLE, publisher: COLLECTION_PUBLISHER, year: SOURCE_YEAR },
+    })
+    .returning();
+
+  const [variant] = await db
+    .insert(schema.variants)
+    .values({
+      collectionId: collection!.id,
+      variantNumber: VARIANT,
+      title: VARIANT_TITLE,
+      year: SOURCE_YEAR,
+      status: 'published',
+      sourceFile: SOURCE_FILE,
+      sourcePageStart: SOURCE_PAGE_START,
+      sourcePageEnd: SOURCE_PAGE_END,
+    })
+    .onConflictDoUpdate({
+      target: [schema.variants.collectionId, schema.variants.variantNumber],
+      set: {
+        title: VARIANT_TITLE,
+        sourceFile: SOURCE_FILE,
+        sourcePageStart: SOURCE_PAGE_START,
+        sourcePageEnd: SOURCE_PAGE_END,
+        updatedAt: new Date(),
+      },
+    })
+    .returning();
+
+  // variant_tasks references tasks by id, and the tasks below are about
+  // to be deleted and recreated with fresh ids — drop this variant's
+  // membership rows first so that delete never trips the FK constraint.
+  await db.delete(schema.variantTasks).where(eq(schema.variantTasks.variantId, variant!.id));
+
   await db
     .delete(schema.tasks)
     .where(
@@ -427,12 +488,24 @@ export async function importVariant1(db: Database) {
     status: t.status,
   }));
 
-  await db.insert(schema.tasks).values(rows);
+  const inserted = await db.insert(schema.tasks).values(rows).returning();
+
+  // position = taskNumber: this variant's full-exam order is exactly
+  // the official question numbering, 1-19 with no gaps.
+  await db.insert(schema.variantTasks).values(
+    inserted.map((task) => ({
+      variantId: variant!.id,
+      taskId: task.id,
+      position: task.taskNumber,
+    })),
+  );
 
   return {
     total: importTasks.length,
     published: importTasks.filter((t) => t.status === 'published').length,
     needsReview: importTasks.filter((t) => t.status === 'needs_review').length,
+    collectionId: collection!.id,
+    variantId: variant!.id,
   };
 }
 
