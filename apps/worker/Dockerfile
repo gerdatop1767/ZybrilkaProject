@@ -1,9 +1,10 @@
 # syntax=docker/dockerfile:1
 #
 # Production image for @zybrilka/worker. Same shape as apps/api/Dockerfile
-# (see its comments for the full rationale): compile in dependency order,
-# `pnpm deploy` a self-contained production bundle, run it under plain
-# Node in a minimal runtime image.
+# (see its comments for the full rationale, including why `deploy` uses
+# --legacy): compile in dependency order, `pnpm deploy --legacy` a
+# self-contained production bundle, run it under plain Node in a
+# minimal runtime image.
 #
 #   docker build -f apps/worker/Dockerfile -t zybrilka-worker .
 
@@ -27,7 +28,7 @@ COPY packages/shared packages/shared
 COPY packages/db packages/db
 COPY apps/worker apps/worker
 RUN pnpm --filter @zybrilka/worker... build
-RUN pnpm --filter @zybrilka/worker deploy --prod /prod/worker
+RUN pnpm --filter @zybrilka/worker deploy --prod --legacy /prod/worker
 
 # --- runtime: the deployed bundle only, no pnpm/workspace/dev deps ---
 FROM --platform=linux/amd64 node:22-alpine AS runtime

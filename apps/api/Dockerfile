@@ -2,10 +2,28 @@
 #
 # Production image for @zybrilka/api (Fastify). Multi-stage: a Node/pnpm
 # builder compiles @zybrilka/shared -> @zybrilka/db -> @zybrilka/api (in
-# that dependency order) and then runs `pnpm deploy` to produce a
-# self-contained, production-only package directory — workspace:
-# dependencies resolved to real copied files, dev dependencies and pnpm
-# itself left behind — so the runtime stage just runs plain Node.
+# that dependency order) and then runs `pnpm deploy --legacy` to produce
+# a self-contained, production-only package directory — workspace:
+# dependencies resolved to real copied files (verified: node_modules/
+# @zybrilka/{db,shared} resolve to files inside the deploy output's own
+# node_modules/.pnpm, never back into the monorepo checkout), dev
+# dependencies and pnpm itself left behind — so the runtime stage just
+# runs plain Node.
+#
+# --legacy: pnpm v10 otherwise refuses to deploy a workspace with
+# `workspace:*` dependencies unless every one of them is "injected"
+# (hard-copied instead of symlinked) via a workspace-wide
+# `injectWorkspacePackages: true`. That setting isn't used here on
+# purpose — it would replace this repo's `@zybrilka/source`-condition
+# live-source-symlink convention (packages/db and packages/shared
+# resolve straight to their .ts source for every dev tool, no build
+# step needed — see the root docs) with static copies workspace-wide,
+# so editing a shared/db source file would silently stop showing up in
+# api/worker's dev and test runs until a manual reinstall. `--legacy`
+# keeps the previous, still fully-supported deploy behavior (a plain
+# recursive copy that already fully resolves workspace: dependencies)
+# scoped to just this one Docker build step, leaving normal
+# install/dev/test behavior untouched everywhere else.
 #
 # Build context is the repo root (this is a pnpm workspace):
 #
@@ -36,7 +54,7 @@ COPY packages/shared packages/shared
 COPY packages/db packages/db
 COPY apps/api apps/api
 RUN pnpm --filter @zybrilka/api... build
-RUN pnpm --filter @zybrilka/api deploy --prod /prod/api
+RUN pnpm --filter @zybrilka/api deploy --prod --legacy /prod/api
 
 # --- runtime: the deployed bundle only, no pnpm/workspace/dev deps ---
 FROM --platform=linux/amd64 node:22-alpine AS runtime

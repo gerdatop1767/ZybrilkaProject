@@ -83,6 +83,16 @@ it only exists locally, never pushed anywhere.
   must `COPY packages/shared packages/shared` before `apps/web`, since
   `vite.config.ts` resolves that package via its `@zybrilka/source`
   condition straight to `.ts` source, not just the compiled `dist/`.
+- **`ERR_PNPM_DEPLOY_NONINJECTED_WORKSPACE`** from `pnpm --filter
+  @zybrilka/{api,worker} deploy` — pnpm v10 refuses to deploy a
+  workspace with `workspace:*` dependencies unless every one is
+  "injected" (hard-copied) via a workspace-wide
+  `injectWorkspacePackages: true`, which this repo deliberately doesn't
+  set (it would replace the live-source `@zybrilka/source` symlink
+  convention with static copies for every dev/test run, not just the
+  Docker build). Both Dockerfiles already pass `--legacy` to `deploy`
+  for exactly this reason — if you see this error, check that flag
+  wasn't dropped from `apps/api/Dockerfile` / `apps/worker/Dockerfile`.
 
 ## Stop
 
