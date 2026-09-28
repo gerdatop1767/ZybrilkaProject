@@ -154,14 +154,69 @@ describe('SubjectMobile', () => {
     });
   });
 
-  it('switches to Варианты and shows the (unchanged) fake source picker + number chips', async () => {
+  it('switches to Варианты and shows the real collections in the source picker + number chips', async () => {
     mockCollections();
     mockProgress();
     const user = userEvent.setup();
     renderSubject();
     await user.click(screen.getByRole('button', { name: 'Варианты' }));
-    expect(screen.getByText('Официальные ФИПИ')).toBeInTheDocument();
+    expect(screen.getByText('Общий банк')).toBeInTheDocument();
     expect(screen.getByText('Выбрать всё')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Общий банк' }));
+    expect(screen.getByRole('option', { name: 'ЕГЭ 2026 Ященко' })).toBeInTheDocument();
+  });
+
+  describe('Варианты — source isolation', () => {
+    const FIPI_COLLECTION = {
+      collection: {
+        id: 'c2',
+        subjectId: 'math',
+        slug: 'fipi-2026',
+        title: 'ФИПИ 2026',
+        publisher: 'ФИПИ',
+        year: 2026,
+        description: null,
+      },
+      variants: [
+        { id: 'v2', collectionId: 'c2', variantNumber: 1, title: 'Вариант 1', year: 2026 },
+      ],
+    };
+
+    it('lists Ященко and ФИПИ as two separate, non-duplicated source options', async () => {
+      mockCollections([YASHCHENKO_COLLECTION, FIPI_COLLECTION]);
+      mockProgress();
+      const user = userEvent.setup();
+      renderSubject();
+      await user.click(screen.getByRole('button', { name: 'Варианты' }));
+      await user.click(screen.getByRole('button', { name: 'Общий банк' }));
+      expect(screen.getAllByRole('option', { name: 'ЕГЭ 2026 Ященко' })).toHaveLength(1);
+      expect(screen.getAllByRole('option', { name: 'ФИПИ 2026' })).toHaveLength(1);
+    });
+
+    it('does not show Ященко nested under the ФИПИ option or vice versa', async () => {
+      mockCollections([YASHCHENKO_COLLECTION, FIPI_COLLECTION]);
+      mockProgress();
+      const user = userEvent.setup();
+      renderSubject();
+      await user.click(screen.getByRole('button', { name: 'Варианты' }));
+      await user.click(screen.getByRole('button', { name: 'Общий банк' }));
+      const fipiOption = screen.getByRole('option', { name: 'ФИПИ 2026' });
+      expect(fipiOption.textContent).not.toContain('Ященко');
+      const yashchenkoOption = screen.getByRole('option', { name: 'ЕГЭ 2026 Ященко' });
+      expect(yashchenkoOption.textContent).not.toContain('ФИПИ');
+    });
+
+    it('"Общий банк" stays the single aggregate option, not a real collection', async () => {
+      mockCollections([YASHCHENKO_COLLECTION, FIPI_COLLECTION]);
+      mockProgress();
+      const user = userEvent.setup();
+      renderSubject();
+      await user.click(screen.getByRole('button', { name: 'Варианты' }));
+      expect(screen.getByText(/Источник: Общий банк/)).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Общий банк' }));
+      expect(screen.getAllByRole('option').length).toBe(3); // Общий банк + Ященко + ФИПИ
+    });
   });
 
   it('drills into a real topic and back returns to the topics list without leaving the page', async () => {

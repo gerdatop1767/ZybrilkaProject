@@ -66,6 +66,7 @@ export function AppMobile() {
             subjectId={contentOverlay.subjectId}
             from={contentOverlay.from}
             collectionSlug={contentOverlay.collectionSlug}
+            initialMode={contentOverlay.initialMode}
           />
         )}
         {contentOverlay.screen === 'task' && (

@@ -268,11 +268,13 @@ export function TaskMobile({
           Проверить ответ <Icon name="arrowRight" size={18} />
         </Button>
         <div className={styles.secondaryActions}>
-          <Button variant="secondary" onClick={back}>
+          <Button
+            variant="secondary"
+            fullWidth
+            disabled={!taskNav.next}
+            onClick={() => taskNav.next && taskNav.goTo(taskNav.next)}
+          >
             <Icon name="skip" size={16} /> Пропустить
-          </Button>
-          <Button variant="secondary" className={styles.showSolutionButton}>
-            <Icon name="showSolution" size={16} /> Показать решение
           </Button>
         </div>
       </div>

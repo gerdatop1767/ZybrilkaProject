@@ -205,30 +205,6 @@
   font-size: var(--font-size-body-sm);
 }
 
-.sourceGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-
-.sourceCard {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-input);
-  background: var(--color-bg-elevated);
-  text-align: left;
-}
-
-.sourceCardActive {
-  border-color: var(--color-accent-primary);
-  background: color-mix(in srgb, var(--color-accent-primary) 14%, var(--color-bg-elevated));
-}
-
 .builderStepHeader {
   display: flex;
   align-items: center;

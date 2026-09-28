@@ -44,6 +44,14 @@ const siblings = [baseTask, { ...baseTask, id: SIBLING_A, conditionMd: 'log₅(x
 
 function OverlayMarker() {
   const { overlay } = useNavigation();
+  if (overlay?.screen === 'subject') {
+    return (
+      <p data-testid="overlay">
+        subject:{overlay.subjectId}:{overlay.collectionSlug ?? 'no-collection'}:
+        {overlay.initialMode ?? 'no-mode'}
+      </p>
+    );
+  }
   return <p data-testid="overlay">{overlay?.screen ?? 'none'}</p>;
 }
 
@@ -195,5 +203,67 @@ describe('ResultDesktop — multi_part task', () => {
     expect(screen.getByText('Пояснение к а.')).toBeInTheDocument();
     expect(screen.getAllByText('Пояснение к б и в.')).toHaveLength(2);
     expect(screen.getByText('1066')).toBeInTheDocument();
+  });
+});
+
+describe('ResultDesktop — "К списку заданий"', () => {
+  it('goes to the Subject screen in "По номерам" mode, not Home, preserving the source', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getVariantForTask).mockResolvedValue({
+      variant: {
+        id: 'variant-1',
+        collectionId: 'col-1',
+        variantNumber: 1,
+        title: 'Вариант 1',
+        year: null,
+      },
+      collection: {
+        id: 'col-1',
+        subjectId: 'math',
+        slug: 'ege-2026-yashchenko',
+        title: 'Ященко',
+        publisher: null,
+        year: null,
+        description: null,
+      },
+      tasks: [{ position: 1, task: taskWithSolution }],
+    });
+    render(
+      <NavigationProvider>
+        <ResultDesktop
+          subjectId={baseTask.subjectId}
+          taskNumber={baseTask.taskNumber}
+          taskId={TASK_ID}
+          correct
+          userAnswer={CORRECT_ANSWER}
+          collectionSlug="ege-2026-yashchenko"
+        />
+        <OverlayMarker />
+      </NavigationProvider>,
+    );
+    await screen.findByText(EXPLANATION);
+    await user.click(screen.getByRole('button', { name: 'К списку заданий' }));
+    expect(screen.getByTestId('overlay')).toHaveTextContent(
+      `subject:${baseTask.subjectId}:ege-2026-yashchenko:byNumber`,
+    );
+  });
+
+  it('does not change onClick for "Попробовать ещё раз" (incorrect path stays a plain back())', async () => {
+    const user = userEvent.setup();
+    render(
+      <NavigationProvider>
+        <ResultDesktop
+          subjectId={baseTask.subjectId}
+          taskNumber={baseTask.taskNumber}
+          taskId={TASK_ID}
+          correct={false}
+          userAnswer="неверный ответ"
+        />
+        <OverlayMarker />
+      </NavigationProvider>,
+    );
+    await screen.findByText(EXPLANATION);
+    await user.click(screen.getByRole('button', { name: 'Попробовать ещё раз' }));
+    expect(screen.getByTestId('overlay')).toHaveTextContent('none');
   });
 });

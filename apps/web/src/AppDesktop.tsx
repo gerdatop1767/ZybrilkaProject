@@ -40,6 +40,7 @@ export function AppDesktop() {
             subjectId={overlay.subjectId}
             from={overlay.from}
             collectionSlug={overlay.collectionSlug}
+            initialMode={overlay.initialMode}
           />
         )}
         {overlay.screen === 'task' && (

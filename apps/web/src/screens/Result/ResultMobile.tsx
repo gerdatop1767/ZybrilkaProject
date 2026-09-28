@@ -117,6 +117,16 @@ export function ResultMobile({
     taskNav.goTo(taskNav.next);
   }
 
+  function goToTaskList() {
+    if (!task) return;
+    navigate({
+      screen: 'subject',
+      subjectId: task.subjectId,
+      collectionSlug,
+      initialMode: 'byNumber',
+    });
+  }
+
   const multiPartSpec =
     task.answerType === 'multi_part' ? parseMultiPartSpec(task.correctAnswer) : null;
   const multiPartUserAnswer = multiPartSpec ? parseMultiPartUserAnswer(userAnswer) : null;
@@ -265,7 +275,7 @@ export function ResultMobile({
           <Button variant="secondary" onClick={goToNext} disabled={!taskNav.next}>
             Следующее задание <Icon name="arrowRight" size={16} />
           </Button>
-          <Button variant="secondary" onClick={back}>
+          <Button variant="secondary" onClick={goToTaskList}>
             <Icon name="grid" size={16} /> К списку заданий
           </Button>
         </div>
