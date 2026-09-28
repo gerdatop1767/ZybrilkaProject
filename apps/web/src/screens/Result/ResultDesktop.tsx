@@ -289,7 +289,7 @@ export function ResultDesktop({
                       return (
                         <div key={stepNumber} className={styles.step}>
                           <span className={styles.stepIndex}>{stepNumber}</span>
-                          <div>
+                          <div className={styles.stepBody}>
                             {step.title && (
                               <p className="text-body-sm" style={{ fontWeight: 700 }}>
                                 <InlineMathText text={step.title} />
@@ -310,7 +310,7 @@ export function ResultDesktop({
             {!correct && task.hint && (
               <div className={styles.tipBox}>
                 <Icon name="hint" size={18} className={styles.tipIcon} />
-                <div>
+                <div className={styles.stepBody}>
                   <p className="text-body-sm" style={{ fontWeight: 600 }}>
                     Полезно знать
                   </p>

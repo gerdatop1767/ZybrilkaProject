@@ -1,6 +1,7 @@
 import { Fragment, useMemo } from 'react';
 import katex from 'katex';
 import { tokenizeMathText } from './mathTokenizer.js';
+import styles from './MathText.module.css';
 
 /**
  * Renders EGE task content (condition/hint/explanation) as a mix of
@@ -77,5 +78,10 @@ function KatexSpan({ tex, block }: { tex: string; block: boolean }) {
     return <>{tex}</>;
   }
   const Tag = block ? 'div' : 'span';
-  return <Tag dangerouslySetInnerHTML={{ __html: html }} />;
+  return (
+    <Tag
+      className={block ? styles.scrollBlock : styles.scrollInline}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
 }

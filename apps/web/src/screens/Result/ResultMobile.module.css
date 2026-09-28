@@ -151,6 +151,15 @@
   gap: var(--space-3);
 }
 
+/* Without this, a wide formula in the step's text (which now scrolls
+   within its own bounds — MathText.module.css) drags this flex item's
+   intrinsic min-width along with it, overflowing the card and
+   stretching everything else in the step (the title) past it too. */
+.solutionStepBody {
+  min-width: 0;
+  flex: 1;
+}
+
 .solutionStepIndex {
   display: flex;
   align-items: center;

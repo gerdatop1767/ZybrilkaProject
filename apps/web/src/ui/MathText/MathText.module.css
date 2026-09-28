@@ -1,0 +1,23 @@
+/* A formula (KaTeX's own CSS keeps each of its internal "base" groups
+   individually non-breaking, but doesn't force the whole inline
+   formula to stay together — see global.css's `.katex { white-space:
+   nowrap }`) can still end up wider than the screen — a long fraction,
+   a system of equations. Scroll it horizontally within its own bounds
+   instead of clipping past the edge or breaking mid-expression onto a
+   stray next line. Lives on this wrapper, not .katex itself: KaTeX's
+   fraction/vlist internals use absolutely-positioned spans whose true
+   painted width isn't reliably captured by overflow/scrollWidth
+   applied directly to .katex. */
+.scrollInline {
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  vertical-align: middle;
+}
+
+.scrollBlock {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
