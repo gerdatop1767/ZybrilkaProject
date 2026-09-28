@@ -1,6 +1,4 @@
-import { userStats } from '../../data/sampleProgress.js';
-import { StreakBadge } from '../RankBadge/StreakBadge.js';
-import { LevelBadge } from '../RankBadge/LevelBadge.js';
+import { Icon } from '../Icon/Icon.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './StatusChips.module.css';
 
@@ -10,36 +8,32 @@ export interface StatusChipsProps {
 
 /**
  * The streak + level chips that sit in every persistent header across
- * the approved design (S1 Block 6) — mobile and desktop alike. One
- * shared component so the two chips stay visually identical wherever
- * they appear, reading real values from the shared progress data.
- * The streak flame / level crown come from `StreakBadge`/`LevelBadge`
- * (lib/rank.ts) — the same components /rating and /friends use, so a
- * given streak/level always shows the same illustration everywhere.
+ * the approved design (S1 Block 6) — mobile and desktop alike. Neither
+ * a streak calculation nor a level/XP system exists in the backend
+ * yet (see docs/PRODUCTION_DATA_MODEL.md before building either instead
+ * of guessing), so both chips show a neutral "—" rather than a
+ * fabricated number — never `StreakBadge`/`LevelBadge`, whose
+ * illustration is itself picked by a day/level count that doesn't
+ * exist here.
  */
 export function StatusChips({ className }: StatusChipsProps) {
-  const levelPercent = Math.round((userStats.xp / userStats.xpToNextLevel) * 100);
-
   return (
     <div className={clsx(styles.row, className)}>
       <div className={styles.chip}>
-        <StreakBadge days={userStats.streakDays} size={20} className={styles.flameIcon} />
+        <Icon name="flame" size={20} className={styles.flameIcon} />
         <span className={styles.chipText}>
           <span className={styles.chipLabel}>Серия</span>
-          <span className={styles.chipValue}>{userStats.streakDays} дней</span>
+          <span className={styles.chipValue}>—</span>
         </span>
       </div>
       <div className={clsx(styles.chip, styles.levelChip)}>
         <div className={styles.levelChipRow}>
-          <LevelBadge level={userStats.level} size={20} className={styles.crownIcon} />
+          <Icon name="crown" size={20} className={styles.crownIcon} />
           <span className={styles.chipText}>
             <span className={styles.chipLabel}>Уровень</span>
-            <span className={styles.chipValue}>{userStats.level}</span>
+            <span className={styles.chipValue}>—</span>
           </span>
         </div>
-        <span className={styles.levelBar} aria-hidden="true">
-          <span className={styles.levelBarFill} style={{ width: `${levelPercent}%` }} />
-        </span>
       </div>
     </div>
   );

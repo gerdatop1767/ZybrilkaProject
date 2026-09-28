@@ -1,11 +1,9 @@
 import { useNavigation, getRouteLabel, type Route } from '../../lib/navigation.js';
-import { userStats } from '../../data/sampleProgress.js';
 import { BackRow } from '../../ui/BackRow/BackRow.js';
 import { Card } from '../../ui/Card/Card.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import type { IconName } from '../../ui/Icon/icons.js';
-import { LevelBadge } from '../../ui/RankBadge/LevelBadge.js';
 import styles from './ProfileDesktop.module.css';
 
 interface ProfileRow {
@@ -32,8 +30,8 @@ export function ProfileDesktop({ from }: ProfileDesktopProps) {
   const { navigate } = useNavigation();
 
   const basicInfo: readonly ProfileRow[] = [
-    { id: 'username', icon: 'profile', label: 'Имя пользователя', value: 'ZybrilkaUser' },
-    { id: 'bio', icon: 'chat', label: 'О себе', value: 'Учусь, развиваюсь и готовлюсь к ЕГЭ 🚀' },
+    { id: 'username', icon: 'profile', label: 'Имя пользователя', value: 'Не задано' },
+    { id: 'bio', icon: 'chat', label: 'О себе', value: 'Не задано' },
     { id: 'avatar', icon: 'palette', label: 'Аватар', value: 'Изменить фото профиля' },
   ];
 
@@ -105,13 +103,9 @@ export function ProfileDesktop({ from }: ProfileDesktopProps) {
           </span>
           <div>
             <div className={styles.nameRow}>
-              <p className="text-h3">ZybrilkaUser</p>
-              <span className={styles.levelBadge}>
-                <LevelBadge level={userStats.level} size={16} />
-                Уровень {userStats.level}
-              </span>
+              <p className="text-h3">Имя не задано</p>
             </div>
-            <p className="text-body-sm text-secondary">Учусь, развиваюсь и готовлюсь к ЕГЭ 🚀</p>
+            <p className="text-body-sm text-secondary">Профиль ещё не настроен</p>
             <Button variant="secondary" className={styles.editButton}>
               <Icon name="palette" size={16} /> Изменить профиль
             </Button>

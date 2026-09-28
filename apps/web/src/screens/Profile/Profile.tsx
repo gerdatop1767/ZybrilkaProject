@@ -1,92 +1,62 @@
-import { useNavigation } from '../../lib/navigation.js';
-import { achievementPreview, userStats } from '../../data/sampleProgress.js';
+import { useEffect, useState } from 'react';
+import { getProgressSummary } from '../../lib/api.js';
+import type { ProgressSummary } from '@zybrilka/shared';
 import { Card } from '../../ui/Card/Card.js';
 import { Icon } from '../../ui/Icon/Icon.js';
-import { CircularProgress } from '../../ui/Progress/CircularProgress.js';
-import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { SectionHeader } from '../../ui/SectionHeader/SectionHeader.js';
-import { clsx } from '../../lib/clsx.js';
-import { useCountUp } from '../../lib/useCountUp.js';
-import { useToast } from '../../ui/Toast/ToastProvider.js';
+import { useNavigation } from '../../lib/navigation.js';
 import { SlideUp } from '../../ui/motion/motion.js';
 import styles from './Profile.module.css';
 
 /**
- * Profile (Design Spec Section 7): identity, level/XP, streak,
- * achievements preview and settings entry points.
+ * Profile — identity (no auth/user-profile backend exists yet, so no
+ * name/avatar/bio is shown as if it were real), real solved/accuracy
+ * from `GET /progress/summary`, and a neutral placeholder for
+ * achievements (no achievements backend exists — see docs/
+ * PRODUCTION_DATA_MODEL.md before building one instead of guessing).
  */
 export function Profile() {
   const { navigate } = useNavigation();
-  const { show } = useToast();
-  const xp = useCountUp(userStats.xp);
-  const xpPercent = (xp / userStats.xpToNextLevel) * 100;
+  const [progress, setProgress] = useState<ProgressSummary | null>(null);
 
-  function previewAchievement(label: string) {
-    show({ variant: 'success', message: `Достижение получено: ${label}` });
-  }
+  useEffect(() => {
+    let cancelled = false;
+    void getProgressSummary()
+      .then((data) => {
+        if (!cancelled) setProgress(data);
+      })
+      .catch(() => {
+        // No backend data yet (or the request failed) — stats stay at
+        // their neutral zero state below.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <SlideUp className={styles.stack}>
       <h1 className="text-h1">Профиль</h1>
 
-      <Card elevated className={styles.identity}>
-        <CircularProgress value={xpPercent} label="Уровень">
-          <span className="text-h3">{userStats.level}</span>
-        </CircularProgress>
-        <div className={styles.identityText}>
-          <p className="text-h3">{userStats.name}</p>
-          <p className="text-body-sm text-secondary">Уровень {userStats.level}</p>
-        </div>
-      </Card>
-
       <Card>
         <div className={styles.statsRow}>
           <div className={styles.stat}>
-            <span className="text-stat">{Math.round(xp)}</span>
-            <span className="text-body-sm text-secondary">XP</span>
+            <span className="text-stat">{progress?.solvedTotal ?? 0}</span>
+            <span className="text-body-sm text-secondary">Решено</span>
           </div>
           <div className={styles.stat}>
-            <span className="text-stat">{userStats.streakDays}</span>
-            <span className="text-body-sm text-secondary">Дней подряд</span>
+            <span className="text-stat">
+              {progress ? Math.round(progress.accuracyPercent) : 0}%
+            </span>
+            <span className="text-body-sm text-secondary">Точность</span>
           </div>
         </div>
-        <ProgressBar value={xpPercent} label="Опыт до следующего уровня" />
       </Card>
 
       <div>
         <SectionHeader title="Достижения" />
         <Card>
-          <div className={styles.achievementRow}>
-            {achievementPreview.map((achievement) =>
-              achievement.unlocked ? (
-                <button
-                  key={achievement.id}
-                  type="button"
-                  className={clsx(styles.achievementBadge, styles.achievementUnlocked)}
-                  onClick={() => previewAchievement(achievement.label)}
-                >
-                  <span className={styles.achievementIcon}>
-                    <Icon name="achievements" size={20} />
-                  </span>
-                  <span className={clsx('text-label', styles.achievementLabel)}>
-                    {achievement.label}
-                  </span>
-                </button>
-              ) : (
-                <div
-                  key={achievement.id}
-                  className={clsx(styles.achievementBadge, styles.achievementLocked)}
-                >
-                  <span className={styles.achievementIcon}>
-                    <Icon name="lock" size={20} />
-                  </span>
-                  <span className={clsx('text-label', styles.achievementLabel)}>
-                    {achievement.label}
-                  </span>
-                </div>
-              ),
-            )}
-          </div>
+          <p className="text-body-sm text-secondary">Достижения скоро появятся здесь.</p>
         </Card>
       </div>
 

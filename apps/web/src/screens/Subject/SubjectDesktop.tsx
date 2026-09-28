@@ -104,7 +104,6 @@ export function SubjectDesktop({ subjectId, from, collectionSlug }: SubjectDeskt
   const [topics, setTopics] = useState<readonly TopicProgressItem[]>([]);
 
   const solved = Math.round((subject.taskCount * subject.mastery) / 100);
-  const friendRank = 1 + (hashCode(subject.id) % 12);
 
   // Real collections for this subject — "Источник" always offers "Общий
   // банк" plus whatever collections/variants exist, generically, never a
@@ -242,10 +241,6 @@ export function SubjectDesktop({ subjectId, from, collectionSlug }: SubjectDeskt
             <span className={styles.heroStat}>
               <Icon name="progress" size={16} />
               <strong>{subject.mastery}%</strong> средняя точность
-            </span>
-            <span className={styles.heroStat}>
-              <Icon name="crown" size={16} />
-              <strong>{friendRank}</strong> место среди друзей
             </span>
           </div>
         </div>
@@ -396,39 +391,14 @@ export function SubjectDesktop({ subjectId, from, collectionSlug }: SubjectDeskt
 
           <Card>
             <p className="text-h3">Последние решения</p>
-            <div className={styles.recentList}>
-              {content.topics.slice(0, 4).map((topic, index) => {
-                const correct = (hashCode(`${subject.id}:${topic.id}`) + index) % 3 !== 0;
-                return (
-                  <div key={topic.id} className={styles.recentRow}>
-                    <Icon
-                      name={correct ? 'success' : 'errorCircle'}
-                      size={18}
-                      className={correct ? styles.recentSuccess : styles.recentError}
-                    />
-                    <span className={styles.recentBody}>
-                      <p className="text-body-sm" style={{ fontWeight: 700 }}>
-                        Задание {topic.number}
-                      </p>
-                      <p className="text-body-sm text-secondary">{topic.title}</p>
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+            <p className="text-body-sm text-secondary" style={{ marginTop: 'var(--space-2)' }}>
+              Пока нет данных о недавних решениях.
+            </p>
           </Card>
         </div>
       </div>
     </div>
   );
-}
-
-function hashCode(seed: string): number {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  }
-  return hash;
 }
 
 function TopicsList({

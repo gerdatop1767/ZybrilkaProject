@@ -19,10 +19,9 @@ function renderProfile(from?: Parameters<typeof ProfileDesktop>[0]['from']) {
 }
 
 describe('ProfileDesktop', () => {
-  it('renders identity and the personal/settings sections, not stats or achievements', () => {
+  it('renders the personal/settings sections, not stats or achievements', () => {
     renderProfile();
     expect(screen.getByText('Мой профиль')).toBeInTheDocument();
-    expect(screen.getAllByText('ZybrilkaUser').length).toBeGreaterThan(0);
     expect(screen.getByText('Основная информация')).toBeInTheDocument();
     expect(screen.getByText('Учебные настройки')).toBeInTheDocument();
     expect(screen.getByText('Настройки аккаунта')).toBeInTheDocument();
@@ -32,6 +31,13 @@ describe('ProfileDesktop', () => {
     expect(screen.queryByText('Твой прогресс')).not.toBeInTheDocument();
     expect(screen.queryByText('Последние достижения')).not.toBeInTheDocument();
     expect(screen.queryByText(/место в рейтинге/i)).not.toBeInTheDocument();
+  });
+
+  it('never shows a fake username/level as if it were real user data', () => {
+    renderProfile();
+    expect(screen.queryByText('ZybrilkaUser')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Уровень \d/)).not.toBeInTheDocument();
+    expect(screen.getByText('Имя не задано')).toBeInTheDocument();
   });
 
   it('shows a destructive "Выйти из аккаунта" action', () => {

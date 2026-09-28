@@ -63,14 +63,6 @@ interface TaskNumberSummary {
 
 type TopicProgressItem = ProgressByTopicResponse['items'][number];
 
-function hashCode(seed: string): number {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  }
-  return hash;
-}
-
 /**
  * Mobile Subject page — the same generic per-subject component
  * SubjectDesktop is (data comes from `data/subjectContent.ts`, never
@@ -104,7 +96,6 @@ export function SubjectMobile({ subjectId, collectionSlug }: SubjectMobileProps)
   const [topics, setTopics] = useState<readonly TopicProgressItem[]>([]);
 
   const solved = Math.round((subject.taskCount * subject.mastery) / 100);
-  const friendRank = 1 + (hashCode(subject.id) % 12);
 
   useEffect(() => {
     let cancelled = false;
@@ -252,10 +243,6 @@ export function SubjectMobile({ subjectId, collectionSlug }: SubjectMobileProps)
                 <Icon name="progress" size={14} />
                 <strong>{subject.mastery}%</strong> точность
               </span>
-              <span className={styles.heroStat}>
-                <Icon name="crown" size={14} />
-                <strong>{friendRank}</strong> место
-              </span>
             </div>
           </Card>
 
@@ -388,26 +375,9 @@ export function SubjectMobile({ subjectId, collectionSlug }: SubjectMobileProps)
 
           <Card>
             <p className="text-h3">Последние решения</p>
-            <div className={styles.recentList}>
-              {content.topics.slice(0, 4).map((topic, index) => {
-                const correct = (hashCode(`${subject.id}:${topic.id}`) + index) % 3 !== 0;
-                return (
-                  <div key={topic.id} className={styles.recentRow}>
-                    <Icon
-                      name={correct ? 'success' : 'errorCircle'}
-                      size={18}
-                      className={correct ? styles.recentSuccess : styles.recentError}
-                    />
-                    <span className={styles.recentBody}>
-                      <p className="text-body-sm" style={{ fontWeight: 700 }}>
-                        Задание {topic.number}
-                      </p>
-                      <p className="text-body-sm text-secondary">{topic.title}</p>
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+            <p className="text-body-sm text-secondary" style={{ marginTop: 'var(--space-2)' }}>
+              Пока нет данных о недавних решениях.
+            </p>
           </Card>
         </>
       )}
