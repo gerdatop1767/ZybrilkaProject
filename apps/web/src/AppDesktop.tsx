@@ -48,6 +48,8 @@ export function AppDesktop() {
             subjectId={overlay.subjectId}
             taskNumber={overlay.taskNumber}
             taskId={overlay.taskId}
+            collectionSlug={overlay.collectionSlug}
+            variantId={overlay.variantId}
           />
         )}
         {overlay.screen === 'result' && (
@@ -58,6 +60,8 @@ export function AppDesktop() {
             taskId={overlay.taskId}
             correct={overlay.correct}
             userAnswer={overlay.userAnswer}
+            collectionSlug={overlay.collectionSlug}
+            variantId={overlay.variantId}
           />
         )}
         {overlay.screen === 'mistakes' && <MistakesDesktop />}

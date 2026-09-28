@@ -7,6 +7,7 @@ import {
   splitMultiPartExplanation,
   toSampleTask,
 } from '../../lib/taskAdapter.js';
+import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
 import type { SampleTask, TaskVariant } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { userStats } from '../../data/sampleProgress.js';
@@ -28,6 +29,8 @@ export interface ResultMobileProps {
   taskId: string;
   correct: boolean;
   userAnswer: string;
+  collectionSlug?: string;
+  variantId?: string;
 }
 
 const XP_REWARD = 20;
@@ -45,9 +48,12 @@ export function ResultMobile({
   taskId,
   correct,
   userAnswer,
+  collectionSlug,
+  variantId,
 }: ResultMobileProps) {
   const { navigate, back } = useNavigation();
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
+  const taskNav = useTaskNavigation({ subjectId, taskId, collectionSlug, variantId });
   // The router remounts this component (key={taskId}) whenever the task
   // or its correctness changes, so state starts fresh here.
   const [task, setTask] = useState<SampleTask | null>(null);
@@ -92,15 +98,8 @@ export function ResultMobile({
   }
 
   function goToNext() {
-    if (!task) return;
-    const nextVariant = task.otherVariants[0];
-    if (!nextVariant) return;
-    navigate({
-      screen: 'task',
-      subjectId: task.subjectId,
-      taskNumber: task.number,
-      taskId: nextVariant.id,
-    });
+    if (!taskNav.next) return;
+    taskNav.goTo(taskNav.next);
   }
 
   const multiPartSpec =
@@ -114,6 +113,8 @@ export function ResultMobile({
 
   function handleSelectVariant(variant: TaskVariant) {
     if (!task) return;
+    // Cross-source sibling — explicitly drop the current source/variant
+    // context, same as TaskMobile's handleSelectVariant.
     navigate({
       screen: 'task',
       subjectId: task.subjectId,
@@ -124,7 +125,16 @@ export function ResultMobile({
 
   return (
     <SlideUp key={`${taskId}-${correct}`} className={styles.stack}>
-      <TaskChrome subject={subject} task={task} onBack={back} />
+      <TaskChrome
+        subject={subject}
+        task={task}
+        onBack={back}
+        numberStripRange={taskNav.orderedTasks}
+        onSelectNumber={taskNav.goTo}
+        previous={taskNav.previous}
+        next={taskNav.next}
+        onGoTo={taskNav.goTo}
+      />
 
       <div
         className={clsx(
@@ -239,7 +249,7 @@ export function ResultMobile({
         </Collapse>
 
         <div className={styles.actions}>
-          <Button variant="secondary" onClick={goToNext}>
+          <Button variant="secondary" onClick={goToNext} disabled={!taskNav.next}>
             Следующее задание <Icon name="arrowRight" size={16} />
           </Button>
           <Button variant="secondary" onClick={back}>

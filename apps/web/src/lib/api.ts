@@ -97,6 +97,19 @@ export function getVariant(id: string): Promise<VariantDetail> {
   return apiFetch(`/variants/${id}`);
 }
 
+/**
+ * Resolves the (published) variant a task belongs to — the ordered
+ * exam context used for top-strip navigation, prev/next, and Result's
+ * "Следующее задание", when only a taskId is known (not yet an
+ * explicit variantId). `collection` isolates the resolution to one
+ * source; throws (via ApiError, 404) when the task isn't part of any
+ * matching variant.
+ */
+export function getVariantForTask(taskId: string, collection?: string): Promise<VariantDetail> {
+  const qs = collection ? `?collection=${encodeURIComponent(collection)}` : '';
+  return apiFetch(`/variants/for-task/${taskId}${qs}`);
+}
+
 export function listTasksByNumber(subject: string, taskNumber: number): Promise<TaskPublic[]> {
   return apiFetch<{ items: TaskPublic[] }>(
     `/tasks?subject=${encodeURIComponent(subject)}&taskNumber=${taskNumber}`,

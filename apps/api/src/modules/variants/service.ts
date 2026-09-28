@@ -38,7 +38,33 @@ export async function getVariantDetail(
 ): Promise<VariantDetail | undefined> {
   const row = await repo.getPublishedVariantById(db, id);
   if (!row) return undefined;
+  return buildVariantDetail(db, row);
+}
 
+/**
+ * Same shape as `getVariantDetail`, but resolved from a taskId instead
+ * of a variantId — for a caller (the web app's task navigation) that
+ * knows "this task, in this collection" but not which variant that
+ * implies. `collectionSlug` isolates the result to one source; leaving
+ * it out matches any collection the task happens to belong to.
+ * Undefined when the task isn't part of any published variant
+ * (matching) — e.g. a task reached outside any collection/variant
+ * context at all.
+ */
+export async function getVariantDetailForTask(
+  db: Database,
+  taskId: string,
+  collectionSlug?: string,
+): Promise<VariantDetail | undefined> {
+  const row = await repo.getVariantForTask(db, taskId, collectionSlug);
+  if (!row) return undefined;
+  return buildVariantDetail(db, row);
+}
+
+async function buildVariantDetail(
+  db: Database,
+  row: repo.VariantWithCollection,
+): Promise<VariantDetail> {
   const taskRows = await repo.listVariantTasks(db, row.variant.id);
   return {
     variant: toVariantPublic(row.variant),

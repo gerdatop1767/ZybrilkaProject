@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { schema } from '@zybrilka/db';
 import { createImportedTestDb } from '@zybrilka/db/testing';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../../app.js';
 
@@ -170,5 +170,103 @@ describe('GET /api/v1/variants/:id', () => {
     const body = res.json();
     expect(body.tasks).toHaveLength(1);
     expect(body.tasks[0].task.taskNumber).toBe(501);
+  });
+});
+
+describe('GET /api/v1/variants/for-task/:taskId', () => {
+  let testDb: Awaited<ReturnType<typeof createImportedTestDb>>;
+  let app: ReturnType<typeof buildApp>;
+
+  beforeAll(async () => {
+    testDb = await createImportedTestDb();
+    app = buildApp({ version: 'test', db: testDb.db });
+  });
+
+  afterAll(async () => {
+    await app.close();
+    await testDb.close();
+  });
+
+  it("resolves task 7's variant and returns the same 19-task ordered exam", async () => {
+    const [task7] = await testDb.db
+      .select()
+      .from(schema.tasks)
+      .where(
+        and(
+          eq(schema.tasks.taskNumber, 7),
+          eq(schema.tasks.source, 'Ященко ЕГЭ 2026. Типовые экзаменационные варианты'),
+        ),
+      );
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/variants/for-task/${task7!.id}`,
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.collection.slug).toBe('ege-2026-yashchenko');
+    expect(body.tasks).toHaveLength(19);
+  });
+
+  it('scoping by collection slug still resolves the correct variant', async () => {
+    const [task7] = await testDb.db
+      .select()
+      .from(schema.tasks)
+      .where(
+        and(
+          eq(schema.tasks.taskNumber, 7),
+          eq(schema.tasks.source, 'Ященко ЕГЭ 2026. Типовые экзаменационные варианты'),
+        ),
+      );
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/variants/for-task/${task7!.id}?collection=ege-2026-yashchenko`,
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('a collection slug that does not contain this task returns 404 (no cross-source leak)', async () => {
+    const [task7] = await testDb.db
+      .select()
+      .from(schema.tasks)
+      .where(
+        and(
+          eq(schema.tasks.taskNumber, 7),
+          eq(schema.tasks.source, 'Ященко ЕГЭ 2026. Типовые экзаменационные варианты'),
+        ),
+      );
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/variants/for-task/${task7!.id}?collection=does-not-exist`,
+    });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('a task that is not part of any variant (a demo-seed task) returns 404', async () => {
+    const [seedTask] = await testDb.db
+      .select()
+      .from(schema.tasks)
+      .where(eq(schema.tasks.source, 'Zybrilka demo (не ФИПИ)'));
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/variants/for-task/${seedTask!.id}`,
+    });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('returns 404 for a random unknown task id', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/variants/for-task/${randomUUID()}`,
+    });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('returns 400 for a non-uuid task id', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/v1/variants/for-task/not-a-uuid' });
+    expect(res.statusCode).toBe(400);
   });
 });

@@ -50,6 +50,13 @@ export type OverlayRoute =
       taskNumber: number;
       taskId: string;
       collectionSlug?: string;
+      /** A specific variant's id, when already known (e.g. picked
+       * explicitly in Training's "Вариант" mode) — lets the task
+       * navigation hook skip re-resolving it from collectionSlug+taskId
+       * on every screen. Absent just means "resolve it lazily"; it is
+       * NOT required for source/variant isolation, which collectionSlug
+       * alone already provides. */
+      variantId?: string;
     }
   | {
       screen: 'result';
@@ -61,6 +68,7 @@ export type OverlayRoute =
        * they really typed, never a placeholder. */
       userAnswer: string;
       collectionSlug?: string;
+      variantId?: string;
     }
   | { screen: 'mistakes' }
   /** Addressable placeholders for training modes not yet built as

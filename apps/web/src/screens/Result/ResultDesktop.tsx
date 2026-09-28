@@ -7,6 +7,7 @@ import {
   splitMultiPartExplanation,
   toSampleTask,
 } from '../../lib/taskAdapter.js';
+import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
 import type { SampleTask } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { userStats } from '../../data/sampleProgress.js';
@@ -29,6 +30,8 @@ export interface ResultDesktopProps {
   taskId: string;
   correct: boolean;
   userAnswer: string;
+  collectionSlug?: string;
+  variantId?: string;
 }
 
 const XP_REWARD = 20;
@@ -47,9 +50,12 @@ export function ResultDesktop({
   taskId,
   correct,
   userAnswer,
+  collectionSlug,
+  variantId,
 }: ResultDesktopProps) {
-  const { navigate, back } = useNavigation();
+  const { back } = useNavigation();
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
+  const taskNav = useTaskNavigation({ subjectId, taskId, collectionSlug, variantId });
   // The router remounts this component (key={taskId}) whenever the task
   // or its correctness changes, so state starts fresh here.
   const [task, setTask] = useState<SampleTask | null>(null);
@@ -104,15 +110,8 @@ export function ResultDesktop({
   const explanationSections = multiPartGrade ? splitMultiPartExplanation(task.explanation) : null;
 
   function goToNext() {
-    if (!task) return;
-    const nextVariant = task.otherVariants[0];
-    if (!nextVariant) return;
-    navigate({
-      screen: 'task',
-      subjectId: task.subjectId,
-      taskNumber: task.number,
-      taskId: nextVariant.id,
-    });
+    if (!taskNav.next) return;
+    taskNav.goTo(taskNav.next);
   }
 
   return (
@@ -147,6 +146,7 @@ export function ResultDesktop({
               type="button"
               className={styles.roundButton}
               onClick={goToNext}
+              disabled={!taskNav.next}
               aria-label="Перейти дальше"
             >
               <Icon name="arrowRight" size={18} />
@@ -323,7 +323,7 @@ export function ResultDesktop({
                 {correct ? <Icon name="grid" size={16} /> : <Icon name="retry" size={16} />}
                 {correct ? 'К списку заданий' : 'Попробовать ещё раз'}
               </Button>
-              <Button variant="primary" onClick={goToNext}>
+              <Button variant="primary" onClick={goToNext} disabled={!taskNav.next}>
                 Следующее задание <Icon name="arrowRight" size={18} />
               </Button>
             </div>

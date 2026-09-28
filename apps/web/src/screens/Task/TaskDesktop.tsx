@@ -4,6 +4,7 @@ import type { TaskPublic } from '@zybrilka/shared';
 import { serializeMultiPartUserAnswer } from '@zybrilka/shared';
 import { getTask, listTasksByNumber, submitAttempt } from '../../lib/api.js';
 import { toSampleTask } from '../../lib/taskAdapter.js';
+import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
@@ -21,6 +22,8 @@ export interface TaskDesktopProps {
   subjectId: string;
   taskNumber: number;
   taskId: string;
+  collectionSlug?: string;
+  variantId?: string;
 }
 
 /**
@@ -30,9 +33,16 @@ export interface TaskDesktopProps {
  * "Другие задания" in the sidebar. Structurally its own layout, not a
  * scaled mobile screen.
  */
-export function TaskDesktop({ subjectId, taskNumber, taskId }: TaskDesktopProps) {
+export function TaskDesktop({
+  subjectId,
+  taskNumber,
+  taskId,
+  collectionSlug,
+  variantId,
+}: TaskDesktopProps) {
   const { navigate, back } = useNavigation();
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
+  const taskNav = useTaskNavigation({ subjectId, taskId, collectionSlug, variantId });
 
   // The router remounts this component (key={taskId}) on every task
   // change, so state starts fresh here — no manual reset-on-taskId-change
@@ -65,6 +75,9 @@ export function TaskDesktop({ subjectId, taskNumber, taskId }: TaskDesktopProps)
   function handleSelectSession(index: number) {
     const sibling = siblings[index - 1];
     if (!sibling) return;
+    // Cross-source sibling ("Другие задания") — explicitly drop the
+    // current source/variant context rather than carrying it into a
+    // task that may belong to a different source entirely.
     navigate({
       screen: 'task',
       subjectId: sibling.subjectId,
@@ -95,6 +108,8 @@ export function TaskDesktop({ subjectId, taskNumber, taskId }: TaskDesktopProps)
           taskId: task.id,
           correct: result.correct,
           userAnswer: userAnswerForResult,
+          collectionSlug,
+          variantId: taskNav.variantId ?? undefined,
         });
       })
       .finally(() => setChecking(false));
@@ -138,7 +153,8 @@ export function TaskDesktop({ subjectId, taskNumber, taskId }: TaskDesktopProps)
             <button
               type="button"
               className={styles.roundButton}
-              onClick={back}
+              onClick={() => (taskNav.previous ? taskNav.goTo(taskNav.previous) : back())}
+              disabled={!taskNav.previous && taskNav.orderedTasks.length > 0}
               aria-label="Предыдущее задание"
             >
               <Icon name="back" size={18} />
@@ -152,7 +168,13 @@ export function TaskDesktop({ subjectId, taskNumber, taskId }: TaskDesktopProps)
             <span className={styles.timer}>
               <Icon name="time" size={16} /> 00:12:34
             </span>
-            <button type="button" className={styles.roundButton} aria-label="Следующее задание">
+            <button
+              type="button"
+              className={styles.roundButton}
+              onClick={() => taskNav.next && taskNav.goTo(taskNav.next)}
+              disabled={!taskNav.next}
+              aria-label="Следующее задание"
+            >
               <Icon name="arrowRight" size={18} />
             </button>
           </div>
