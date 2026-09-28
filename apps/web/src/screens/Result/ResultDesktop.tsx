@@ -10,10 +10,8 @@ import {
 import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
 import type { SampleTask } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
-import { userStats } from '../../data/sampleProgress.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
-import { StreakBadge } from '../../ui/RankBadge/StreakBadge.js';
 import { DesktopToolsCard } from '../../ui/Training/DesktopToolsCard.js';
 import { SessionTaskListCard } from '../../ui/Training/SessionTaskListCard.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
@@ -194,11 +192,6 @@ export function ResultDesktop({
                     <Icon name="target" size={16} className={styles.rewardIconGold} />+
                     {Math.round(xp)} XP
                     <span className="text-label text-secondary">Опыт</span>
-                  </span>
-                  <span className={styles.rewardChip}>
-                    <StreakBadge days={userStats.streakDays} size={18} />
-                    +1 день
-                    <span className="text-label text-secondary">Серия</span>
                   </span>
                 </div>
               )}
@@ -423,12 +416,6 @@ function ResultCard({
         <div className={styles.resultRow}>
           <span className="text-body-sm text-secondary">Получено опыта</span>
           <span className={clsx('text-body-sm', styles.resultHighlight)}>+{Math.round(xp)} XP</span>
-        </div>
-        <div className={styles.resultRow}>
-          <span className="text-body-sm text-secondary">Серия</span>
-          <span className={clsx('text-body-sm', styles.resultHighlight)}>
-            {correct ? '+1 день' : `${userStats.streakDays} дней`}
-          </span>
         </div>
       </div>
     </div>
