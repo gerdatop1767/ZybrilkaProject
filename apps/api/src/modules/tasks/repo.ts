@@ -126,6 +126,7 @@ export async function getRandomTask(
   const conditions = [eq(schema.tasks.status, 'published' as const)];
   if (filters.subject) conditions.push(eq(schema.tasks.subjectId, filters.subject));
   if (filters.taskNumber) conditions.push(eq(schema.tasks.taskNumber, filters.taskNumber));
+  if (filters.topic) conditions.push(eq(schema.tasks.topicId, filters.topic));
   const scoped = taskIdsForCollectionOrVariant(db, filters);
   if (scoped) conditions.push(inArray(schema.tasks.id, scoped));
 

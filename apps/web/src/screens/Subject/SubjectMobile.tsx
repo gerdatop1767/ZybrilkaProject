@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react';
-import type { CollectionListItem } from '@zybrilka/shared';
+import type { CollectionListItem, ProgressByTopicResponse } from '@zybrilka/shared';
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
 import { startRealTask } from '../../lib/startTraining.js';
-import { getProgressByTaskNumber, listCollections } from '../../lib/api.js';
+import { getProgressByTaskNumber, getProgressByTopic, listCollections } from '../../lib/api.js';
 import {
   getSubjectContent,
-  getTopicProgress,
   taskSources,
   type SubjectModeId,
-  type SubjectTopic,
   type TaskSourceId,
   type TaskSourceGlyph,
 } from '../../data/subjectContent.js';
@@ -63,6 +61,8 @@ interface TaskNumberSummary {
   total: number;
 }
 
+type TopicProgressItem = ProgressByTopicResponse['items'][number];
+
 function hashCode(seed: string): number {
   let hash = 0;
   for (let i = 0; i < seed.length; i += 1) {
@@ -87,12 +87,13 @@ export function SubjectMobile({ subjectId, collectionSlug }: SubjectMobileProps)
   const content = getSubjectContent(subject.id);
 
   const [mode, setMode] = useState<SubjectModeId>('topics');
-  const [selectedTopic, setSelectedTopic] = useState<SubjectTopic | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<TopicProgressItem | null>(null);
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
   const [collections, setCollections] = useState<readonly CollectionListItem[]>([]);
   const [collectionsLoaded, setCollectionsLoaded] = useState(false);
   const [byNumberSlug, setByNumberSlug] = useState<string | null>(collectionSlug ?? null);
   const [randomSlug, setRandomSlug] = useState<string | null>(collectionSlug ?? null);
+  const [topicsSlug, setTopicsSlug] = useState<string | null>(collectionSlug ?? null);
   const [taskNumbers, setTaskNumbers] = useState<readonly TaskNumberSummary[]>(() =>
     Array.from({ length: content.taskNumberCount }, (_, i) => ({
       number: i + 1,
@@ -100,6 +101,7 @@ export function SubjectMobile({ subjectId, collectionSlug }: SubjectMobileProps)
       total: 0,
     })),
   );
+  const [topics, setTopics] = useState<readonly TopicProgressItem[]>([]);
 
   const solved = Math.round((subject.taskCount * subject.mastery) / 100);
   const friendRank = 1 + (hashCode(subject.id) % 12);
@@ -126,6 +128,8 @@ export function SubjectMobile({ subjectId, collectionSlug }: SubjectMobileProps)
     collectionsLoaded && byNumberSlug && !knownSlugs.has(byNumberSlug) ? null : byNumberSlug;
   const effectiveRandomSlug =
     collectionsLoaded && randomSlug && !knownSlugs.has(randomSlug) ? null : randomSlug;
+  const effectiveTopicsSlug =
+    collectionsLoaded && topicsSlug && !knownSlugs.has(topicsSlug) ? null : topicsSlug;
 
   useEffect(() => {
     let cancelled = false;
@@ -160,8 +164,35 @@ export function SubjectMobile({ subjectId, collectionSlug }: SubjectMobileProps)
     };
   }, [subject.id, effectiveByNumberSlug, content.taskNumberCount]);
 
+  // Real topics (Block D) — see SubjectDesktop.tsx for why the static
+  // per-subject content topics can't be reused here.
+  useEffect(() => {
+    let cancelled = false;
+    void getProgressByTopic({
+      subject: subject.id,
+      collection: effectiveTopicsSlug ?? undefined,
+    })
+      .then((res) => {
+        if (!cancelled) setTopics(res.items);
+      })
+      .catch(() => {
+        if (!cancelled) setTopics([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [subject.id, effectiveTopicsSlug]);
+
   function startTraining(taskNumber: number, collection?: string) {
     startRealTask(navigate, { subject: subject.id, taskNumber, collection });
+  }
+
+  function startTopicTraining(topic: TopicProgressItem) {
+    startRealTask(navigate, {
+      subject: subject.id,
+      topic: topic.topicId,
+      collection: effectiveTopicsSlug ?? undefined,
+    });
   }
 
   function selectMode(id: SubjectModeId) {
@@ -183,7 +214,7 @@ export function SubjectMobile({ subjectId, collectionSlug }: SubjectMobileProps)
   }
 
   const headerTitle = selectedTopic
-    ? selectedTopic.title
+    ? selectedTopic.topicName
     : selectedNumber !== null
       ? `Задание №${selectedNumber}`
       : subject.shortName;
@@ -244,13 +275,19 @@ export function SubjectMobile({ subjectId, collectionSlug }: SubjectMobileProps)
       )}
 
       {mode === 'topics' && !selectedTopic && (
-        <TopicsList subjectId={subject.id} topics={content.topics} onSelect={setSelectedTopic} />
+        <TopicsList
+          topics={topics}
+          collections={collections}
+          selectedSlug={effectiveTopicsSlug}
+          onSourceChange={setTopicsSlug}
+          onSelect={setSelectedTopic}
+        />
       )}
       {mode === 'topics' && selectedTopic && (
         <TopicDetail
-          subjectId={subject.id}
+          subjectName={subject.shortName}
           topic={selectedTopic}
-          onStart={() => startTraining(selectedTopic.number)}
+          onStart={() => startTopicTraining(selectedTopic)}
         />
       )}
       {mode === 'byNumber' && selectedNumber === null && (
@@ -379,36 +416,48 @@ export function SubjectMobile({ subjectId, collectionSlug }: SubjectMobileProps)
 }
 
 function TopicsList({
-  subjectId,
   topics,
+  collections,
+  selectedSlug,
+  onSourceChange,
   onSelect,
 }: {
-  subjectId: string;
-  topics: readonly SubjectTopic[];
-  onSelect: (topic: SubjectTopic) => void;
+  topics: readonly TopicProgressItem[];
+  collections: readonly CollectionListItem[];
+  selectedSlug: string | null;
+  onSourceChange: (slug: string | null) => void;
+  onSelect: (topic: TopicProgressItem) => void;
 }) {
   return (
     <Card>
       <p className="text-h3">Темы ЕГЭ</p>
+      <p className="text-body-sm text-secondary">Реальные темы из базы заданий</p>
+      <div className={styles.sourceSelect}>
+        <span className="text-body-sm text-secondary">Источник:</span>
+        <Select
+          options={sourceSelectOptions(collections)}
+          value={selectedSlug ?? ALL_SOURCES_VALUE}
+          onChange={(value) => onSourceChange(value === ALL_SOURCES_VALUE ? null : value)}
+          sheetTitle="Источник"
+        />
+      </div>
       <div className={styles.topicList}>
+        {topics.length === 0 && (
+          <p className="text-body-sm text-secondary">В этом источнике пока нет тем.</p>
+        )}
         {topics.map((topic, index) => {
-          const progress = getTopicProgress(subjectId, topic);
+          const percent = topic.total > 0 ? Math.round((topic.completed / topic.total) * 100) : 0;
           return (
-            <FadeIn key={topic.id} delayMs={index * 25}>
+            <FadeIn key={topic.topicId} delayMs={index * 25}>
               <button type="button" className={styles.topicRow} onClick={() => onSelect(topic)}>
-                <span className={styles.topicNumber}>{topic.number}</span>
                 <span className={styles.topicBody}>
                   <p className="text-body-sm" style={{ fontWeight: 700 }}>
-                    {topic.title}
+                    {topic.topicName}
                   </p>
-                  <p className="text-body-sm text-secondary">{topic.description}</p>
                   <span className={styles.topicStatsRow}>
-                    <ProgressBar
-                      value={(progress.solved / progress.total) * 100}
-                      className={styles.topicBar}
-                    />
+                    <ProgressBar value={percent} className={styles.topicBar} />
                     <span className="text-label text-secondary">
-                      {progress.solved}/{progress.total}
+                      {topic.completed}/{topic.total}
                     </span>
                   </span>
                 </span>
@@ -423,28 +472,34 @@ function TopicsList({
 }
 
 function TopicDetail({
-  subjectId,
+  subjectName,
   topic,
   onStart,
 }: {
-  subjectId: string;
-  topic: SubjectTopic;
+  subjectName: string;
+  topic: TopicProgressItem;
   onStart: () => void;
 }) {
-  const progress = getTopicProgress(subjectId, topic);
+  const percent = topic.total > 0 ? Math.round((topic.completed / topic.total) * 100) : 0;
   return (
     <Card>
-      <p className="text-h3">{topic.title}</p>
+      <p className="text-h3">{topic.topicName}</p>
       <p className="text-body-sm text-secondary" style={{ marginTop: 'var(--space-1)' }}>
-        {topic.description}
+        {subjectName}
       </p>
       <div className={styles.topicDetailStats}>
         <span className="text-body-sm text-secondary">
-          {progress.solved} / {progress.total} решено · {progress.accuracyPercent}% точность
+          {topic.completed} / {topic.total} решено
         </span>
-        <ProgressBar value={(progress.solved / progress.total) * 100} />
+        <ProgressBar value={percent} />
       </div>
-      <Button variant="primary" fullWidth onClick={onStart} style={{ marginTop: 'var(--space-4)' }}>
+      <Button
+        variant="primary"
+        fullWidth
+        onClick={onStart}
+        disabled={topic.total === 0}
+        style={{ marginTop: 'var(--space-4)' }}
+      >
         Начать тренировку <Icon name="arrowRight" size={16} />
       </Button>
     </Card>

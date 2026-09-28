@@ -2,6 +2,9 @@ import type { Database } from '@zybrilka/db';
 import type {
   ProgressByTaskNumberQuery,
   ProgressByTaskNumberResponse,
+  ProgressByTopicQuery,
+  ProgressByTopicResponse,
+  ProgressDailyResponse,
   ProgressSummary,
 } from '@zybrilka/shared';
 import * as repo from './repo.js';
@@ -56,4 +59,28 @@ export async function getByTaskNumberWithTotals(
 ): Promise<ProgressByTaskNumberResponse> {
   const items = await repo.getByTaskNumberWithTotals(db, userId, filters);
   return { items };
+}
+
+export async function getByTopicWithTotals(
+  db: Database,
+  userId: string,
+  filters: ProgressByTopicQuery,
+): Promise<ProgressByTopicResponse> {
+  const items = await repo.getByTopicWithTotals(db, userId, filters);
+  return { items };
+}
+
+export async function getDaily(
+  db: Database,
+  userId: string,
+  days: number,
+): Promise<ProgressDailyResponse> {
+  const rows = await repo.getDaily(db, userId, days);
+  return {
+    items: rows.map((row) => ({
+      date: row.date,
+      solved: row.solved,
+      accuracyPercent: accuracy(row.solved, row.correct),
+    })),
+  };
 }

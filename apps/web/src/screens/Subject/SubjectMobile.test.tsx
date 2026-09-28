@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SubjectMobile } from './SubjectMobile.js';
@@ -10,7 +10,14 @@ vi.mock('../../lib/api.js', () => ({
   getRandomTask: vi.fn(),
   listCollections: vi.fn(),
   getProgressByTaskNumber: vi.fn(),
+  getProgressByTopic: vi.fn(),
 }));
+
+// Every render starts on the 'topics' mode, so its effect always fires —
+// a neutral default keeps unrelated tests from needing to know about it.
+beforeEach(() => {
+  vi.mocked(api.getProgressByTopic).mockResolvedValue({ items: [] });
+});
 
 const YASHCHENKO_COLLECTION = {
   collection: {
@@ -79,16 +86,27 @@ function renderSubject(subjectId = 'math') {
 }
 
 describe('SubjectMobile', () => {
-  it('renders the hero and topics list by default, matching desktop data', () => {
+  it('renders the hero and real topics (not the static design-content list)', async () => {
     mockCollections();
     mockProgress();
+    vi.mocked(api.getProgressByTopic).mockResolvedValue({
+      items: [{ topicId: 't1', topicName: 'Логарифмы', total: 4, completed: 1 }],
+    });
     renderSubject();
     const content = getSubjectContent('math');
     expect(screen.getAllByText('Математика').length).toBeGreaterThan(0);
     expect(screen.getByText(content.tagline)).toBeInTheDocument();
-    for (const topic of content.topics) {
-      expect(screen.getAllByText(topic.title).length).toBeGreaterThan(0);
-    }
+    await waitFor(() => expect(screen.getByText('Логарифмы')).toBeInTheDocument());
+    expect(screen.getByText('1/4')).toBeInTheDocument();
+  });
+
+  it('an empty topic list shows a neutral empty state, not a fake row', async () => {
+    mockCollections();
+    mockProgress();
+    renderSubject();
+    await waitFor(() =>
+      expect(screen.getByText('В этом источнике пока нет тем.')).toBeInTheDocument(),
+    );
   });
 
   it('switches to Задания по номерам and shows every task number with real X/Y, not a fake hash', async () => {
@@ -146,28 +164,40 @@ describe('SubjectMobile', () => {
     expect(screen.getByText('Выбрать всё')).toBeInTheDocument();
   });
 
-  it('drills into a topic and back returns to the topics list without leaving the page', async () => {
+  it('drills into a real topic and back returns to the topics list without leaving the page', async () => {
     mockCollections();
     mockProgress();
+    vi.mocked(api.getProgressByTopic).mockResolvedValue({
+      items: [
+        { topicId: 't1', topicName: 'Логарифмы', total: 4, completed: 1 },
+        { topicId: 't2', topicName: 'Планиметрия', total: 2, completed: 0 },
+      ],
+    });
     const user = userEvent.setup();
     renderSubject();
-    const content = getSubjectContent('math');
-    await user.click(screen.getAllByText(content.topics[0]!.title)[0]!);
+    await waitFor(() => screen.getByText('Логарифмы'));
+    await user.click(screen.getAllByText('Логарифмы')[0]!);
     expect(screen.getByRole('button', { name: /Начать тренировку/ })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Назад' }));
-    expect(screen.getAllByText(content.topics[1]!.title).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Планиметрия').length).toBeGreaterThan(0);
   });
 
-  it('starting a topic training session navigates to the task overlay', async () => {
+  it('starting a topic training session passes the real topicId and navigates to the task overlay', async () => {
     mockCollections();
     mockProgress();
+    vi.mocked(api.getProgressByTopic).mockResolvedValue({
+      items: [{ topicId: 'real-topic-id', topicName: 'Логарифмы', total: 4, completed: 1 }],
+    });
     vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
     const user = userEvent.setup();
     renderSubject();
-    const content = getSubjectContent('math');
-    await user.click(screen.getAllByText(content.topics[0]!.title)[0]!);
+    await waitFor(() => screen.getByText('Логарифмы'));
+    await user.click(screen.getAllByText('Логарифмы')[0]!);
     await user.click(screen.getByRole('button', { name: /Начать тренировку/ }));
     await waitFor(() => {
+      expect(api.getRandomTask).toHaveBeenCalledWith(
+        expect.objectContaining({ subject: 'math', topic: 'real-topic-id' }),
+      );
       expect(screen.getByTestId('overlay')).toHaveTextContent('task');
     });
   });

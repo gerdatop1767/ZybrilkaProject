@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SubjectDesktop } from './SubjectDesktop.js';
@@ -9,7 +9,15 @@ vi.mock('../../lib/api.js', () => ({
   getRandomTask: vi.fn(),
   listCollections: vi.fn(),
   getProgressByTaskNumber: vi.fn(),
+  getProgressByTopic: vi.fn(),
 }));
+
+// Every render starts on the 'topics' mode, so its effect always fires
+// regardless of which mode a given test actually exercises — a neutral
+// default keeps unrelated tests from needing to know about topics.
+beforeEach(() => {
+  vi.mocked(api.getProgressByTopic).mockResolvedValue({ items: [] });
+});
 
 const YASHCHENKO_COLLECTION = {
   collection: {
@@ -197,6 +205,97 @@ describe('SubjectDesktop — Задания по номерам source filter (r
     );
     await user.click(screen.getByText('Задания по номерам'));
     await waitFor(() => expect(screen.getByText('Общий банк')).toBeInTheDocument());
+  });
+});
+
+describe('SubjectDesktop — Темы (real API, no fake hash)', () => {
+  function mockTopics(
+    items: { topicId: string; topicName: string; total: number; completed: number }[],
+  ) {
+    vi.mocked(api.getProgressByTopic).mockResolvedValue({ items });
+  }
+
+  it('shows real topics with real X/Y, not the static design-content list', async () => {
+    mockCollections();
+    mockTopics([{ topicId: 't1', topicName: 'Логарифмы', total: 4, completed: 1 }]);
+    renderSubject();
+    await waitFor(() => expect(screen.getByText('Логарифмы')).toBeInTheDocument());
+    expect(screen.getByText('1 / 4 решено')).toBeInTheDocument();
+  });
+
+  it('an empty topic list (e.g. unknown source) shows a neutral empty state, not a fake row', async () => {
+    mockCollections();
+    mockTopics([]);
+    renderSubject();
+    await waitFor(() =>
+      expect(screen.getByText('В этом источнике пока нет тем.')).toBeInTheDocument(),
+    );
+  });
+
+  it('switching the topics source selector refetches scoped by the new collection', async () => {
+    mockCollections();
+    vi.mocked(api.getProgressByTopic).mockImplementation(({ collection }) =>
+      Promise.resolve({
+        items: collection
+          ? [{ topicId: 't-yash', topicName: 'Планиметрия', total: 1, completed: 0 }]
+          : [{ topicId: 't-agg', topicName: 'Логарифмы', total: 4, completed: 1 }],
+      }),
+    );
+    const user = userEvent.setup();
+    renderSubject();
+    await waitFor(() => expect(screen.getByText('Логарифмы')).toBeInTheDocument());
+
+    await user.click(screen.getAllByRole('button', { name: 'Общий банк' })[0]!);
+    await user.click(screen.getByRole('option', { name: 'ЕГЭ 2026 Ященко' }));
+
+    await waitFor(() => expect(screen.getByText('Планиметрия')).toBeInTheDocument());
+    expect(api.getProgressByTopic).toHaveBeenLastCalledWith({
+      subject: 'math',
+      collection: 'ege-2026-yashchenko',
+    });
+  });
+
+  it('drilling into a topic and starting training passes its real topicId to getRandomTask', async () => {
+    mockCollections();
+    mockTopics([{ topicId: 'real-topic-id', topicName: 'Логарифмы', total: 4, completed: 1 }]);
+    vi.mocked(api.getRandomTask).mockResolvedValue({
+      id: 'task-1',
+      subjectId: 'math',
+      taskNumber: 9,
+      topicId: 'real-topic-id',
+      topicName: 'Логарифмы',
+      difficulty: 2,
+      conditionMd: 'Условие',
+      imageUrl: null,
+      hintMd: null,
+      answerType: 'short_answer',
+      answerOptions: null,
+      source: 'Ященко',
+      sourceUrl: null,
+      sourceYear: 2026,
+      tags: [],
+      status: 'published',
+    } as never);
+    const user = userEvent.setup();
+    renderSubject();
+    await waitFor(() => screen.getByText('Логарифмы'));
+    await user.click(screen.getByText('Логарифмы'));
+    await user.click(screen.getByRole('button', { name: /Начать тренировку/ }));
+    await waitFor(() => {
+      expect(api.getRandomTask).toHaveBeenCalledWith(
+        expect.objectContaining({ subject: 'math', topic: 'real-topic-id' }),
+      );
+    });
+  });
+
+  it('a topic with total=0 disables the start button rather than dividing by zero', async () => {
+    mockCollections();
+    mockTopics([{ topicId: 't1', topicName: 'Пустая тема', total: 0, completed: 0 }]);
+    const user = userEvent.setup();
+    renderSubject();
+    await waitFor(() => screen.getByText('Пустая тема'));
+    await user.click(screen.getByText('Пустая тема'));
+    expect(screen.getByRole('button', { name: /Начать тренировку/ })).toBeDisabled();
   });
 });
 

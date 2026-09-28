@@ -16,7 +16,7 @@ import type { Route } from './navigation.js';
  */
 export function startRealTask(
   navigate: (route: Route) => void,
-  params: { subject?: string; taskNumber?: number; collection?: string } = {},
+  params: { subject?: string; taskNumber?: number; collection?: string; topic?: string } = {},
 ): void {
   void getRandomTask(params).then((task) => {
     navigate({

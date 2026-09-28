@@ -9,6 +9,7 @@ vi.mock('./lib/api.js', () => ({
   getRandomTask: vi.fn(),
   getTask: vi.fn(),
   listTasksByNumber: vi.fn(),
+  getProgressSummary: vi.fn(() => new Promise(() => {})),
 }));
 
 const RANDOM_TASK = {
