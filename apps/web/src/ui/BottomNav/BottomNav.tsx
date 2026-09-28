@@ -18,10 +18,8 @@ export interface BottomNavProps {
 
 /**
  * Primary navigation foundation (Design Spec Section 3): 5 items on
- * mobile, collapses to a left rail at >=768px. Achievements and
- * Mistakes live one level down (inside Progress/Profile) so this stays
- * at 5 items. Task/battle screens hide this entirely — that's the
- * screen's job, not this component's.
+ * mobile, collapses to a left rail at >=768px. Task/battle screens
+ * hide this entirely — that's the screen's job, not this component's.
  */
 export function BottomNav({ items, activeId, onSelect, className }: BottomNavProps) {
   return (

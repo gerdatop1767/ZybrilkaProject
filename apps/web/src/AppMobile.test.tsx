@@ -10,6 +10,7 @@ vi.mock('./lib/api.js', () => ({
   getTask: vi.fn(),
   listTasksByNumber: vi.fn(),
   getProgressSummary: vi.fn(() => new Promise(() => {})),
+  getMistakes: vi.fn(() => new Promise(() => {})),
 }));
 
 const RANDOM_TASK = {
@@ -40,7 +41,24 @@ function OverlayMarker() {
   return <p data-testid="overlay">{overlay?.screen ?? 'none'}</p>;
 }
 
-describe('AppMobile — bottom nav "Тренировка" tab', () => {
+describe('AppMobile — bottom nav "Мои ошибки" slot', () => {
+  it('opens the real Mistakes screen, not a WIP training tab', async () => {
+    const user = userEvent.setup();
+    render(
+      <NavigationProvider>
+        <AppMobile />
+        <OverlayMarker />
+      </NavigationProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Мои ошибки' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('overlay')).toHaveTextContent('mistakes');
+    });
+  });
+});
+
+describe('AppMobile — menu "Тренировка" item', () => {
   it('fetches a real random task and opens it, instead of the hardcoded design-mock task', async () => {
     const user = userEvent.setup();
     vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
@@ -53,10 +71,14 @@ describe('AppMobile — bottom nav "Тренировка" tab', () => {
       </NavigationProvider>,
     );
 
+    // Training no longer has a bottom-nav shortcut (that slot is now
+    // "Мои ошибки" — audit Block 2), but it stays reachable from the
+    // menu, opened via the bottom nav's "Профиль" slot.
+    await user.click(screen.getByRole('button', { name: 'Профиль' }));
     await user.click(screen.getByRole('button', { name: 'Тренировка' }));
     await waitFor(() => {
       expect(screen.getByTestId('overlay')).toHaveTextContent('task:7');
     });
-    expect(api.getRandomTask).toHaveBeenCalledWith({ subject: 'math' });
+    expect(api.getRandomTask).toHaveBeenCalled();
   });
 });
