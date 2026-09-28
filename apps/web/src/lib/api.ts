@@ -3,6 +3,7 @@ import type {
   AttemptResult,
   CollectionListItem,
   Mistake,
+  ProgressByTaskNumberResponse,
   ProgressSummary,
   TaskPublic,
   TaskWithSolution,
@@ -115,4 +116,24 @@ export function getMistakes(): Promise<Mistake[]> {
 
 export function getProgressSummary(): Promise<ProgressSummary> {
   return apiFetch('/progress/summary');
+}
+
+/**
+ * Real X/Y for the "По номерам" grid — `total` real, unique published
+ * tasks per number under the given filters, `completed` real, unique
+ * tasks the current user has attempted. No `collection`/`variant`
+ * means the aggregate bank across every source; passing one scopes to
+ * just that source, exactly like `getRandomTask`.
+ */
+export function getProgressByTaskNumber(params: {
+  subject?: string;
+  collection?: string;
+  variant?: string;
+}): Promise<ProgressByTaskNumberResponse> {
+  const query = new URLSearchParams();
+  if (params.subject) query.set('subject', params.subject);
+  if (params.collection) query.set('collection', params.collection);
+  if (params.variant) query.set('variant', params.variant);
+  const qs = query.toString();
+  return apiFetch(`/progress/by-task-number${qs ? `?${qs}` : ''}`);
 }

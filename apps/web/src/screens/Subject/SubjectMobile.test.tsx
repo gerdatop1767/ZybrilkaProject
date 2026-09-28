@@ -3,12 +3,46 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SubjectMobile } from './SubjectMobile.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
-import { getSubjectContent, getTaskNumbers } from '../../data/subjectContent.js';
+import { getSubjectContent } from '../../data/subjectContent.js';
 import * as api from '../../lib/api.js';
 
 vi.mock('../../lib/api.js', () => ({
   getRandomTask: vi.fn(),
+  listCollections: vi.fn(),
+  getProgressByTaskNumber: vi.fn(),
 }));
+
+const YASHCHENKO_COLLECTION = {
+  collection: {
+    id: 'c1',
+    subjectId: 'math',
+    slug: 'ege-2026-yashchenko',
+    title: 'ЕГЭ 2026 Ященко',
+    publisher: 'Ященко',
+    year: 2026,
+    description: null,
+  },
+  variants: [{ id: 'v1', collectionId: 'c1', variantNumber: 1, title: 'Вариант 1', year: 2026 }],
+};
+
+function mockCollections(items = [YASHCHENKO_COLLECTION]) {
+  vi.mocked(api.listCollections).mockResolvedValue(items);
+}
+
+function aggregateProgress() {
+  return {
+    items: Array.from({ length: 19 }, (_, i) => ({
+      subjectId: 'math',
+      taskNumber: i + 1,
+      total: 3,
+      completed: 0,
+    })),
+  };
+}
+
+function mockProgress(res = aggregateProgress()) {
+  vi.mocked(api.getProgressByTaskNumber).mockResolvedValue(res);
+}
 
 const RANDOM_TASK = {
   id: 'task-1',
@@ -46,6 +80,8 @@ function renderSubject(subjectId = 'math') {
 
 describe('SubjectMobile', () => {
   it('renders the hero and topics list by default, matching desktop data', () => {
+    mockCollections();
+    mockProgress();
     renderSubject();
     const content = getSubjectContent('math');
     expect(screen.getAllByText('Математика').length).toBeGreaterThan(0);
@@ -55,17 +91,54 @@ describe('SubjectMobile', () => {
     }
   });
 
-  it('switches to Задания по номерам and shows every task number', async () => {
+  it('switches to Задания по номерам and shows every task number with real X/Y, not a fake hash', async () => {
+    mockCollections();
+    mockProgress();
     const user = userEvent.setup();
     renderSubject();
     await user.click(screen.getByRole('button', { name: 'По номерам' }));
-    const numbers = getTaskNumbers('math', 'fipi');
-    for (const item of numbers) {
-      expect(screen.getByText(`№${item.number}`)).toBeInTheDocument();
-    }
+    await waitFor(() => {
+      for (let n = 1; n <= 19; n += 1) {
+        expect(screen.getByText(`№${n}`)).toBeInTheDocument();
+      }
+    });
+    expect(api.getProgressByTaskNumber).toHaveBeenCalledWith({
+      subject: 'math',
+      collection: undefined,
+    });
   });
 
-  it('switches to Варианты and shows the source picker + number chips', async () => {
+  it('shows a real "Общий банк" + collection source picker, and switching source refetches', async () => {
+    mockCollections();
+    vi.mocked(api.getProgressByTaskNumber).mockImplementation(({ collection }) =>
+      Promise.resolve({
+        items: Array.from({ length: 19 }, (_, i) => ({
+          subjectId: 'math',
+          taskNumber: i + 1,
+          total: collection ? 1 : 3,
+          completed: 0,
+        })),
+      }),
+    );
+    const user = userEvent.setup();
+    renderSubject();
+    await user.click(screen.getByRole('button', { name: 'По номерам' }));
+    await waitFor(() => expect(screen.getByText('Общий банк')).toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: 'Общий банк' }));
+    await user.click(screen.getByRole('option', { name: 'ЕГЭ 2026 Ященко' }));
+
+    await waitFor(() => {
+      expect(api.getProgressByTaskNumber).toHaveBeenLastCalledWith({
+        subject: 'math',
+        collection: 'ege-2026-yashchenko',
+      });
+    });
+  });
+
+  it('switches to Варианты and shows the (unchanged) fake source picker + number chips', async () => {
+    mockCollections();
+    mockProgress();
     const user = userEvent.setup();
     renderSubject();
     await user.click(screen.getByRole('button', { name: 'Варианты' }));
@@ -74,17 +147,20 @@ describe('SubjectMobile', () => {
   });
 
   it('drills into a topic and back returns to the topics list without leaving the page', async () => {
+    mockCollections();
+    mockProgress();
     const user = userEvent.setup();
     renderSubject();
     const content = getSubjectContent('math');
-    const firstTopic = content.topics[0]!;
-    await user.click(screen.getAllByText(firstTopic.title)[0]!);
+    await user.click(screen.getAllByText(content.topics[0]!.title)[0]!);
     expect(screen.getByRole('button', { name: /Начать тренировку/ })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Назад' }));
     expect(screen.getAllByText(content.topics[1]!.title).length).toBeGreaterThan(0);
   });
 
   it('starting a topic training session navigates to the task overlay', async () => {
+    mockCollections();
+    mockProgress();
     vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
     const user = userEvent.setup();
     renderSubject();

@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { CollectionListItem } from '@zybrilka/shared';
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
 import { startRealTask } from '../../lib/startTraining.js';
+import { getProgressByTaskNumber, listCollections } from '../../lib/api.js';
 import {
   getSubjectContent,
-  getTaskNumbers,
   getTopicProgress,
   taskSources,
   type SubjectModeId,
@@ -30,11 +31,31 @@ const sourceGlyphIcon: Record<TaskSourceGlyph, IconName> = {
   star: 'star',
 };
 
-const sourceOptions = taskSources.map((source) => ({ value: source.id, label: source.label }));
+/** Sentinel Select value for "Общий банк" (no collection filter) — Select's
+ * own value type is `string | null`, and `null` there means "nothing
+ * picked yet", not a deliberate "every source" choice, so this needs its
+ * own explicit, always-visible option instead of just an empty selection. */
+const ALL_SOURCES_VALUE = '__all__';
+
+function sourceSelectOptions(collections: readonly CollectionListItem[]) {
+  return [
+    { value: ALL_SOURCES_VALUE, label: 'Общий банк' },
+    ...collections.map((item) => ({ value: item.collection.slug, label: item.collection.title })),
+  ];
+}
 
 export interface SubjectDesktopProps {
   subjectId: string;
   from?: 'subjectCatalog' | 'learningCenter';
+  /** Pre-selects the "Источник" filter (e.g. arriving back from a task
+   * opened under a specific collection) — see navigation.tsx. */
+  collectionSlug?: string;
+}
+
+interface TaskNumberSummary {
+  number: number;
+  solved: number;
+  total: number;
 }
 
 const modes: readonly { id: SubjectModeId; label: string; caption: string; icon: IconName }[] = [
@@ -60,7 +81,7 @@ const modes: readonly { id: SubjectModeId; label: string; caption: string; icon:
  * here a deep link needs to restore, and it keeps this screen's own
  * back-stack (topic/number → list) independent of the app router's.
  */
-export function SubjectDesktop({ subjectId, from }: SubjectDesktopProps) {
+export function SubjectDesktop({ subjectId, from, collectionSlug }: SubjectDesktopProps) {
   const { navigate } = useNavigation();
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
   const content = getSubjectContent(subject.id);
@@ -68,15 +89,89 @@ export function SubjectDesktop({ subjectId, from }: SubjectDesktopProps) {
   const [mode, setMode] = useState<SubjectModeId>('topics');
   const [selectedTopic, setSelectedTopic] = useState<SubjectTopic | null>(null);
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
-  const [byNumberSource, setByNumberSource] = useState<TaskSourceId>('fipi');
-  const [randomSource, setRandomSource] = useState<TaskSourceId>('fipi');
+  const [collections, setCollections] = useState<readonly CollectionListItem[]>([]);
+  const [collectionsLoaded, setCollectionsLoaded] = useState(false);
+  const [byNumberSlug, setByNumberSlug] = useState<string | null>(collectionSlug ?? null);
+  const [randomSlug, setRandomSlug] = useState<string | null>(collectionSlug ?? null);
+  const [taskNumbers, setTaskNumbers] = useState<readonly TaskNumberSummary[]>(() =>
+    Array.from({ length: content.taskNumberCount }, (_, i) => ({
+      number: i + 1,
+      solved: 0,
+      total: 0,
+    })),
+  );
 
   const solved = Math.round((subject.taskCount * subject.mastery) / 100);
   const friendRank = 1 + (hashCode(subject.id) % 12);
-  const taskNumbers = getTaskNumbers(subject.id, byNumberSource);
 
-  function startTraining(taskNumber: number) {
-    startRealTask(navigate, { subject: subject.id, taskNumber });
+  // Real collections for this subject — "Источник" always offers "Общий
+  // банк" plus whatever collections/variants exist, generically, never a
+  // hardcoded publisher. An unreachable API just leaves the list empty:
+  // every mode still works against the aggregate bank.
+  useEffect(() => {
+    let cancelled = false;
+    void listCollections()
+      .then((items) => {
+        if (cancelled) return;
+        setCollections(items.filter((item) => item.collection.subjectId === subject.id));
+        setCollectionsLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled) setCollectionsLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [subject.id]);
+
+  // A slug carried in from the route (or picked earlier) might name a
+  // collection that no longer exists/isn't published for this subject —
+  // derived (not synced via an effect) so it falls back to "Общий банк"
+  // the moment the real list loads, without a set-state-in-effect round trip.
+  const knownSlugs = new Set(collections.map((item) => item.collection.slug));
+  const effectiveByNumberSlug =
+    collectionsLoaded && byNumberSlug && !knownSlugs.has(byNumberSlug) ? null : byNumberSlug;
+  const effectiveRandomSlug =
+    collectionsLoaded && randomSlug && !knownSlugs.has(randomSlug) ? null : randomSlug;
+
+  // Real X/Y per number (Block A) — re-fetched whenever the selected
+  // source changes. Numbers with no task in the current scope keep
+  // total=0 rather than being dropped, so the grid never shrinks/jumps.
+  useEffect(() => {
+    let cancelled = false;
+    void getProgressByTaskNumber({
+      subject: subject.id,
+      collection: effectiveByNumberSlug ?? undefined,
+    })
+      .then((res) => {
+        if (cancelled) return;
+        const byNumber = new Map(res.items.map((item) => [item.taskNumber, item]));
+        setTaskNumbers(
+          Array.from({ length: content.taskNumberCount }, (_, i) => {
+            const number = i + 1;
+            const row = byNumber.get(number);
+            return { number, solved: row?.completed ?? 0, total: row?.total ?? 0 };
+          }),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTaskNumbers(
+            Array.from({ length: content.taskNumberCount }, (_, i) => ({
+              number: i + 1,
+              solved: 0,
+              total: 0,
+            })),
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [subject.id, effectiveByNumberSlug, content.taskNumberCount]);
+
+  function startTraining(taskNumber: number, collection?: string) {
+    startRealTask(navigate, { subject: subject.id, taskNumber, collection });
   }
 
   const parentLabel = from === 'learningCenter' ? 'К учебному центру' : 'К предметам';
@@ -163,8 +258,9 @@ export function SubjectDesktop({ subjectId, from }: SubjectDesktopProps) {
           {mode === 'byNumber' && selectedNumber === null && (
             <TaskNumberGrid
               numbers={taskNumbers}
-              source={byNumberSource}
-              onSourceChange={setByNumberSource}
+              collections={collections}
+              selectedSlug={effectiveByNumberSlug}
+              onSourceChange={setByNumberSlug}
               onSelect={setSelectedNumber}
             />
           )}
@@ -172,9 +268,10 @@ export function SubjectDesktop({ subjectId, from }: SubjectDesktopProps) {
             <TaskNumberDetail
               subjectName={subject.shortName}
               number={selectedNumber}
-              source={byNumberSource}
+              collections={collections}
+              selectedSlug={effectiveByNumberSlug}
               summary={taskNumbers.find((n) => n.number === selectedNumber)!}
-              onStart={() => startTraining(selectedNumber)}
+              onStart={() => startTraining(selectedNumber, effectiveByNumberSlug ?? undefined)}
             />
           )}
           {mode === 'variants' && (
@@ -182,9 +279,10 @@ export function SubjectDesktop({ subjectId, from }: SubjectDesktopProps) {
           )}
           {mode === 'random' && (
             <RandomModeCard
-              source={randomSource}
-              onSourceChange={setRandomSource}
-              onStart={() => startTraining(1)}
+              collections={collections}
+              selectedSlug={effectiveRandomSlug}
+              onSourceChange={setRandomSlug}
+              onStart={() => startTraining(1, effectiveRandomSlug ?? undefined)}
             />
           )}
           {mode === 'favorites' && (
@@ -376,13 +474,15 @@ function TopicDetail({
 
 function TaskNumberGrid({
   numbers,
-  source,
+  collections,
+  selectedSlug,
   onSourceChange,
   onSelect,
 }: {
-  numbers: readonly { number: number; solved: number; total: number }[];
-  source: TaskSourceId;
-  onSourceChange: (source: TaskSourceId) => void;
+  numbers: readonly TaskNumberSummary[];
+  collections: readonly CollectionListItem[];
+  selectedSlug: string | null;
+  onSourceChange: (slug: string | null) => void;
   onSelect: (number: number) => void;
 }) {
   return (
@@ -395,9 +495,9 @@ function TaskNumberGrid({
         <div className={styles.sourceSelect}>
           <span className="text-body-sm text-secondary">Источник:</span>
           <Select
-            options={sourceOptions}
-            value={source}
-            onChange={(value) => onSourceChange(value as TaskSourceId)}
+            options={sourceSelectOptions(collections)}
+            value={selectedSlug ?? ALL_SOURCES_VALUE}
+            onChange={(value) => onSourceChange(value === ALL_SOURCES_VALUE ? null : value)}
             sheetTitle="Источник"
           />
         </div>
@@ -408,11 +508,14 @@ function TaskNumberGrid({
             key={item.number}
             type="button"
             className={styles.numberTile}
-            onClick={() => onSelect(item.number)}
+            disabled={item.total === 0}
+            onClick={() => {
+              if (item.total > 0) onSelect(item.number);
+            }}
           >
             <span className={styles.numberValue}>№{item.number}</span>
             <span className="text-body-sm text-secondary">
-              {item.solved}/{item.total}
+              {item.total > 0 ? `${item.solved}/${item.total}` : 'Нет заданий'}
             </span>
           </button>
         ))}
@@ -424,17 +527,21 @@ function TaskNumberGrid({
 function TaskNumberDetail({
   subjectName,
   number,
-  source,
+  collections,
+  selectedSlug,
   summary,
   onStart,
 }: {
   subjectName: string;
   number: number;
-  source: TaskSourceId;
-  summary: { solved: number; total: number };
+  collections: readonly CollectionListItem[];
+  selectedSlug: string | null;
+  summary: TaskNumberSummary;
   onStart: () => void;
 }) {
-  const sourceLabel = taskSources.find((s) => s.id === source)!.label;
+  const sourceLabel =
+    collections.find((c) => c.collection.slug === selectedSlug)?.collection.title ?? 'Общий банк';
+  const percent = summary.total > 0 ? (summary.solved / summary.total) * 100 : 0;
   return (
     <Card>
       <p className="text-h2">Задание №{number}</p>
@@ -443,11 +550,18 @@ function TaskNumberDetail({
       </p>
       <div className={styles.topicDetailStats}>
         <span className="text-body-sm text-secondary">
-          {summary.solved} / {summary.total} решено
+          {summary.total > 0
+            ? `${summary.solved} / ${summary.total} решено`
+            : 'Нет доступных заданий в этом источнике'}
         </span>
-        <ProgressBar value={(summary.solved / summary.total) * 100} />
+        <ProgressBar value={percent} />
       </div>
-      <Button variant="primary" onClick={onStart} style={{ marginTop: 'var(--space-4)' }}>
+      <Button
+        variant="primary"
+        onClick={onStart}
+        disabled={summary.total === 0}
+        style={{ marginTop: 'var(--space-4)' }}
+      >
         Начать тренировку по №{number} <Icon name="arrowRight" size={16} />
       </Button>
     </Card>
@@ -455,12 +569,14 @@ function TaskNumberDetail({
 }
 
 function RandomModeCard({
-  source,
+  collections,
+  selectedSlug,
   onSourceChange,
   onStart,
 }: {
-  source: TaskSourceId;
-  onSourceChange: (source: TaskSourceId) => void;
+  collections: readonly CollectionListItem[];
+  selectedSlug: string | null;
+  onSourceChange: (slug: string | null) => void;
   onStart: () => void;
 }) {
   return (
@@ -475,9 +591,9 @@ function RandomModeCard({
       <div className={styles.sourceSelect} style={{ marginTop: 'var(--space-4)' }}>
         <span className="text-body-sm text-secondary">Источник:</span>
         <Select
-          options={sourceOptions}
-          value={source}
-          onChange={(value) => onSourceChange(value as TaskSourceId)}
+          options={sourceSelectOptions(collections)}
+          value={selectedSlug ?? ALL_SOURCES_VALUE}
+          onChange={(value) => onSourceChange(value === ALL_SOURCES_VALUE ? null : value)}
           sheetTitle="Источник"
         />
       </div>

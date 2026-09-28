@@ -8,10 +8,15 @@ import type { Route } from './navigation.js';
  * straight to a design-mock id (e.g. the demo task's non-UUID id)
  * always fails with `400 invalid_id` and shows "Не удалось загрузить
  * задание."
+ *
+ * `collection` scopes the pick to that collection's tasks (via
+ * `GET /tasks/random?collection=`) and is carried into the resulting
+ * `task` route's `collectionSlug` so the selected source isn't lost
+ * once the caller's own component unmounts — see navigation.tsx.
  */
 export function startRealTask(
   navigate: (route: Route) => void,
-  params: { subject?: string; taskNumber?: number } = {},
+  params: { subject?: string; taskNumber?: number; collection?: string } = {},
 ): void {
   void getRandomTask(params).then((task) => {
     navigate({
@@ -19,6 +24,7 @@ export function startRealTask(
       subjectId: task.subjectId,
       taskNumber: task.taskNumber,
       taskId: task.id,
+      collectionSlug: params.collection,
     });
   });
 }

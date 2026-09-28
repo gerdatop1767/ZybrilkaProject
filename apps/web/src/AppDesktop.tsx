@@ -36,7 +36,11 @@ export function AppDesktop() {
       <DesktopShell header={header} sidebar={sidebar}>
         {overlay.screen === 'subjectCatalog' && <SubjectCatalogDesktop />}
         {overlay.screen === 'subject' && (
-          <SubjectDesktop subjectId={overlay.subjectId} from={overlay.from} />
+          <SubjectDesktop
+            subjectId={overlay.subjectId}
+            from={overlay.from}
+            collectionSlug={overlay.collectionSlug}
+          />
         )}
         {overlay.screen === 'task' && (
           <TaskDesktop

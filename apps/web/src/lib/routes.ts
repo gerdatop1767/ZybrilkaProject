@@ -72,7 +72,8 @@ export function pathForRoute(route: Route): string | null {
 
   if (route.screen === 'subject') {
     const slug = subjectSlugs[route.subjectId] ?? route.subjectId;
-    return `/subjects/${slug}`;
+    const query = route.collectionSlug ? `?source=${encodeURIComponent(route.collectionSlug)}` : '';
+    return `/subjects/${slug}${query}`;
   }
 
   if (route.screen === 'profile') {
@@ -89,11 +90,14 @@ export function pathForRoute(route: Route): string | null {
 
 const simpleOverlayScreens = new Set(Object.keys(simpleOverlayPaths));
 
-/** Parses a pathname into a Route, defaulting to Home for anything
- * unrecognized rather than erroring — a stale/typo'd/removed link
- * should land the user somewhere real, not a blank screen. */
+/** Parses a pathname (optionally with a `?query` string attached) into
+ * a Route, defaulting to Home for anything unrecognized rather than
+ * erroring — a stale/typo'd/removed link should land the user
+ * somewhere real, not a blank screen. */
 export function routeFromPath(pathname: string): Route {
-  const path = pathname.replace(/\/+$/, '') || '/';
+  const [rawPath, search] = pathname.split('?');
+  const path = (rawPath ?? '/').replace(/\/+$/, '') || '/';
+  const params = new URLSearchParams(search ?? '');
 
   if (path === '/') return { screen: 'home' };
 
@@ -105,7 +109,8 @@ export function routeFromPath(pathname: string): Route {
   if (subjectMatch) {
     const slug = subjectMatch[1]!;
     const subjectId = slugToSubjectId[slug] ?? slug;
-    return { screen: 'subject', subjectId, from: 'subjectCatalog' };
+    const collectionSlug = params.get('source') ?? undefined;
+    return { screen: 'subject', subjectId, from: 'subjectCatalog', collectionSlug };
   }
 
   if (path === '/profile') return { screen: 'profile' };

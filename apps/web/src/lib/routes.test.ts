@@ -17,6 +17,13 @@ describe('pathForRoute', () => {
     );
   });
 
+  it('appends ?source= only when a collectionSlug is set', () => {
+    expect(pathForRoute({ screen: 'subject', subjectId: 'math' })).toBe('/subjects/math');
+    expect(
+      pathForRoute({ screen: 'subject', subjectId: 'math', collectionSlug: 'ege-2026-yashchenko' }),
+    ).toBe('/subjects/math?source=ege-2026-yashchenko');
+  });
+
   it('maps simple overlays to their paths', () => {
     expect(pathForRoute({ screen: 'subjectCatalog' })).toBe('/subjects');
     expect(pathForRoute({ screen: 'profile' })).toBe('/profile');
@@ -75,5 +82,23 @@ describe('routeFromPath', () => {
 
   it('ignores a trailing slash', () => {
     expect(routeFromPath('/help/')).toEqual({ screen: 'help' });
+  });
+
+  it('round-trips a subject route carrying a collectionSlug through ?source=', () => {
+    const route: Route = {
+      screen: 'subject',
+      subjectId: 'math',
+      collectionSlug: 'ege-2026-yashchenko',
+    };
+    const path = pathForRoute(route);
+    expect(routeFromPath(path!)).toEqual({ ...route, from: 'subjectCatalog' });
+  });
+
+  it('parses no collectionSlug when ?source= is absent', () => {
+    expect(routeFromPath('/subjects/math')).toEqual({
+      screen: 'subject',
+      subjectId: 'math',
+      from: 'subjectCatalog',
+    });
   });
 });

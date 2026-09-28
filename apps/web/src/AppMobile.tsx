@@ -62,7 +62,11 @@ export function AppMobile() {
       <MobileShell>
         {contentOverlay.screen === 'subjectCatalog' && <SubjectCatalogMobile />}
         {contentOverlay.screen === 'subject' && (
-          <SubjectMobile subjectId={contentOverlay.subjectId} from={contentOverlay.from} />
+          <SubjectMobile
+            subjectId={contentOverlay.subjectId}
+            from={contentOverlay.from}
+            collectionSlug={contentOverlay.collectionSlug}
+          />
         )}
         {contentOverlay.screen === 'task' && (
           <TaskMobile
