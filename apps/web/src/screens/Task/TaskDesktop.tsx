@@ -14,7 +14,10 @@ import { SessionTaskListCard } from '../../ui/Training/SessionTaskListCard.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { Collapse, FadeIn } from '../../ui/motion/motion.js';
 import { MathText } from '../../ui/MathText/MathText.js';
-import { TaskIllustration } from '../../ui/TaskIllustration/TaskIllustration.js';
+import {
+  TaskConditionImage,
+  TaskSolutionIllustration,
+} from '../../ui/TaskIllustration/TaskIllustration.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './TaskDesktop.module.css';
 
@@ -210,7 +213,8 @@ export function TaskDesktop({
             <div className={clsx('text-task', styles.condition)}>
               <MathText text={task.condition} />
             </div>
-            <TaskIllustration
+            <TaskConditionImage imageUrl={task.imageUrl} className={styles.taskImage} />
+            <TaskSolutionIllustration
               subjectId={task.subjectId}
               taskNumber={task.number}
               imageUrl={task.imageUrl}

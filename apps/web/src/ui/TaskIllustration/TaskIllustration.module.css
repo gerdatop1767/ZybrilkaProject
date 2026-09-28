@@ -11,3 +11,25 @@
   filter: invert(1);
   mix-blend-mode: screen;
 }
+
+/* Visually separates a reconstructed illustration from "Условие" (the
+ * real given condition) — a labelled block of its own, never styled to
+ * look like part of the task statement above it (audit Block 5). */
+.solutionIllustration {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+}
+
+.solutionIllustrationLabel {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
