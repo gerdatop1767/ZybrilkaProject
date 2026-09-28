@@ -1,14 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { CollectionListItem, ProgressByTopicResponse } from '@zybrilka/shared';
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
 import { startRealTask } from '../../lib/startTraining.js';
+import { getProgressByTaskNumber, getProgressByTopic, listCollections } from '../../lib/api.js';
 import {
   getSubjectContent,
-  getTaskNumbers,
-  getTopicProgress,
   taskSources,
   type SubjectModeId,
-  type SubjectTopic,
   type TaskSourceId,
   type TaskSourceGlyph,
 } from '../../data/subjectContent.js';
@@ -30,12 +29,34 @@ const sourceGlyphIcon: Record<TaskSourceGlyph, IconName> = {
   star: 'star',
 };
 
-const sourceOptions = taskSources.map((source) => ({ value: source.id, label: source.label }));
+/** Sentinel Select value for "Общий банк" (no collection filter) — Select's
+ * own value type is `string | null`, and `null` there means "nothing
+ * picked yet", not a deliberate "every source" choice, so this needs its
+ * own explicit, always-visible option instead of just an empty selection. */
+const ALL_SOURCES_VALUE = '__all__';
+
+function sourceSelectOptions(collections: readonly CollectionListItem[]) {
+  return [
+    { value: ALL_SOURCES_VALUE, label: 'Общий банк' },
+    ...collections.map((item) => ({ value: item.collection.slug, label: item.collection.title })),
+  ];
+}
 
 export interface SubjectDesktopProps {
   subjectId: string;
   from?: 'subjectCatalog' | 'learningCenter';
+  /** Pre-selects the "Источник" filter (e.g. arriving back from a task
+   * opened under a specific collection) — see navigation.tsx. */
+  collectionSlug?: string;
 }
+
+interface TaskNumberSummary {
+  number: number;
+  solved: number;
+  total: number;
+}
+
+type TopicProgressItem = ProgressByTopicResponse['items'][number];
 
 const modes: readonly { id: SubjectModeId; label: string; caption: string; icon: IconName }[] = [
   { id: 'topics', label: 'Темы', caption: 'Все темы по номерам', icon: 'reference' },
@@ -60,23 +81,129 @@ const modes: readonly { id: SubjectModeId; label: string; caption: string; icon:
  * here a deep link needs to restore, and it keeps this screen's own
  * back-stack (topic/number → list) independent of the app router's.
  */
-export function SubjectDesktop({ subjectId, from }: SubjectDesktopProps) {
+export function SubjectDesktop({ subjectId, from, collectionSlug }: SubjectDesktopProps) {
   const { navigate } = useNavigation();
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
   const content = getSubjectContent(subject.id);
 
   const [mode, setMode] = useState<SubjectModeId>('topics');
-  const [selectedTopic, setSelectedTopic] = useState<SubjectTopic | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<TopicProgressItem | null>(null);
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
-  const [byNumberSource, setByNumberSource] = useState<TaskSourceId>('fipi');
-  const [randomSource, setRandomSource] = useState<TaskSourceId>('fipi');
+  const [collections, setCollections] = useState<readonly CollectionListItem[]>([]);
+  const [collectionsLoaded, setCollectionsLoaded] = useState(false);
+  const [byNumberSlug, setByNumberSlug] = useState<string | null>(collectionSlug ?? null);
+  const [randomSlug, setRandomSlug] = useState<string | null>(collectionSlug ?? null);
+  const [topicsSlug, setTopicsSlug] = useState<string | null>(collectionSlug ?? null);
+  const [taskNumbers, setTaskNumbers] = useState<readonly TaskNumberSummary[]>(() =>
+    Array.from({ length: content.taskNumberCount }, (_, i) => ({
+      number: i + 1,
+      solved: 0,
+      total: 0,
+    })),
+  );
+  const [topics, setTopics] = useState<readonly TopicProgressItem[]>([]);
 
   const solved = Math.round((subject.taskCount * subject.mastery) / 100);
-  const friendRank = 1 + (hashCode(subject.id) % 12);
-  const taskNumbers = getTaskNumbers(subject.id, byNumberSource);
 
-  function startTraining(taskNumber: number) {
-    startRealTask(navigate, { subject: subject.id, taskNumber });
+  // Real collections for this subject — "Источник" always offers "Общий
+  // банк" plus whatever collections/variants exist, generically, never a
+  // hardcoded publisher. An unreachable API just leaves the list empty:
+  // every mode still works against the aggregate bank.
+  useEffect(() => {
+    let cancelled = false;
+    void listCollections()
+      .then((items) => {
+        if (cancelled) return;
+        setCollections(items.filter((item) => item.collection.subjectId === subject.id));
+        setCollectionsLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled) setCollectionsLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [subject.id]);
+
+  // A slug carried in from the route (or picked earlier) might name a
+  // collection that no longer exists/isn't published for this subject —
+  // derived (not synced via an effect) so it falls back to "Общий банк"
+  // the moment the real list loads, without a set-state-in-effect round trip.
+  const knownSlugs = new Set(collections.map((item) => item.collection.slug));
+  const effectiveByNumberSlug =
+    collectionsLoaded && byNumberSlug && !knownSlugs.has(byNumberSlug) ? null : byNumberSlug;
+  const effectiveRandomSlug =
+    collectionsLoaded && randomSlug && !knownSlugs.has(randomSlug) ? null : randomSlug;
+  const effectiveTopicsSlug =
+    collectionsLoaded && topicsSlug && !knownSlugs.has(topicsSlug) ? null : topicsSlug;
+
+  // Real X/Y per number (Block A) — re-fetched whenever the selected
+  // source changes. Numbers with no task in the current scope keep
+  // total=0 rather than being dropped, so the grid never shrinks/jumps.
+  useEffect(() => {
+    let cancelled = false;
+    void getProgressByTaskNumber({
+      subject: subject.id,
+      collection: effectiveByNumberSlug ?? undefined,
+    })
+      .then((res) => {
+        if (cancelled) return;
+        const byNumber = new Map(res.items.map((item) => [item.taskNumber, item]));
+        setTaskNumbers(
+          Array.from({ length: content.taskNumberCount }, (_, i) => {
+            const number = i + 1;
+            const row = byNumber.get(number);
+            return { number, solved: row?.completed ?? 0, total: row?.total ?? 0 };
+          }),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTaskNumbers(
+            Array.from({ length: content.taskNumberCount }, (_, i) => ({
+              number: i + 1,
+              solved: 0,
+              total: 0,
+            })),
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [subject.id, effectiveByNumberSlug, content.taskNumberCount]);
+
+  // Real topics (Block D) — the DB's own topics table, never the static
+  // per-subject design content, whose ids/names are a different,
+  // incompatible taxonomy. A topic with no published task in the
+  // current scope simply doesn't appear rather than showing a fake 0/0.
+  useEffect(() => {
+    let cancelled = false;
+    void getProgressByTopic({
+      subject: subject.id,
+      collection: effectiveTopicsSlug ?? undefined,
+    })
+      .then((res) => {
+        if (!cancelled) setTopics(res.items);
+      })
+      .catch(() => {
+        if (!cancelled) setTopics([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [subject.id, effectiveTopicsSlug]);
+
+  function startTraining(taskNumber: number, collection?: string) {
+    startRealTask(navigate, { subject: subject.id, taskNumber, collection });
+  }
+
+  function startTopicTraining(topic: TopicProgressItem) {
+    startRealTask(navigate, {
+      subject: subject.id,
+      topic: topic.topicId,
+      collection: effectiveTopicsSlug ?? undefined,
+    });
   }
 
   const parentLabel = from === 'learningCenter' ? 'К учебному центру' : 'К предметам';
@@ -115,10 +242,6 @@ export function SubjectDesktop({ subjectId, from }: SubjectDesktopProps) {
               <Icon name="progress" size={16} />
               <strong>{subject.mastery}%</strong> средняя точность
             </span>
-            <span className={styles.heroStat}>
-              <Icon name="crown" size={16} />
-              <strong>{friendRank}</strong> место среди друзей
-            </span>
           </div>
         </div>
       </div>
@@ -148,23 +271,26 @@ export function SubjectDesktop({ subjectId, from }: SubjectDesktopProps) {
         <div className={styles.main}>
           {mode === 'topics' && !selectedTopic && (
             <TopicsList
-              subjectId={subject.id}
-              topics={content.topics}
+              topics={topics}
+              collections={collections}
+              selectedSlug={effectiveTopicsSlug}
+              onSourceChange={setTopicsSlug}
               onSelect={setSelectedTopic}
             />
           )}
           {mode === 'topics' && selectedTopic && (
             <TopicDetail
-              subjectId={subject.id}
+              subjectName={subject.shortName}
               topic={selectedTopic}
-              onStart={() => startTraining(selectedTopic.number)}
+              onStart={() => startTopicTraining(selectedTopic)}
             />
           )}
           {mode === 'byNumber' && selectedNumber === null && (
             <TaskNumberGrid
               numbers={taskNumbers}
-              source={byNumberSource}
-              onSourceChange={setByNumberSource}
+              collections={collections}
+              selectedSlug={effectiveByNumberSlug}
+              onSourceChange={setByNumberSlug}
               onSelect={setSelectedNumber}
             />
           )}
@@ -172,9 +298,10 @@ export function SubjectDesktop({ subjectId, from }: SubjectDesktopProps) {
             <TaskNumberDetail
               subjectName={subject.shortName}
               number={selectedNumber}
-              source={byNumberSource}
+              collections={collections}
+              selectedSlug={effectiveByNumberSlug}
               summary={taskNumbers.find((n) => n.number === selectedNumber)!}
-              onStart={() => startTraining(selectedNumber)}
+              onStart={() => startTraining(selectedNumber, effectiveByNumberSlug ?? undefined)}
             />
           )}
           {mode === 'variants' && (
@@ -182,9 +309,10 @@ export function SubjectDesktop({ subjectId, from }: SubjectDesktopProps) {
           )}
           {mode === 'random' && (
             <RandomModeCard
-              source={randomSource}
-              onSourceChange={setRandomSource}
-              onStart={() => startTraining(1)}
+              collections={collections}
+              selectedSlug={effectiveRandomSlug}
+              onSourceChange={setRandomSlug}
+              onStart={() => startTraining(1, effectiveRandomSlug ?? undefined)}
             />
           )}
           {mode === 'favorites' && (
@@ -263,26 +391,9 @@ export function SubjectDesktop({ subjectId, from }: SubjectDesktopProps) {
 
           <Card>
             <p className="text-h3">Последние решения</p>
-            <div className={styles.recentList}>
-              {content.topics.slice(0, 4).map((topic, index) => {
-                const correct = (hashCode(`${subject.id}:${topic.id}`) + index) % 3 !== 0;
-                return (
-                  <div key={topic.id} className={styles.recentRow}>
-                    <Icon
-                      name={correct ? 'success' : 'errorCircle'}
-                      size={18}
-                      className={correct ? styles.recentSuccess : styles.recentError}
-                    />
-                    <span className={styles.recentBody}>
-                      <p className="text-body-sm" style={{ fontWeight: 700 }}>
-                        Задание {topic.number}
-                      </p>
-                      <p className="text-body-sm text-secondary">{topic.title}</p>
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+            <p className="text-body-sm text-secondary" style={{ marginTop: 'var(--space-2)' }}>
+              Пока нет данных о недавних решениях.
+            </p>
           </Card>
         </div>
       </div>
@@ -290,51 +401,59 @@ export function SubjectDesktop({ subjectId, from }: SubjectDesktopProps) {
   );
 }
 
-function hashCode(seed: string): number {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  }
-  return hash;
-}
-
 function TopicsList({
-  subjectId,
   topics,
+  collections,
+  selectedSlug,
+  onSourceChange,
   onSelect,
 }: {
-  subjectId: string;
-  topics: readonly SubjectTopic[];
-  onSelect: (topic: SubjectTopic) => void;
+  topics: readonly TopicProgressItem[];
+  collections: readonly CollectionListItem[];
+  selectedSlug: string | null;
+  onSourceChange: (slug: string | null) => void;
+  onSelect: (topic: TopicProgressItem) => void;
 }) {
   return (
     <Card>
-      <p className="text-h3">Темы ЕГЭ</p>
+      <div className={styles.numberGridHeader}>
+        <div>
+          <p className="text-h3">Темы ЕГЭ</p>
+          <p className="text-body-sm text-secondary">Реальные темы из базы заданий</p>
+        </div>
+        <div className={styles.sourceSelect}>
+          <span className="text-body-sm text-secondary">Источник:</span>
+          <Select
+            options={sourceSelectOptions(collections)}
+            value={selectedSlug ?? ALL_SOURCES_VALUE}
+            onChange={(value) => onSourceChange(value === ALL_SOURCES_VALUE ? null : value)}
+            sheetTitle="Источник"
+          />
+        </div>
+      </div>
       <div className={styles.topicList}>
+        {topics.length === 0 && (
+          <p className="text-body-sm text-secondary">В этом источнике пока нет тем.</p>
+        )}
         {topics.map((topic) => {
-          const progress = getTopicProgress(subjectId, topic);
+          const percent = topic.total > 0 ? Math.round((topic.completed / topic.total) * 100) : 0;
           return (
             <button
-              key={topic.id}
+              key={topic.topicId}
               type="button"
               className={styles.topicRow}
               onClick={() => onSelect(topic)}
             >
-              <span className={styles.topicNumber}>{topic.number}</span>
               <span className={styles.topicBody}>
                 <p className="text-body" style={{ fontWeight: 700 }}>
-                  {topic.title}
+                  {topic.topicName}
                 </p>
-                <p className="text-body-sm text-secondary">{topic.description}</p>
               </span>
               <span className={styles.topicStats}>
                 <span className="text-body-sm text-secondary">
-                  {progress.solved} / {progress.total} решено
+                  {topic.completed} / {topic.total} решено
                 </span>
-                <ProgressBar value={(progress.solved / progress.total) * 100} />
-                <span className="text-body-sm text-secondary">
-                  {progress.accuracyPercent}% точность
-                </span>
+                <ProgressBar value={percent} />
               </span>
               <Icon name="chevronRight" size={18} className={styles.topicArrow} />
             </button>
@@ -346,28 +465,33 @@ function TopicsList({
 }
 
 function TopicDetail({
-  subjectId,
+  subjectName,
   topic,
   onStart,
 }: {
-  subjectId: string;
-  topic: SubjectTopic;
+  subjectName: string;
+  topic: TopicProgressItem;
   onStart: () => void;
 }) {
-  const progress = getTopicProgress(subjectId, topic);
+  const percent = topic.total > 0 ? Math.round((topic.completed / topic.total) * 100) : 0;
   return (
     <Card>
-      <p className="text-h2">{topic.title}</p>
+      <p className="text-h2">{topic.topicName}</p>
       <p className="text-body-sm text-secondary" style={{ marginTop: 'var(--space-1)' }}>
-        {topic.description}
+        {subjectName}
       </p>
       <div className={styles.topicDetailStats}>
         <span className="text-body-sm text-secondary">
-          {progress.solved} / {progress.total} решено · {progress.accuracyPercent}% точность
+          {topic.completed} / {topic.total} решено
         </span>
-        <ProgressBar value={(progress.solved / progress.total) * 100} />
+        <ProgressBar value={percent} />
       </div>
-      <Button variant="primary" onClick={onStart} style={{ marginTop: 'var(--space-4)' }}>
+      <Button
+        variant="primary"
+        onClick={onStart}
+        disabled={topic.total === 0}
+        style={{ marginTop: 'var(--space-4)' }}
+      >
         Начать тренировку <Icon name="arrowRight" size={16} />
       </Button>
     </Card>
@@ -376,13 +500,15 @@ function TopicDetail({
 
 function TaskNumberGrid({
   numbers,
-  source,
+  collections,
+  selectedSlug,
   onSourceChange,
   onSelect,
 }: {
-  numbers: readonly { number: number; solved: number; total: number }[];
-  source: TaskSourceId;
-  onSourceChange: (source: TaskSourceId) => void;
+  numbers: readonly TaskNumberSummary[];
+  collections: readonly CollectionListItem[];
+  selectedSlug: string | null;
+  onSourceChange: (slug: string | null) => void;
   onSelect: (number: number) => void;
 }) {
   return (
@@ -395,9 +521,9 @@ function TaskNumberGrid({
         <div className={styles.sourceSelect}>
           <span className="text-body-sm text-secondary">Источник:</span>
           <Select
-            options={sourceOptions}
-            value={source}
-            onChange={(value) => onSourceChange(value as TaskSourceId)}
+            options={sourceSelectOptions(collections)}
+            value={selectedSlug ?? ALL_SOURCES_VALUE}
+            onChange={(value) => onSourceChange(value === ALL_SOURCES_VALUE ? null : value)}
             sheetTitle="Источник"
           />
         </div>
@@ -408,11 +534,14 @@ function TaskNumberGrid({
             key={item.number}
             type="button"
             className={styles.numberTile}
-            onClick={() => onSelect(item.number)}
+            disabled={item.total === 0}
+            onClick={() => {
+              if (item.total > 0) onSelect(item.number);
+            }}
           >
             <span className={styles.numberValue}>№{item.number}</span>
             <span className="text-body-sm text-secondary">
-              {item.solved}/{item.total}
+              {item.total > 0 ? `${item.solved}/${item.total}` : 'Нет заданий'}
             </span>
           </button>
         ))}
@@ -424,17 +553,21 @@ function TaskNumberGrid({
 function TaskNumberDetail({
   subjectName,
   number,
-  source,
+  collections,
+  selectedSlug,
   summary,
   onStart,
 }: {
   subjectName: string;
   number: number;
-  source: TaskSourceId;
-  summary: { solved: number; total: number };
+  collections: readonly CollectionListItem[];
+  selectedSlug: string | null;
+  summary: TaskNumberSummary;
   onStart: () => void;
 }) {
-  const sourceLabel = taskSources.find((s) => s.id === source)!.label;
+  const sourceLabel =
+    collections.find((c) => c.collection.slug === selectedSlug)?.collection.title ?? 'Общий банк';
+  const percent = summary.total > 0 ? (summary.solved / summary.total) * 100 : 0;
   return (
     <Card>
       <p className="text-h2">Задание №{number}</p>
@@ -443,11 +576,18 @@ function TaskNumberDetail({
       </p>
       <div className={styles.topicDetailStats}>
         <span className="text-body-sm text-secondary">
-          {summary.solved} / {summary.total} решено
+          {summary.total > 0
+            ? `${summary.solved} / ${summary.total} решено`
+            : 'Нет доступных заданий в этом источнике'}
         </span>
-        <ProgressBar value={(summary.solved / summary.total) * 100} />
+        <ProgressBar value={percent} />
       </div>
-      <Button variant="primary" onClick={onStart} style={{ marginTop: 'var(--space-4)' }}>
+      <Button
+        variant="primary"
+        onClick={onStart}
+        disabled={summary.total === 0}
+        style={{ marginTop: 'var(--space-4)' }}
+      >
         Начать тренировку по №{number} <Icon name="arrowRight" size={16} />
       </Button>
     </Card>
@@ -455,12 +595,14 @@ function TaskNumberDetail({
 }
 
 function RandomModeCard({
-  source,
+  collections,
+  selectedSlug,
   onSourceChange,
   onStart,
 }: {
-  source: TaskSourceId;
-  onSourceChange: (source: TaskSourceId) => void;
+  collections: readonly CollectionListItem[];
+  selectedSlug: string | null;
+  onSourceChange: (slug: string | null) => void;
   onStart: () => void;
 }) {
   return (
@@ -475,9 +617,9 @@ function RandomModeCard({
       <div className={styles.sourceSelect} style={{ marginTop: 'var(--space-4)' }}>
         <span className="text-body-sm text-secondary">Источник:</span>
         <Select
-          options={sourceOptions}
-          value={source}
-          onChange={(value) => onSourceChange(value as TaskSourceId)}
+          options={sourceSelectOptions(collections)}
+          value={selectedSlug ?? ALL_SOURCES_VALUE}
+          onChange={(value) => onSourceChange(value === ALL_SOURCES_VALUE ? null : value)}
           sheetTitle="Источник"
         />
       </div>

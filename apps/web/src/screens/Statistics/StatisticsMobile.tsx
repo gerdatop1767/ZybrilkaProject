@@ -2,16 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
 import { startRealTask } from '../../lib/startTraining.js';
-import { userStats } from '../../data/sampleProgress.js';
+import { computeMistakesSummary, type Mistake } from '../../data/sampleMistakes.js';
 import {
-  taskNumberProgress as mockTaskNumberProgress,
-  topicMasteryRows,
-  mockExams,
-  computeDifficultTopics,
-} from '../../data/sampleStatistics.js';
-import { getProgressSummary } from '../../lib/api.js';
+  getMistakes,
+  getProgressByTaskNumber,
+  getProgressByTopic,
+  getProgressSummary,
+} from '../../lib/api.js';
+import { toSampleMistake } from '../../lib/mistakeAdapter.js';
 import { toTaskNumberProgress } from '../../lib/progressAdapter.js';
-import type { ProgressSummary } from '@zybrilka/shared';
+import type { ProgressByTopicResponse, ProgressSummary } from '@zybrilka/shared';
 import { Card } from '../../ui/Card/Card.js';
 import { Tabs } from '../../ui/Tabs/Tabs.js';
 import { Icon } from '../../ui/Icon/Icon.js';
@@ -20,7 +20,7 @@ import { StatTile } from '../../ui/Statistics/StatTile.js';
 import { TaskNumberBars } from '../../ui/Statistics/TaskNumberBars.js';
 import { TaskNumberGrid } from '../../ui/Statistics/TaskNumberGrid.js';
 import { TopicProgressRow } from '../../ui/Statistics/TopicProgressRow.js';
-import { MockExamCard, NewMockExamCard } from '../../ui/Statistics/MockExamCard.js';
+import { NewMockExamCard } from '../../ui/Statistics/MockExamCard.js';
 import { CircularProgress } from '../../ui/Progress/CircularProgress.js';
 import { DonutChart } from '../../ui/Charts/DonutChart.js';
 import { FadeIn } from '../../ui/motion/motion.js';
@@ -35,10 +35,6 @@ const subTabs = [
 ];
 
 const DEFAULT_SUBJECT_ID = 'math';
-// A representative task number for rows (e.g. a topic) not tied to a
-// specific one — startRealTask fetches a real task matching it rather
-// than navigating to a fixed id.
-const DEFAULT_TASK_NUMBER = 15;
 
 /**
  * Mobile Statistics (S1 Block 6, approved design —
@@ -47,12 +43,23 @@ const DEFAULT_TASK_NUMBER = 15;
  * switchable tabs with no approved screenshot yet, so — per the same
  * rule already applied to desktop "Учебный центр"/"Меню" — they show
  * the neutral WIP placeholder rather than an invented layout.
+ *
+ * Every number here is real (Block D): task-number/topic X/Y from the
+ * same by-task-number/by-topic endpoints Subject uses, the errors
+ * donut from the real `/mistakes` feed. Level/XP/streak/average-time
+ * and mock exams have no backend metric behind them at all — they show
+ * a neutral "—"/empty state rather than fabricated numbers.
  */
 export function StatisticsMobile() {
   const { navigate } = useNavigation();
   const [subTab, setSubTab] = useState('overview');
   const subject = subjects.find((s) => s.id === DEFAULT_SUBJECT_ID) ?? subjects[0]!;
   const [realProgress, setRealProgress] = useState<ProgressSummary | null>(null);
+  const [taskNumberItems, setTaskNumberItems] = useState<
+    Awaited<ReturnType<typeof getProgressByTaskNumber>>['items']
+  >([]);
+  const [topics, setTopics] = useState<ProgressByTopicResponse['items']>([]);
+  const [mistakes, setMistakes] = useState<readonly Mistake[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,29 +68,55 @@ export function StatisticsMobile() {
         if (!cancelled) setRealProgress(data);
       })
       .catch(() => {
-        // No backend data yet (or the request failed) — screen stays on
-        // the demo profile numbers below.
+        // No backend data yet (or the request failed) — headline tiles
+        // stay at their neutral zero/dash state below.
+      });
+    void getProgressByTaskNumber({ subject: subject.id })
+      .then((res) => {
+        if (!cancelled) setTaskNumberItems(res.items);
+      })
+      .catch(() => {
+        if (!cancelled) setTaskNumberItems([]);
+      });
+    void getProgressByTopic({ subject: subject.id })
+      .then((res) => {
+        if (!cancelled) setTopics(res.items);
+      })
+      .catch(() => {
+        if (!cancelled) setTopics([]);
+      });
+    void getMistakes()
+      .then((items) => {
+        if (!cancelled) setMistakes(items.map(toSampleMistake));
+      })
+      .catch(() => {
+        if (!cancelled) setMistakes([]);
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [subject.id]);
 
-  const difficultTopics = useMemo(() => computeDifficultTopics(), []);
+  const difficultTopics = useMemo(
+    () =>
+      mistakes.length > 0
+        ? computeMistakesSummary(mistakes).topicBreakdown.filter((row) => row.topic !== 'Остальные')
+        : [],
+    [mistakes],
+  );
   const taskNumberProgress = useMemo(
-    () => (realProgress ? toTaskNumberProgress(realProgress.byTaskNumber) : mockTaskNumberProgress),
-    [realProgress],
+    () => toTaskNumberProgress(taskNumberItems),
+    [taskNumberItems],
   );
-  const solvedTotal = realProgress?.solvedTotal ?? userStats.solvedTotal;
-  const accuracyPercent = realProgress
-    ? Math.round(realProgress.accuracyPercent)
-    : userStats.accuracy;
-  const avgExamPercent = Math.round(
-    mockExams.reduce((sum, e) => sum + e.percent, 0) / mockExams.length,
-  );
+  const solvedTotal = realProgress?.solvedTotal ?? 0;
+  const accuracyPercent = realProgress ? Math.round(realProgress.accuracyPercent) : 0;
 
   function openTask(taskNumber: number) {
     startRealTask(navigate, { subject: subject.id, taskNumber });
+  }
+
+  function openTopic(topic: ProgressByTopicResponse['items'][number]) {
+    startRealTask(navigate, { subject: subject.id, topic: topic.topicId });
   }
 
   return (
@@ -131,37 +164,48 @@ export function StatisticsMobile() {
               <p className="text-h3">Темы ЕГЭ</p>
             </div>
             <div className={styles.topicList}>
-              {topicMasteryRows.map((row) => (
-                <TopicProgressRow
-                  key={row.topic}
-                  icon={row.icon}
-                  topic={row.topic}
-                  masteryPercent={row.masteryPercent}
-                  onSelect={() => openTask(DEFAULT_TASK_NUMBER)}
-                />
-              ))}
+              {topics.length === 0 && (
+                <p className="text-body-sm text-secondary">Пока нет данных по темам.</p>
+              )}
+              {topics.map((topic) => {
+                const percent =
+                  topic.total > 0 ? Math.round((topic.completed / topic.total) * 100) : 0;
+                return (
+                  <TopicProgressRow
+                    key={topic.topicId}
+                    icon="topic"
+                    topic={topic.topicName}
+                    masteryPercent={percent}
+                    onSelect={() => openTopic(topic)}
+                  />
+                );
+              })}
             </div>
           </Card>
           <Card className={styles.donutCard}>
             <div className={styles.cardHeaderRow}>
               <p className="text-h3">Распределение ошибок по темам</p>
             </div>
-            <DonutChart
-              ariaLabel="Распределение ошибок по темам"
-              size={160}
-              segments={difficultTopics.map((t) => ({
-                label: t.topic,
-                value: t.errorPercent,
-                percent: t.errorPercent,
-                color: t.color,
-              }))}
-              centerLabel={
-                <>
-                  <p className="text-h3">{difficultTopics.length}</p>
-                  <p className="text-body-sm text-secondary">тем</p>
-                </>
-              }
-            />
+            {difficultTopics.length === 0 ? (
+              <p className="text-body-sm text-secondary">Пока нет данных об ошибках.</p>
+            ) : (
+              <DonutChart
+                ariaLabel="Распределение ошибок по темам"
+                size={160}
+                segments={difficultTopics.map((t) => ({
+                  label: t.topic,
+                  value: t.percent,
+                  percent: t.percent,
+                  color: t.color,
+                }))}
+                centerLabel={
+                  <>
+                    <p className="text-h3">{difficultTopics.length}</p>
+                    <p className="text-body-sm text-secondary">тем</p>
+                  </>
+                }
+              />
+            )}
           </Card>
         </FadeIn>
       )}
@@ -169,21 +213,16 @@ export function StatisticsMobile() {
       {subTab === 'exams' && (
         <FadeIn className={styles.stack}>
           <Card className={styles.summaryCard}>
-            <CircularProgress
-              value={avgExamPercent}
-              variant={avgExamPercent >= 75 ? 'success' : avgExamPercent < 60 ? 'error' : 'default'}
-              size={72}
-              label="Средний результат"
-            >
+            <CircularProgress value={0} size={72} label="Средний результат">
               <span className="text-body" style={{ fontWeight: 700 }}>
-                {avgExamPercent}%
+                —
               </span>
             </CircularProgress>
             <div>
               <p className="text-body" style={{ fontWeight: 700 }}>
-                {mockExams.length} пробника решено
+                0 пробников решено
               </p>
-              <p className="text-body-sm text-secondary">средний результат</p>
+              <p className="text-body-sm text-secondary">пробные варианты ещё не поддерживаются</p>
             </div>
           </Card>
           <Card>
@@ -191,9 +230,6 @@ export function StatisticsMobile() {
               <p className="text-h3">Решённые пробники</p>
             </div>
             <div className={styles.examGrid}>
-              {mockExams.map((exam) => (
-                <MockExamCard key={exam.id} exam={exam} />
-              ))}
               <NewMockExamCard />
             </div>
           </Card>
@@ -216,21 +252,21 @@ export function StatisticsMobile() {
               label="Точность"
               value={accuracyPercent}
               suffix="%"
-              deltaLabel={`${realProgress?.correctTotal ?? Math.round((accuracyPercent / 100) * solvedTotal)} верных`}
+              deltaLabel={`${realProgress?.correctTotal ?? 0} верных`}
             />
             <StatTile
               icon="xp"
               iconColor="var(--color-gold)"
               label="Текущая серия"
-              value={userStats.streakDays}
-              suffix=" дней"
+              value="—"
+              deltaLabel="скоро"
             />
             <StatTile
               icon="time"
               iconColor="var(--color-accent-primary)"
               label="Среднее время"
-              value="2:14"
-              deltaLabel="на задание"
+              value="—"
+              deltaLabel="скоро"
             />
           </div>
 
@@ -253,15 +289,22 @@ export function StatisticsMobile() {
               </button>
             </div>
             <div className={styles.topicList}>
-              {topicMasteryRows.map((row) => (
-                <TopicProgressRow
-                  key={row.topic}
-                  icon={row.icon}
-                  topic={row.topic}
-                  masteryPercent={row.masteryPercent}
-                  onSelect={() => openTask(DEFAULT_TASK_NUMBER)}
-                />
-              ))}
+              {topics.length === 0 && (
+                <p className="text-body-sm text-secondary">Пока нет данных по темам.</p>
+              )}
+              {topics.map((topic) => {
+                const percent =
+                  topic.total > 0 ? Math.round((topic.completed / topic.total) * 100) : 0;
+                return (
+                  <TopicProgressRow
+                    key={topic.topicId}
+                    icon="topic"
+                    topic={topic.topicName}
+                    masteryPercent={percent}
+                    onSelect={() => openTopic(topic)}
+                  />
+                );
+              })}
             </div>
           </Card>
 
@@ -273,9 +316,6 @@ export function StatisticsMobile() {
               </span>
             </div>
             <div className={styles.examScroller}>
-              {mockExams.map((exam) => (
-                <MockExamCard key={exam.id} exam={exam} />
-              ))}
               <NewMockExamCard />
             </div>
           </Card>

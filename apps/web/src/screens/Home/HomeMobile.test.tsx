@@ -1,15 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HomeMobile } from './HomeMobile.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
-import { userStats } from '../../data/sampleProgress.js';
-import { getStreakAsset, getLevelAsset } from '../../lib/rank.js';
 import * as api from '../../lib/api.js';
 
 vi.mock('../../lib/api.js', () => ({
   getRandomTask: vi.fn(),
+  getProgressSummary: vi.fn(),
 }));
 
 const RANDOM_TASK = {
@@ -46,6 +45,18 @@ function renderHome() {
   );
 }
 
+beforeEach(() => {
+  vi.mocked(api.getProgressSummary).mockResolvedValue({
+    solvedTotal: 0,
+    correctTotal: 0,
+    incorrectTotal: 0,
+    accuracyPercent: 0,
+    bySubject: [],
+    byTaskNumber: [],
+    byTopic: [],
+  });
+});
+
 describe('HomeMobile', () => {
   it('renders the hero greeting and CTA', () => {
     renderHome();
@@ -53,12 +64,31 @@ describe('HomeMobile', () => {
     expect(screen.getByRole('button', { name: /Начать тренировку/ })).toBeInTheDocument();
   });
 
-  it('renders real progress numbers from shared data', () => {
+  it('renders real solved/accuracy numbers from /progress/summary, not the demo profile', async () => {
+    vi.mocked(api.getProgressSummary).mockResolvedValue({
+      solvedTotal: 248,
+      correctTotal: 203,
+      incorrectTotal: 45,
+      accuracyPercent: 82,
+      bySubject: [],
+      byTaskNumber: [],
+      byTopic: [],
+    });
     renderHome();
-    expect(screen.getByText('320 / 500 XP')).toBeInTheDocument();
-    expect(screen.getByText(/12 дней/)).toBeInTheDocument();
-    expect(screen.getByText('248')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('248')).toBeInTheDocument());
     expect(screen.getByText('82%')).toBeInTheDocument();
+  });
+
+  it('shows a neutral dash for streak, never a fabricated day count', () => {
+    renderHome();
+    expect(screen.getByText('Серия')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
+  });
+
+  it('shows 0/0% before the real progress data has loaded, never a fabricated fallback', () => {
+    renderHome();
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('0%')).toBeInTheDocument();
   });
 
   it('renders every popular subject as a tappable card', () => {
@@ -84,17 +114,6 @@ describe('HomeMobile', () => {
     await waitFor(() => {
       expect(screen.getByTestId('overlay')).toHaveTextContent('task');
     });
-  });
-
-  it('uses the shared LevelBadge/StreakBadge PNGs in the progress card, never an emoji', () => {
-    renderHome();
-    expect(
-      document.querySelector(`img[src="${getLevelAsset(userStats.level)}"]`),
-    ).toBeInTheDocument();
-    expect(
-      document.querySelector(`img[src="${getStreakAsset(userStats.streakDays)}"]`),
-    ).toBeInTheDocument();
-    expect(document.body.textContent).not.toMatch(/🔥|👑/);
   });
 
   it('shows a real subject illustration for every popular subject, not a flat glyph tile', () => {

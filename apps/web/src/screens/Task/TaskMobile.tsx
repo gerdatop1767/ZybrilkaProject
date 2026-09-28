@@ -3,6 +3,7 @@ import { useNavigation } from '../../lib/navigation.js';
 import { serializeMultiPartUserAnswer } from '@zybrilka/shared';
 import { getTask, listTasksByNumber, submitAttempt } from '../../lib/api.js';
 import { toSampleTask } from '../../lib/taskAdapter.js';
+import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
 import type { TaskVariant } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
@@ -21,6 +22,8 @@ export interface TaskMobileProps {
   subjectId: string;
   taskNumber: number;
   taskId: string;
+  collectionSlug?: string;
+  variantId?: string;
 }
 
 const mathSymbols = ['∞', '∪', '∩', '≤', '≥', '≠'];
@@ -31,9 +34,16 @@ const mathSymbols = ['∞', '∪', '∩', '≤', '≥', '≠'];
  * collapsed tools/variants state is the default; both are real
  * toggles, not two hardcoded screens.
  */
-export function TaskMobile({ subjectId, taskNumber, taskId }: TaskMobileProps) {
+export function TaskMobile({
+  subjectId,
+  taskNumber,
+  taskId,
+  collectionSlug,
+  variantId,
+}: TaskMobileProps) {
   const { navigate, back } = useNavigation();
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
+  const taskNav = useTaskNavigation({ subjectId, taskId, collectionSlug, variantId });
 
   // The router remounts this component (key={taskId}) on every task
   // change, so state starts fresh here — no manual reset-on-taskId-change
@@ -85,6 +95,8 @@ export function TaskMobile({ subjectId, taskNumber, taskId }: TaskMobileProps) {
           taskId: task.id,
           correct: result.correct,
           userAnswer: userAnswerForResult,
+          collectionSlug,
+          variantId: taskNav.variantId ?? undefined,
         });
       })
       .finally(() => setChecking(false));
@@ -92,6 +104,9 @@ export function TaskMobile({ subjectId, taskNumber, taskId }: TaskMobileProps) {
 
   function handleSelectVariant(variant: TaskVariant) {
     if (!task) return;
+    // Cross-source sibling ("Похожие задания на эту тему") — explicitly
+    // drop the current source/variant context, same as TaskDesktop's
+    // handleSelectSession.
     navigate({
       screen: 'task',
       subjectId: task.subjectId,
@@ -126,7 +141,16 @@ export function TaskMobile({ subjectId, taskNumber, taskId }: TaskMobileProps) {
 
   return (
     <SlideUp key={task.id} className={styles.stack}>
-      <TaskChrome subject={subject} task={task} onBack={back} />
+      <TaskChrome
+        subject={subject}
+        task={task}
+        onBack={back}
+        numberStripRange={taskNav.orderedTasks}
+        onSelectNumber={taskNav.goTo}
+        previous={taskNav.previous}
+        next={taskNav.next}
+        onGoTo={taskNav.goTo}
+      />
 
       <div className={styles.card}>
         <div className={styles.metaRow}>

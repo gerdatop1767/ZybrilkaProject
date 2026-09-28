@@ -3,6 +3,9 @@ import type {
   AttemptResult,
   CollectionListItem,
   Mistake,
+  ProgressByTaskNumberResponse,
+  ProgressByTopicResponse,
+  ProgressDailyResponse,
   ProgressSummary,
   TaskPublic,
   TaskWithSolution,
@@ -78,12 +81,15 @@ export function getRandomTask(params: {
   collection?: string;
   /** A specific variant's id — restricts the random pick to just that variant. */
   variant?: string;
+  /** A specific topic's id — restricts the random pick to that topic. */
+  topic?: string;
 }): Promise<TaskPublic> {
   const query = new URLSearchParams();
   if (params.subject) query.set('subject', params.subject);
   if (params.taskNumber) query.set('taskNumber', String(params.taskNumber));
   if (params.collection) query.set('collection', params.collection);
   if (params.variant) query.set('variant', params.variant);
+  if (params.topic) query.set('topic', params.topic);
   const qs = query.toString();
   return apiFetch(`/tasks/random${qs ? `?${qs}` : ''}`);
 }
@@ -94,6 +100,19 @@ export function listCollections(): Promise<CollectionListItem[]> {
 
 export function getVariant(id: string): Promise<VariantDetail> {
   return apiFetch(`/variants/${id}`);
+}
+
+/**
+ * Resolves the (published) variant a task belongs to — the ordered
+ * exam context used for top-strip navigation, prev/next, and Result's
+ * "Следующее задание", when only a taskId is known (not yet an
+ * explicit variantId). `collection` isolates the resolution to one
+ * source; throws (via ApiError, 404) when the task isn't part of any
+ * matching variant.
+ */
+export function getVariantForTask(taskId: string, collection?: string): Promise<VariantDetail> {
+  const qs = collection ? `?collection=${encodeURIComponent(collection)}` : '';
+  return apiFetch(`/variants/for-task/${taskId}${qs}`);
 }
 
 export function listTasksByNumber(subject: string, taskNumber: number): Promise<TaskPublic[]> {
@@ -115,4 +134,55 @@ export function getMistakes(): Promise<Mistake[]> {
 
 export function getProgressSummary(): Promise<ProgressSummary> {
   return apiFetch('/progress/summary');
+}
+
+/**
+ * Real X/Y for the "По номерам" grid — `total` real, unique published
+ * tasks per number under the given filters, `completed` real, unique
+ * tasks the current user has attempted. No `collection`/`variant`
+ * means the aggregate bank across every source; passing one scopes to
+ * just that source, exactly like `getRandomTask`.
+ */
+export function getProgressByTaskNumber(params: {
+  subject?: string;
+  collection?: string;
+  variant?: string;
+}): Promise<ProgressByTaskNumberResponse> {
+  const query = new URLSearchParams();
+  if (params.subject) query.set('subject', params.subject);
+  if (params.collection) query.set('collection', params.collection);
+  if (params.variant) query.set('variant', params.variant);
+  const qs = query.toString();
+  return apiFetch(`/progress/by-task-number${qs ? `?${qs}` : ''}`);
+}
+
+/**
+ * Real X/Y per real DB topic (never the static per-subject design
+ * content) — same total/completed contract and source scoping as
+ * `getProgressByTaskNumber`.
+ */
+export function getProgressByTopic(params: {
+  subject?: string;
+  collection?: string;
+  variant?: string;
+}): Promise<ProgressByTopicResponse> {
+  const query = new URLSearchParams();
+  if (params.subject) query.set('subject', params.subject);
+  if (params.collection) query.set('collection', params.collection);
+  if (params.variant) query.set('variant', params.variant);
+  const qs = query.toString();
+  return apiFetch(`/progress/by-topic${qs ? `?${qs}` : ''}`);
+}
+
+/**
+ * Real per-day activity for the "Активность по дням" chart — see
+ * apps/api/src/modules/progress/repo.ts's getDaily for the exact
+ * bucketing/dedup rules. Only days with at least one attempt come
+ * back; callers zero-fill the requested range themselves.
+ */
+export function getProgressDaily(params: { days?: number } = {}): Promise<ProgressDailyResponse> {
+  const query = new URLSearchParams();
+  if (params.days) query.set('days', String(params.days));
+  const qs = query.toString();
+  return apiFetch(`/progress/daily${qs ? `?${qs}` : ''}`);
 }

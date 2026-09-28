@@ -36,8 +36,28 @@ export type OverlayRoute =
        * this router has no general back-stack, so the one drill-down
        * that needs it carries its own parent explicitly. */
       from?: 'subjectCatalog' | 'learningCenter';
+      /** The collection slug selected in the "Источник" picker (e.g.
+       * "ege-2026-yashchenko"), or absent for "Общий банк" (no
+       * filter). Carried here — not component-local state — so it
+       * survives navigating away to a task and back: this is the same
+       * pattern subjectId/taskNumber/taskId already use to cross a
+       * screen unmount, never a value a component would lose. */
+      collectionSlug?: string;
     }
-  | { screen: 'task'; subjectId: string; taskNumber: number; taskId: string }
+  | {
+      screen: 'task';
+      subjectId: string;
+      taskNumber: number;
+      taskId: string;
+      collectionSlug?: string;
+      /** A specific variant's id, when already known (e.g. picked
+       * explicitly in Training's "Вариант" mode) — lets the task
+       * navigation hook skip re-resolving it from collectionSlug+taskId
+       * on every screen. Absent just means "resolve it lazily"; it is
+       * NOT required for source/variant isolation, which collectionSlug
+       * alone already provides. */
+      variantId?: string;
+    }
   | {
       screen: 'result';
       subjectId: string;
@@ -47,6 +67,8 @@ export type OverlayRoute =
       /** The user's actual submitted answer — Result must show what
        * they really typed, never a placeholder. */
       userAnswer: string;
+      collectionSlug?: string;
+      variantId?: string;
     }
   | { screen: 'mistakes' }
   /** Addressable placeholders for training modes not yet built as
@@ -113,7 +135,7 @@ const NavigationContext = createContext<NavigationContextValue | null>(null);
 function initialRoute(): Route {
   return typeof window === 'undefined'
     ? { screen: 'home' }
-    : routeFromPath(window.location.pathname);
+    : routeFromPath(window.location.pathname + window.location.search);
 }
 
 /**
@@ -140,7 +162,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     function onPopState() {
-      const route = routeFromPath(window.location.pathname);
+      const route = routeFromPath(window.location.pathname + window.location.search);
       if (isTabRoute(route)) {
         setTab(route.screen);
         setOverlay(null);
@@ -160,7 +182,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       setOverlay(route);
     }
     const path = pathForRoute(route);
-    if (path !== null && path !== window.location.pathname) {
+    const currentPath = window.location.pathname + window.location.search;
+    if (path !== null && path !== currentPath) {
       window.history.pushState(null, '', path);
     }
   }, []);

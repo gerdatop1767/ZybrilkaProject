@@ -33,3 +33,72 @@ export const progressSummarySchema = z.object({
   ),
 });
 export type ProgressSummary = z.infer<typeof progressSummarySchema>;
+
+/**
+ * Same collection/variant scoping shape as TaskListQuery/RandomTaskQuery
+ * (packages/shared/src/tasks.ts) — no filter given means "aggregate
+ * across every source", exactly one of collection/variant given means
+ * "only this source's tasks". Works unchanged for any future
+ * collection/variant, never a specific publisher's id.
+ */
+export const progressByTaskNumberQuerySchema = z.object({
+  subject: z.string().optional(),
+  collection: z.string().optional(),
+  variant: z.uuid().optional(),
+});
+export type ProgressByTaskNumberQuery = z.infer<typeof progressByTaskNumberQuerySchema>;
+
+export const progressByTaskNumberResponseSchema = z.object({
+  items: z.array(
+    z.object({
+      subjectId: z.string(),
+      taskNumber: z.number().int().positive(),
+      /** Real, unique tasks available for this number under the given filters. */
+      total: z.number().int().nonnegative(),
+      /** Unique tasks (not attempts) the current user has answered at least once. */
+      completed: z.number().int().nonnegative(),
+    }),
+  ),
+});
+export type ProgressByTaskNumberResponse = z.infer<typeof progressByTaskNumberResponseSchema>;
+
+/** Same shape/semantics as progressByTaskNumberQuerySchema — scoping is
+ * identical for every real-progress endpoint, never special-cased. */
+export const progressByTopicQuerySchema = progressByTaskNumberQuerySchema;
+export type ProgressByTopicQuery = z.infer<typeof progressByTopicQuerySchema>;
+
+export const progressByTopicResponseSchema = z.object({
+  items: z.array(
+    z.object({
+      topicId: z.uuid(),
+      topicName: z.string(),
+      /** Real, unique published tasks in this topic under the given filters. */
+      total: z.number().int().nonnegative(),
+      /** Unique tasks (not attempts) the current user has answered at least once. */
+      completed: z.number().int().nonnegative(),
+    }),
+  ),
+});
+export type ProgressByTopicResponse = z.infer<typeof progressByTopicResponseSchema>;
+
+export const progressDailyQuerySchema = z.object({
+  days: z.coerce.number().int().min(1).max(90).optional(),
+});
+export type ProgressDailyQuery = z.infer<typeof progressDailyQuerySchema>;
+
+export const progressDailyResponseSchema = z.object({
+  items: z.array(
+    z.object({
+      /** ISO calendar date (YYYY-MM-DD), UTC day boundary — same
+       * timezone-less convention as the rest of this API; only days
+       * with at least one attempt are included, so callers zero-fill
+       * the requested range themselves (same precedent as
+       * by-task-number's sparse `items`). */
+      date: z.string(),
+      /** Unique tasks (not attempts) this user attempted that day. */
+      solved: z.number().int().nonnegative(),
+      accuracyPercent: z.number().min(0).max(100),
+    }),
+  ),
+});
+export type ProgressDailyResponse = z.infer<typeof progressDailyResponseSchema>;

@@ -4,8 +4,6 @@ import { Icon } from '../Icon/Icon.js';
 import type { IconName } from '../Icon/icons.js';
 import { SubjectTile } from '../SubjectTile/SubjectTile.js';
 import { Avatar } from '../Leaderboard/Avatar.js';
-import { ProgressBar } from '../Progress/ProgressBar.js';
-import { userStats } from '../../data/sampleProgress.js';
 import { startRealTask } from '../../lib/startTraining.js';
 import { useNavigation, type MainTabId, type OverlayRoute } from '../../lib/navigation.js';
 import { clsx } from '../../lib/clsx.js';
@@ -179,22 +177,12 @@ export function MobileMenu({ open, onClose, activeTab }: MobileMenuProps) {
             className={styles.profileRow}
             onClick={() => go({ screen: 'settings' })}
           >
-            <Avatar username={userStats.name} color="var(--color-accent-primary)" size={48} />
+            <Avatar username="?" color="var(--color-accent-primary)" size={48} />
             <div className={styles.profileBody}>
               <p className={`text-body ${styles.profileName}`} style={{ fontWeight: 700 }}>
-                {userStats.name}
+                Профиль
               </p>
-              <div className={styles.profileLevelRow}>
-                <ProgressBar
-                  value={(userStats.xp / userStats.xpToNextLevel) * 100}
-                  label="Прогресс уровня"
-                  className={styles.profileProgressBar}
-                />
-                <span className={styles.profileXp}>
-                  {userStats.xp} / {userStats.xpToNextLevel} XP
-                </span>
-              </div>
-              <p className="text-body-sm text-secondary">{userStats.level} уровень</p>
+              <p className="text-body-sm text-secondary">Имя не задано</p>
             </div>
             <Icon name="chevronRight" size={18} className={styles.navChevron} />
           </button>

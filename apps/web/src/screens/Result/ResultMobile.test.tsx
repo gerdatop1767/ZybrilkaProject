@@ -11,6 +11,8 @@ import * as api from '../../lib/api.js';
 vi.mock('../../lib/api.js', () => ({
   getTask: vi.fn(),
   listTasksByNumber: vi.fn(),
+  getVariant: vi.fn(),
+  getVariantForTask: vi.fn(),
 }));
 
 const TASK_ID = '11111111-1111-1111-1111-111111111111';
@@ -89,11 +91,57 @@ describe('ResultMobile — correct state', () => {
     expect(screen.getByText(EXPLANATION)).toBeInTheDocument();
   });
 
-  it('navigates to the next task', async () => {
+  it('has no ordered context without a collection/variant, so "Следующее задание" stays inert', async () => {
     const user = userEvent.setup();
     renderResult(true);
     await screen.findByText('Правильно!');
-    await user.click(screen.getByRole('button', { name: /Следующее задание/ }));
+    expect(screen.getByRole('button', { name: 'Следующее задание' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Следующее задание' }));
+    expect(screen.getByTestId('overlay')).toHaveTextContent('none');
+  });
+
+  it('navigates to the next task using the ordered variant context when known', async () => {
+    const user = userEvent.setup();
+    const nextTaskId = '33333333-3333-3333-3333-333333333333';
+    vi.mocked(api.getVariant).mockResolvedValue({
+      variant: {
+        id: 'variant-1',
+        collectionId: 'col-1',
+        variantNumber: 1,
+        title: 'Вариант 1',
+        year: null,
+      },
+      collection: {
+        id: 'col-1',
+        subjectId: 'math',
+        slug: 'ege-2026-yashchenko',
+        title: 'Ященко',
+        publisher: null,
+        year: null,
+        description: null,
+      },
+      tasks: [
+        { position: 1, task: taskWithSolution },
+        { position: 2, task: { ...taskWithSolution, id: nextTaskId, taskNumber: 16 } },
+      ],
+    });
+    render(
+      <NavigationProvider>
+        <ResultMobile
+          subjectId={baseTask.subjectId}
+          taskNumber={baseTask.taskNumber}
+          taskId={TASK_ID}
+          correct
+          userAnswer={CORRECT_ANSWER}
+          variantId="variant-1"
+        />
+        <OverlayMarker />
+      </NavigationProvider>,
+    );
+    await screen.findByText('Правильно!');
+    const nextButton = await screen.findByRole('button', { name: 'Следующее задание' });
+    expect(nextButton).toBeEnabled();
+    await user.click(nextButton);
     expect(screen.getByTestId('overlay')).toHaveTextContent('task');
   });
 });

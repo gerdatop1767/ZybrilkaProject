@@ -70,6 +70,28 @@ describe('tasks routes', () => {
     expect(res.statusCode).toBe(404);
   });
 
+  it('GET /api/v1/tasks/random respects a topic filter', async () => {
+    const [task] = await testDb.db
+      .select()
+      .from(schema.tasks)
+      .where(eq(schema.tasks.status, 'published'))
+      .limit(1);
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/tasks/random?topic=${task!.topicId}`,
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().topicId).toBe(task!.topicId);
+  });
+
+  it('GET /api/v1/tasks/random 404s for a topic with no published tasks', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/tasks/random?topic=${randomUUID()}`,
+    });
+    expect(res.statusCode).toBe(404);
+  });
+
   describe('POST /api/v1/tasks/:id/attempt', () => {
     it('requires an x-anon-id header', async () => {
       const [task] = await testDb.db.select().from(schema.tasks).limit(1);

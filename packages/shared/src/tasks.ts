@@ -102,6 +102,8 @@ export const randomTaskQuerySchema = z.object({
   collection: z.string().optional(),
   /** A specific variant's id — restrict the random pick to just that variant. */
   variant: z.uuid().optional(),
+  /** A specific topic's id — restrict the random pick to that topic. */
+  topic: z.uuid().optional(),
 });
 export type RandomTaskQuery = z.infer<typeof randomTaskQuerySchema>;
 

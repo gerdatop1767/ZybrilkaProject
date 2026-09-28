@@ -31,6 +31,40 @@ export async function getPublishedVariantById(
   return row;
 }
 
+/**
+ * Finds the (published) variant a task belongs to — the reverse of
+ * `listVariantTasks`, used to resolve "which ordered exam is this task
+ * a part of" when a caller knows only a taskId (and, optionally, a
+ * collection slug to disambiguate/isolate a specific source rather
+ * than matching any collection the task happens to appear in). A task
+ * can in principle sit in more than one variant (variant_tasks is
+ * many-to-many); this returns the first published match, which is
+ * exact and unambiguous for every case that exists today (one task,
+ * one variant) and still well-defined once a collection scope is
+ * given for the many-variant case.
+ */
+export async function getVariantForTask(
+  db: Database,
+  taskId: string,
+  collectionSlug?: string,
+): Promise<VariantWithCollection | undefined> {
+  const conditions = [
+    eq(schema.variantTasks.taskId, taskId),
+    eq(schema.variants.status, 'published'),
+    eq(schema.collections.status, 'published'),
+  ];
+  if (collectionSlug) conditions.push(eq(schema.collections.slug, collectionSlug));
+
+  const [row] = await db
+    .select({ variant: schema.variants, collection: schema.collections })
+    .from(schema.variantTasks)
+    .innerJoin(schema.variants, eq(schema.variantTasks.variantId, schema.variants.id))
+    .innerJoin(schema.collections, eq(schema.variants.collectionId, schema.collections.id))
+    .where(and(...conditions))
+    .limit(1);
+  return row;
+}
+
 export interface VariantTaskRow {
   position: number;
   task: typeof schema.tasks.$inferSelect;

@@ -1,6 +1,6 @@
 import { Icon } from '../Icon/Icon.js';
 import { SubjectTile } from '../SubjectTile/SubjectTile.js';
-import { TaskNumberStrip } from './TaskNumberStrip.js';
+import { TaskNumberStrip, type TaskNumberStripEntry } from './TaskNumberStrip.js';
 import { ProgressBar } from '../Progress/ProgressBar.js';
 import type { Subject } from '../../data/subjects.js';
 import type { SampleTask } from '../../data/sampleTask.js';
@@ -10,15 +10,34 @@ export interface TaskChromeProps {
   subject: Subject;
   task: SampleTask;
   onBack: () => void;
+  /** The real ordered task list for the current source/variant — see
+   * TaskNumberStrip; empty when there's no source/variant context. */
+  numberStripRange: readonly TaskNumberStripEntry[];
+  onSelectNumber: (entry: TaskNumberStripEntry) => void;
+  previous: TaskNumberStripEntry | null;
+  next: TaskNumberStripEntry | null;
+  onGoTo: (entry: TaskNumberStripEntry) => void;
 }
 
 /**
  * The header + task-number strip + session-progress bar shared by
  * mobile Training and Result (S1 Block 6, approved design) — visually
  * and structurally identical across both screenshots, so it lives
- * once rather than being duplicated per screen.
+ * once rather than being duplicated per screen. The strip and the
+ * prev/next round buttons are both driven by the shared
+ * useTaskNavigation hook via the parent screen — this component stays
+ * purely presentational.
  */
-export function TaskChrome({ subject, task, onBack }: TaskChromeProps) {
+export function TaskChrome({
+  subject,
+  task,
+  onBack,
+  numberStripRange,
+  onSelectNumber,
+  previous,
+  next,
+  onGoTo,
+}: TaskChromeProps) {
   const progressPercent = (task.indexInSession / task.totalInSession) * 100;
 
   return (
@@ -42,7 +61,27 @@ export function TaskChrome({ subject, task, onBack }: TaskChromeProps) {
         </button>
       </div>
 
-      <TaskNumberStrip active={task.number} onSelect={() => undefined} />
+      <div className={styles.navRow}>
+        <button
+          type="button"
+          className={styles.iconButton}
+          aria-label="Предыдущий номер задания"
+          disabled={!previous}
+          onClick={() => previous && onGoTo(previous)}
+        >
+          <Icon name="chevronLeft" size={20} />
+        </button>
+        <TaskNumberStrip active={task.number} range={numberStripRange} onSelect={onSelectNumber} />
+        <button
+          type="button"
+          className={styles.iconButton}
+          aria-label="Следующий номер задания"
+          disabled={!next}
+          onClick={() => next && onGoTo(next)}
+        >
+          <Icon name="chevronRight" size={20} />
+        </button>
+      </div>
 
       <div>
         <div className={styles.progressRow}>

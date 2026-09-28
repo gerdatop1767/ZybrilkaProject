@@ -36,7 +36,11 @@ export function AppDesktop() {
       <DesktopShell header={header} sidebar={sidebar}>
         {overlay.screen === 'subjectCatalog' && <SubjectCatalogDesktop />}
         {overlay.screen === 'subject' && (
-          <SubjectDesktop subjectId={overlay.subjectId} from={overlay.from} />
+          <SubjectDesktop
+            subjectId={overlay.subjectId}
+            from={overlay.from}
+            collectionSlug={overlay.collectionSlug}
+          />
         )}
         {overlay.screen === 'task' && (
           <TaskDesktop
@@ -44,6 +48,8 @@ export function AppDesktop() {
             subjectId={overlay.subjectId}
             taskNumber={overlay.taskNumber}
             taskId={overlay.taskId}
+            collectionSlug={overlay.collectionSlug}
+            variantId={overlay.variantId}
           />
         )}
         {overlay.screen === 'result' && (
@@ -54,6 +60,8 @@ export function AppDesktop() {
             taskId={overlay.taskId}
             correct={overlay.correct}
             userAnswer={overlay.userAnswer}
+            collectionSlug={overlay.collectionSlug}
+            variantId={overlay.variantId}
           />
         )}
         {overlay.screen === 'mistakes' && <MistakesDesktop />}

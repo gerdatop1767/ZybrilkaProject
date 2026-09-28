@@ -1,13 +1,12 @@
+import { useEffect, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
-import { userStats } from '../../data/sampleProgress.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
-import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { StatRow } from '../../ui/StatRow/StatRow.js';
 import { startRealTask } from '../../lib/startTraining.js';
-import { StreakBadge } from '../../ui/RankBadge/StreakBadge.js';
-import { LevelBadge } from '../../ui/RankBadge/LevelBadge.js';
+import { getProgressSummary } from '../../lib/api.js';
+import type { ProgressSummary } from '@zybrilka/shared';
 import { SlideUp } from '../../ui/motion/motion.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './HomeMobile.module.css';
@@ -17,11 +16,31 @@ import styles from './HomeMobile.module.css';
  * logged-in dashboard. Structurally its own composition, not a scaled
  * desktop layout — desktop Home is a separate marketing page
  * (see HomeDesktop.tsx).
+ *
+ * "Решено"/"Правильно" are real (`GET /progress/summary`, Block D).
+ * There's no backend streak/level/XP system at all yet, so "Серия"
+ * shows a neutral "—" rather than a fabricated number or badge — see
+ * docs/PRODUCTION_DATA_MODEL.md before adding one instead of guessing.
  */
 export function HomeMobile() {
   const { navigate } = useNavigation();
-  const levelPercent = Math.round((userStats.xp / userStats.xpToNextLevel) * 100);
   const popularSubjects = subjects.slice(0, 6);
+  const [progress, setProgress] = useState<ProgressSummary | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getProgressSummary()
+      .then((data) => {
+        if (!cancelled) setProgress(data);
+      })
+      .catch(() => {
+        // No backend data yet (or the request failed) — stats stay at
+        // their neutral zero state below.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <SlideUp className={styles.stack}>
@@ -63,30 +82,11 @@ export function HomeMobile() {
       </div>
 
       <div className={styles.progressCard}>
-        <div className={styles.progressHeader}>
-          <span className={styles.levelBadge}>
-            <LevelBadge level={userStats.level} size={32} />
-          </span>
-          <div className={styles.progressHeaderText}>
-            <p className="text-body" style={{ fontWeight: 700 }}>
-              Уровень {userStats.level}
-            </p>
-            <ProgressBar value={levelPercent} label="Опыт" />
-          </div>
-          <span className="text-body-sm text-secondary">
-            {userStats.xp} / {userStats.xpToNextLevel} XP
-          </span>
-        </div>
         <StatRow
           items={[
             {
               id: 'streak',
-              value: (
-                <span className={styles.statValue}>
-                  <StreakBadge days={userStats.streakDays} size={18} />
-                  {userStats.streakDays} дней
-                </span>
-              ),
+              value: <span className={styles.statValue}>—</span>,
               label: 'Серия',
             },
             {
@@ -94,7 +94,7 @@ export function HomeMobile() {
               value: (
                 <span className={styles.statValue}>
                   <Icon name="success" size={16} className={styles.statIconSuccess} />
-                  {userStats.solvedTotal}
+                  {progress?.solvedTotal ?? 0}
                 </span>
               ),
               label: 'Решено',
@@ -104,7 +104,7 @@ export function HomeMobile() {
               value: (
                 <span className={styles.statValue}>
                   <Icon name="star" size={16} className={styles.statIconGold} />
-                  {userStats.accuracy}%
+                  {progress ? Math.round(progress.accuracyPercent) : 0}%
                 </span>
               ),
               label: 'Правильно',
