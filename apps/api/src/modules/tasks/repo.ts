@@ -32,8 +32,14 @@ function encodeCursor(row: TaskRow): string {
  * a *published* variant/collection, so an archived/draft one silently
  * yields no tasks rather than leaking them. Returns null when neither
  * filter is given, so callers skip the condition entirely.
+ *
+ * Exported so other modules (progress) can scope their own queries to
+ * the exact same collection/variant membership rules without
+ * duplicating this SQL — one source of truth for "which tasks belong
+ * to this source", reused by every future collection/variant, not
+ * special-cased per publisher.
  */
-function taskIdsForCollectionOrVariant(
+export function taskIdsForCollectionOrVariant(
   db: Database,
   filters: { collection?: string; variant?: string },
 ) {

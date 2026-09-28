@@ -1,5 +1,9 @@
 import type { Database } from '@zybrilka/db';
-import type { ProgressSummary } from '@zybrilka/shared';
+import type {
+  ProgressByTaskNumberQuery,
+  ProgressByTaskNumberResponse,
+  ProgressSummary,
+} from '@zybrilka/shared';
 import * as repo from './repo.js';
 
 function accuracy(solved: number, correct: number): number {
@@ -43,4 +47,13 @@ export async function getSummary(db: Database, userId: string): Promise<Progress
         accuracyPercent: accuracy(row.solved, row.correct),
       })),
   };
+}
+
+export async function getByTaskNumberWithTotals(
+  db: Database,
+  userId: string,
+  filters: ProgressByTaskNumberQuery,
+): Promise<ProgressByTaskNumberResponse> {
+  const items = await repo.getByTaskNumberWithTotals(db, userId, filters);
+  return { items };
 }
