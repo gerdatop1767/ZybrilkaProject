@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { MobileShell } from './MobileShell.js';
 import { NavigationProvider } from '../../lib/navigation.js';
 
@@ -31,8 +30,7 @@ describe('MobileShell', () => {
     expect(container.querySelector('nav')).not.toBeInTheDocument();
   });
 
-  it('sends the header logo/mascot to Учебный центр without a page reload', async () => {
-    const user = userEvent.setup();
+  it('renders the header logo/mascot as plain decoration, not a navigation control', () => {
     render(
       <NavigationProvider>
         <MobileShell nav={<span>nav</span>}>
@@ -40,8 +38,9 @@ describe('MobileShell', () => {
         </MobileShell>
       </NavigationProvider>,
     );
-    await user.click(screen.getByRole('button', { name: 'Zybrilka — Учебный центр' }));
-    expect(window.location.pathname).toBe('/learning');
+    expect(
+      screen.queryByRole('button', { name: 'Zybrilka — Учебный центр' }),
+    ).not.toBeInTheDocument();
   });
 
   it('renders the nav and children together', () => {

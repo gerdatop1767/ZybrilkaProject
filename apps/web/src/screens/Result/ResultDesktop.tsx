@@ -51,7 +51,7 @@ export function ResultDesktop({
   collectionSlug,
   variantId,
 }: ResultDesktopProps) {
-  const { back } = useNavigation();
+  const { navigate, back } = useNavigation();
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
   const taskNav = useTaskNavigation({ subjectId, taskId, collectionSlug, variantId });
   // The router remounts this component (key={taskId}) whenever the task
@@ -110,6 +110,16 @@ export function ResultDesktop({
   function goToNext() {
     if (!taskNav.next) return;
     taskNav.goTo(taskNav.next);
+  }
+
+  function goToTaskList() {
+    if (!task) return;
+    navigate({
+      screen: 'subject',
+      subjectId: task.subjectId,
+      collectionSlug,
+      initialMode: 'byNumber',
+    });
   }
 
   return (
@@ -312,7 +322,7 @@ export function ResultDesktop({
             )}
 
             <div className={styles.actions}>
-              <Button variant="secondary" onClick={back}>
+              <Button variant="secondary" onClick={correct ? goToTaskList : back}>
                 {correct ? <Icon name="grid" size={16} /> : <Icon name="retry" size={16} />}
                 {correct ? 'К списку заданий' : 'Попробовать ещё раз'}
               </Button>

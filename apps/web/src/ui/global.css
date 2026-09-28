@@ -141,3 +141,25 @@ a,
 .text-disabled {
   color: var(--color-text-disabled);
 }
+
+/* KaTeX formulas can render wider than a mobile viewport (long
+   fractions, systems of equations) — scroll horizontally within the
+   formula itself instead of clipping off-screen or forcing the whole
+   page to scroll sideways. Applies to both `$$...$$` display blocks
+   and a single `$...$` inline formula too wide to wrap with its
+   surrounding text. */
+.katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* `overflow` has no effect on a plain inline box, so a wide inline
+   formula needs `inline-block` first for the scroll region to apply. */
+.katex {
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  vertical-align: middle;
+}

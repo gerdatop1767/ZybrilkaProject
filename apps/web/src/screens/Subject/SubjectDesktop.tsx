@@ -4,13 +4,7 @@ import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
 import { startRealTask } from '../../lib/startTraining.js';
 import { getProgressByTaskNumber, getProgressByTopic, listCollections } from '../../lib/api.js';
-import {
-  getSubjectContent,
-  taskSources,
-  type SubjectModeId,
-  type TaskSourceId,
-  type TaskSourceGlyph,
-} from '../../data/subjectContent.js';
+import { getSubjectContent, type SubjectModeId } from '../../data/subjectContent.js';
 import { BackRow, type BackRowProps } from '../../ui/BackRow/BackRow.js';
 import { Card } from '../../ui/Card/Card.js';
 import { Button } from '../../ui/Button/Button.js';
@@ -21,13 +15,6 @@ import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { CircularProgress } from '../../ui/Progress/CircularProgress.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './SubjectDesktop.module.css';
-
-const sourceGlyphIcon: Record<TaskSourceGlyph, IconName> = {
-  document: 'variant',
-  bank: 'bank',
-  book: 'reference',
-  star: 'star',
-};
 
 /** Sentinel Select value for "Общий банк" (no collection filter) — Select's
  * own value type is `string | null`, and `null` there means "nothing
@@ -48,6 +35,9 @@ export interface SubjectDesktopProps {
   /** Pre-selects the "Источник" filter (e.g. arriving back from a task
    * opened under a specific collection) — see navigation.tsx. */
   collectionSlug?: string;
+  /** Opens straight into this mode tab (e.g. Result's "К списку
+   * заданий" wants "По номерам") instead of the default "Темы". */
+  initialMode?: SubjectModeId;
 }
 
 interface TaskNumberSummary {
@@ -81,12 +71,17 @@ const modes: readonly { id: SubjectModeId; label: string; caption: string; icon:
  * here a deep link needs to restore, and it keeps this screen's own
  * back-stack (topic/number → list) independent of the app router's.
  */
-export function SubjectDesktop({ subjectId, from, collectionSlug }: SubjectDesktopProps) {
+export function SubjectDesktop({
+  subjectId,
+  from,
+  collectionSlug,
+  initialMode,
+}: SubjectDesktopProps) {
   const { navigate } = useNavigation();
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
   const content = getSubjectContent(subject.id);
 
-  const [mode, setMode] = useState<SubjectModeId>('topics');
+  const [mode, setMode] = useState<SubjectModeId>(initialMode ?? 'topics');
   const [selectedTopic, setSelectedTopic] = useState<TopicProgressItem | null>(null);
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
   const [collections, setCollections] = useState<readonly CollectionListItem[]>([]);
@@ -305,7 +300,11 @@ export function SubjectDesktop({ subjectId, from, collectionSlug }: SubjectDeskt
             />
           )}
           {mode === 'variants' && (
-            <VariantBuilder taskNumberCount={content.taskNumberCount} onStart={startTraining} />
+            <VariantBuilder
+              taskNumberCount={content.taskNumberCount}
+              collections={collections}
+              onStart={startTraining}
+            />
           )}
           {mode === 'random' && (
             <RandomModeCard
@@ -632,15 +631,19 @@ function RandomModeCard({
 
 function VariantBuilder({
   taskNumberCount,
+  collections,
   onStart,
 }: {
   taskNumberCount: number;
-  onStart: (firstNumber: number) => void;
+  collections: readonly CollectionListItem[];
+  onStart: (firstNumber: number, collection?: string) => void;
 }) {
   const allNumbers = Array.from({ length: taskNumberCount }, (_, i) => i + 1);
-  const [source, setSource] = useState<TaskSourceId>('fipi');
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [selected, setSelected] = useState<ReadonlySet<number>>(new Set());
-  const activeSource = taskSources.find((s) => s.id === source)!;
+  const activeSourceLabel =
+    collections.find((item) => item.collection.slug === selectedSlug)?.collection.title ??
+    'Общий банк';
 
   function toggleNumber(number: number) {
     setSelected((prev) => {
@@ -673,21 +676,13 @@ function VariantBuilder({
       </p>
 
       <p className={styles.builderStepLabel}>1. Выбери источник</p>
-      <div className={styles.sourceGrid}>
-        {taskSources.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={clsx(styles.sourceCard, source === item.id && styles.sourceCardActive)}
-            onClick={() => setSource(item.id)}
-          >
-            <Icon name={sourceGlyphIcon[item.glyph]} size={20} />
-            <span className="text-body-sm" style={{ fontWeight: 700 }}>
-              {item.cardTitle}
-            </span>
-            <span className="text-body-sm text-secondary">{item.cardCaption}</span>
-          </button>
-        ))}
+      <div className={styles.sourceSelect}>
+        <Select
+          options={sourceSelectOptions(collections)}
+          value={selectedSlug ?? ALL_SOURCES_VALUE}
+          onChange={(value) => setSelectedSlug(value === ALL_SOURCES_VALUE ? null : value)}
+          sheetTitle="Источник"
+        />
       </div>
 
       <div className={styles.builderStepHeader}>
@@ -724,7 +719,7 @@ function VariantBuilder({
           </p>
           <p className="text-body-sm text-secondary">
             {selected.size > 0 ? `Номера: ${sortedSelected.join(', ')}` : 'Номера не выбраны'} ·
-            Источник: {activeSource.cardTitle}
+            Источник: {activeSourceLabel}
           </p>
         </span>
         <Button variant="secondary" onClick={reset} disabled={selected.size === 0}>
@@ -736,7 +731,7 @@ function VariantBuilder({
         variant="primary"
         fullWidth
         disabled={selected.size === 0}
-        onClick={() => onStart(sortedSelected[0]!)}
+        onClick={() => onStart(sortedSelected[0]!, selectedSlug ?? undefined)}
         style={{ marginTop: 'var(--space-4)' }}
       >
         <Icon name="play" size={16} /> Собрать вариант и начать решать

@@ -9,6 +9,8 @@ vi.mock('../../lib/api.js', () => ({
   getTask: vi.fn(),
   listTasksByNumber: vi.fn(),
   submitAttempt: vi.fn(),
+  getVariant: vi.fn(),
+  getVariantForTask: vi.fn(),
 }));
 
 const TASK_ID = '11111111-1111-1111-1111-111111111111';
@@ -47,10 +49,57 @@ const siblings = [
   { ...baseTask, id: SIBLING_B, conditionMd: 'log₃(x + 2) + log₃x ≥ 1' },
 ];
 
+const COLLECTION_SLUG = 'ege-2026-yashchenko';
+const VARIANT_ID = 'variant-1';
+const NEXT_TASK_ID = '44444444-4444-4444-4444-444444444444';
+
+const variantCollection = {
+  id: 'c1',
+  subjectId: 'math',
+  slug: COLLECTION_SLUG,
+  title: 'ЕГЭ 2026 Ященко',
+  publisher: 'Ященко',
+  year: 2026,
+  description: null,
+};
+
+const variantMeta = {
+  id: VARIANT_ID,
+  collectionId: 'c1',
+  variantNumber: 1,
+  title: 'Вариант 1',
+  year: 2026,
+};
+
+/** Two-task ordered variant — TASK_ID has a real "next" task to skip to. */
+const twoTaskVariant = {
+  variant: variantMeta,
+  collection: variantCollection,
+  tasks: [
+    { position: 1, task: { ...baseTask, id: TASK_ID } },
+    { position: 2, task: { ...baseTask, id: NEXT_TASK_ID, taskNumber: 16 } },
+  ],
+};
+
+/** Single-task variant — TASK_ID is both first and last, no "next". */
+const oneTaskVariant = {
+  variant: variantMeta,
+  collection: variantCollection,
+  tasks: [{ position: 1, task: { ...baseTask, id: TASK_ID } }],
+};
+
 function OverlayMarker() {
   const { overlay } = useNavigation();
   if (overlay?.screen === 'result') {
     return <p data-testid="overlay">result:{overlay.correct ? 'correct' : 'incorrect'}</p>;
+  }
+  if (overlay?.screen === 'task') {
+    return (
+      <p data-testid="overlay">
+        task:{overlay.taskId}:{overlay.collectionSlug ?? 'no-collection'}:
+        {overlay.variantId ?? 'no-variant'}
+      </p>
+    );
   }
   return <p data-testid="overlay">{overlay?.screen ?? 'none'}</p>;
 }
@@ -62,6 +111,20 @@ function renderTask() {
         subjectId={baseTask.subjectId}
         taskNumber={baseTask.taskNumber}
         taskId={TASK_ID}
+      />
+      <OverlayMarker />
+    </NavigationProvider>,
+  );
+}
+
+function renderTaskWithVariantContext() {
+  return render(
+    <NavigationProvider>
+      <TaskMobile
+        subjectId={baseTask.subjectId}
+        taskNumber={baseTask.taskNumber}
+        taskId={TASK_ID}
+        collectionSlug={COLLECTION_SLUG}
       />
       <OverlayMarker />
     </NavigationProvider>,
@@ -254,6 +317,68 @@ describe('TaskMobile', () => {
           answer: { a: 'нет', b: '607', c: '1066' },
         });
       });
+    });
+  });
+
+  describe('Пропустить (skip)', () => {
+    it('skips from the first task to the next real task in the variant, using useTaskNavigation', async () => {
+      vi.mocked(api.getVariantForTask).mockResolvedValue(twoTaskVariant);
+      const user = userEvent.setup();
+      renderTaskWithVariantContext();
+      const skip = await screen.findByRole('button', { name: /Пропустить/ });
+      await waitFor(() => expect(skip).toBeEnabled());
+      await user.click(skip);
+      await waitFor(() => {
+        expect(screen.getByTestId('overlay')).toHaveTextContent(`task:${NEXT_TASK_ID}`);
+      });
+    });
+
+    it('preserves the current source/collection when skipping', async () => {
+      vi.mocked(api.getVariantForTask).mockResolvedValue(twoTaskVariant);
+      const user = userEvent.setup();
+      renderTaskWithVariantContext();
+      const skip = await screen.findByRole('button', { name: /Пропустить/ });
+      await waitFor(() => expect(skip).toBeEnabled());
+      await user.click(skip);
+      await waitFor(() => {
+        expect(screen.getByTestId('overlay')).toHaveTextContent(COLLECTION_SLUG);
+      });
+    });
+
+    it('preserves the resolved variant when skipping', async () => {
+      vi.mocked(api.getVariantForTask).mockResolvedValue(twoTaskVariant);
+      const user = userEvent.setup();
+      renderTaskWithVariantContext();
+      const skip = await screen.findByRole('button', { name: /Пропустить/ });
+      await waitFor(() => expect(skip).toBeEnabled());
+      await user.click(skip);
+      await waitFor(() => {
+        expect(screen.getByTestId('overlay')).toHaveTextContent(VARIANT_ID);
+      });
+    });
+
+    it('does not submit an attempt (no correct/incorrect, no completion) when skipping', async () => {
+      vi.mocked(api.getVariantForTask).mockResolvedValue(twoTaskVariant);
+      const user = userEvent.setup();
+      renderTaskWithVariantContext();
+      const skip = await screen.findByRole('button', { name: /Пропустить/ });
+      await waitFor(() => expect(skip).toBeEnabled());
+      await user.click(skip);
+      await waitFor(() => {
+        expect(screen.getByTestId('overlay')).toHaveTextContent('task:');
+      });
+      expect(api.submitAttempt).not.toHaveBeenCalled();
+    });
+
+    it('disables Пропустить on the last task of the variant, so it never leaves the source boundary', async () => {
+      vi.mocked(api.getVariantForTask).mockResolvedValue(oneTaskVariant);
+      const user = userEvent.setup();
+      renderTaskWithVariantContext();
+      await screen.findByText(CONDITION);
+      const skip = await screen.findByRole('button', { name: /Пропустить/ });
+      await waitFor(() => expect(skip).toBeDisabled());
+      await user.click(skip);
+      expect(screen.getByTestId('overlay')).toHaveTextContent('none');
     });
   });
 });

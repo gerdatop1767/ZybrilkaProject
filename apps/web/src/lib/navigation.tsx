@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { pathForRoute, routeFromPath } from './routes.js';
+import type { SubjectModeId } from '../data/subjectContent.js';
 
 /**
  * The persistent tabs behind the bottom nav (mobile) / sidebar
@@ -43,6 +44,11 @@ export type OverlayRoute =
        * pattern subjectId/taskNumber/taskId already use to cross a
        * screen unmount, never a value a component would lose. */
       collectionSlug?: string;
+      /** Opens the Subject page straight into this mode (e.g. `'byNumber'`
+       * when returning from Result's "К списку заданий") instead of the
+       * default "Темы" tab — absent means "let the page pick its own
+       * default", same as before this existed. */
+      initialMode?: SubjectModeId;
     }
   | {
       screen: 'task';

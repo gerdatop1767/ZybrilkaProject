@@ -1,4 +1,13 @@
 import type { MainTabId, OverlayRoute, Route } from './navigation.js';
+import type { SubjectModeId } from '../data/subjectContent.js';
+
+const subjectModeIds: readonly SubjectModeId[] = [
+  'topics',
+  'byNumber',
+  'variants',
+  'random',
+  'favorites',
+];
 
 /**
  * URL <-> Route mapping. The URL is the single source of truth for
@@ -72,7 +81,10 @@ export function pathForRoute(route: Route): string | null {
 
   if (route.screen === 'subject') {
     const slug = subjectSlugs[route.subjectId] ?? route.subjectId;
-    const query = route.collectionSlug ? `?source=${encodeURIComponent(route.collectionSlug)}` : '';
+    const params = new URLSearchParams();
+    if (route.collectionSlug) params.set('source', route.collectionSlug);
+    if (route.initialMode) params.set('mode', route.initialMode);
+    const query = params.size > 0 ? `?${params.toString()}` : '';
     return `/subjects/${slug}${query}`;
   }
 
@@ -110,7 +122,11 @@ export function routeFromPath(pathname: string): Route {
     const slug = subjectMatch[1]!;
     const subjectId = slugToSubjectId[slug] ?? slug;
     const collectionSlug = params.get('source') ?? undefined;
-    return { screen: 'subject', subjectId, from: 'subjectCatalog', collectionSlug };
+    const modeParam = params.get('mode');
+    const initialMode = subjectModeIds.includes(modeParam as SubjectModeId)
+      ? (modeParam as SubjectModeId)
+      : undefined;
+    return { screen: 'subject', subjectId, from: 'subjectCatalog', collectionSlug, initialMode };
   }
 
   if (path === '/profile') return { screen: 'profile' };

@@ -300,34 +300,6 @@
   font-weight: var(--font-weight-bold);
 }
 
-.sourceGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-3);
-}
-
-.sourceCard {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: var(--space-3);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-card);
-  background: var(--color-bg-surface);
-  color: var(--color-text-primary);
-  cursor: pointer;
-  text-align: left;
-}
-
-.sourceCard:hover {
-  background: var(--color-bg-elevated);
-}
-
-.sourceCardActive {
-  border-color: var(--color-accent-primary);
-  background: color-mix(in srgb, var(--color-accent-primary) 16%, var(--color-bg-surface));
-}
-
 .builderStepHeader {
   display: flex;
   align-items: center;
@@ -416,10 +388,6 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .sourceGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .numberChipGrid {
     grid-template-columns: repeat(8, minmax(0, 1fr));
   }
@@ -463,10 +431,6 @@
 
   .sourceSelect > div:last-child {
     width: 100%;
-  }
-
-  .sourceGrid {
-    grid-template-columns: 1fr;
   }
 
   .numberChipGrid {

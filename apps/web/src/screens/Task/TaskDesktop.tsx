@@ -287,7 +287,11 @@ export function TaskDesktop({
             </div>
 
             <div className={styles.actions}>
-              <Button variant="secondary" onClick={back}>
+              <Button
+                variant="secondary"
+                disabled={!taskNav.next}
+                onClick={() => taskNav.next && taskNav.goTo(taskNav.next)}
+              >
                 <Icon name="skip" size={16} /> Пропустить
               </Button>
               <Button
