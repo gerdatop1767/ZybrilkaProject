@@ -10,10 +10,9 @@ import {
 import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
 import type { SampleTask, TaskVariant } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
-import { userStats } from '../../data/sampleProgress.js';
+import { getProgressSummary } from '../../lib/api.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
-import { StreakBadge } from '../../ui/RankBadge/StreakBadge.js';
 import { TaskChrome } from '../../ui/Training/TaskChrome.js';
 import { ToolsPanelMobile } from '../../ui/Training/ToolsPanelMobile.js';
 import { OtherVariantsSection } from '../../ui/Training/OtherVariantsSection.js';
@@ -61,6 +60,7 @@ export function ResultMobile({
   const [toolsOpen, setToolsOpen] = useState(false);
   const [otherOpen, setOtherOpen] = useState(false);
   const [solutionOpen, setSolutionOpen] = useState(false);
+  const [accuracyPercent, setAccuracyPercent] = useState<number | null>(null);
   const xp = useCountUp(correct ? XP_REWARD : 0, 500);
 
   useEffect(() => {
@@ -77,6 +77,21 @@ export function ResultMobile({
       cancelled = true;
     };
   }, [taskId, subjectId, taskNumber]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getProgressSummary()
+      .then((data) => {
+        if (!cancelled) setAccuracyPercent(Math.round(data.accuracyPercent));
+      })
+      .catch(() => {
+        // No backend data yet (or the request failed) — the accuracy
+        // chip stays hidden below rather than showing a fabricated number.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (loadError) {
     return (
@@ -157,17 +172,15 @@ export function ResultMobile({
             <Icon name="xp" size={16} className={styles.statIconGold} />+{Math.round(xp)} XP
           </span>
           <span className={styles.statChip}>
-            <StreakBadge days={userStats.streakDays} size={18} />
-            Серия {userStats.streakDays} дней
-          </span>
-          <span className={styles.statChip}>
             <Icon name="progress" size={16} className={styles.statIconBlue} />
             Время 1:24
           </span>
-          <span className={styles.statChip}>
-            <Icon name="star" size={16} className={styles.statIconGold} />
-            Точность {userStats.accuracy}%
-          </span>
+          {accuracyPercent !== null && (
+            <span className={styles.statChip}>
+              <Icon name="star" size={16} className={styles.statIconGold} />
+              Точность {accuracyPercent}%
+            </span>
+          )}
         </div>
 
         {multiPartGrade && multiPartUserAnswer ? (

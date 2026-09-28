@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
-import { topicMastery } from '../../data/sampleProgress.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Card } from '../../ui/Card/Card.js';
 import { Chip } from '../../ui/Chip/Chip.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { Logo } from '../../ui/Logo/Logo.js';
-import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { clsx } from '../../lib/clsx.js';
 import { FadeIn } from '../../ui/motion/motion.js';
 import styles from './Onboarding.module.css';
@@ -157,11 +155,11 @@ export function Onboarding() {
           <div className={styles.centered}>
             <h1 className="text-h2">Короткая диагностика</h1>
             <p className="text-body text-secondary">
-              Ответь на 10–15 заданий (≈10 минут) — это поможет понять твой текущий уровень по
-              темам.
+              Диагностика ещё в разработке — скоро она поможет понять твой текущий уровень по темам.
+              Пока можно сразу перейти к тренировкам.
             </p>
             <Button variant="primary" fullWidth onClick={() => setStep(5)}>
-              Начать диагностику
+              Далее
             </Button>
           </div>
         )}
@@ -169,20 +167,13 @@ export function Onboarding() {
         {step === 5 && (
           <>
             <div className={styles.centered}>
-              <h1 className="text-h2">Готово! Вот твой профиль</h1>
+              <h1 className="text-h2">Почти готово!</h1>
             </div>
             <Card>
-              {topicMastery.map((topic) => (
-                <div key={topic.topic} className={styles.skillRow}>
-                  <span className={clsx('text-body-sm', styles.skillName)}>{topic.topic}</span>
-                  <ProgressBar
-                    value={topic.mastery}
-                    label={topic.topic}
-                    className={styles.skillBar}
-                  />
-                  <span className="text-body-sm text-secondary">{topic.mastery}%</span>
-                </div>
-              ))}
+              <p className="text-body-sm text-secondary">
+                Диагностика и профиль по темам появятся здесь, когда мы их реализуем. Начни
+                тренироваться — прогресс будет собираться по мере решения заданий.
+              </p>
             </Card>
             <Button variant="primary" fullWidth onClick={() => navigate({ screen: 'home' })}>
               Перейти к тренировкам

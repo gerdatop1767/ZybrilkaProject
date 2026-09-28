@@ -4,8 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { serializeMultiPartSpec, serializeMultiPartUserAnswer } from '@zybrilka/shared';
 import { ResultDesktop } from './ResultDesktop.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
-import { userStats } from '../../data/sampleProgress.js';
-import { getStreakAsset } from '../../lib/rank.js';
 import * as api from '../../lib/api.js';
 
 vi.mock('../../lib/api.js', () => ({
@@ -197,16 +195,5 @@ describe('ResultDesktop — multi_part task', () => {
     expect(screen.getByText('Пояснение к а.')).toBeInTheDocument();
     expect(screen.getAllByText('Пояснение к б и в.')).toHaveLength(2);
     expect(screen.getByText('1066')).toBeInTheDocument();
-  });
-});
-
-describe('ResultDesktop — badges', () => {
-  it('uses the shared StreakBadge PNG for the streak reward chip, never an emoji', async () => {
-    renderResult(true);
-    await screen.findByText(EXPLANATION);
-    expect(
-      document.querySelector(`img[src="${getStreakAsset(userStats.streakDays)}"]`),
-    ).toBeInTheDocument();
-    expect(document.body.textContent).not.toMatch(/🔥/);
   });
 });

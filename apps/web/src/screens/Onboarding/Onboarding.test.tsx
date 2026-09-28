@@ -53,8 +53,8 @@ describe('Onboarding', () => {
     await user.click(screen.getByRole('button', { name: 'Далее' }));
     await user.click(screen.getByRole('button', { name: /Первая часть ЕГЭ/ }));
     await user.click(screen.getByRole('button', { name: 'Далее' }));
-    await user.click(screen.getByRole('button', { name: 'Начать диагностику' }));
-    expect(screen.getByText('Готово! Вот твой профиль')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Далее' }));
+    expect(screen.getByText('Почти готово!')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Перейти к тренировкам' }));
     expect(screen.getByTestId('nav')).toHaveTextContent('home');

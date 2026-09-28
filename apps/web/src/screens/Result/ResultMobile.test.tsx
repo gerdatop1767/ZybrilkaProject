@@ -4,8 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { serializeMultiPartSpec, serializeMultiPartUserAnswer } from '@zybrilka/shared';
 import { ResultMobile } from './ResultMobile.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
-import { userStats } from '../../data/sampleProgress.js';
-import { getStreakAsset } from '../../lib/rank.js';
 import * as api from '../../lib/api.js';
 
 vi.mock('../../lib/api.js', () => ({
@@ -13,6 +11,7 @@ vi.mock('../../lib/api.js', () => ({
   listTasksByNumber: vi.fn(),
   getVariant: vi.fn(),
   getVariantForTask: vi.fn(),
+  getProgressSummary: vi.fn(),
 }));
 
 const TASK_ID = '11111111-1111-1111-1111-111111111111';
@@ -68,6 +67,15 @@ function renderResult(correct: boolean, userAnswer = correct ? CORRECT_ANSWER : 
 beforeEach(() => {
   vi.mocked(api.getTask).mockResolvedValue(taskWithSolution);
   vi.mocked(api.listTasksByNumber).mockResolvedValue(siblings);
+  vi.mocked(api.getProgressSummary).mockResolvedValue({
+    solvedTotal: 42,
+    correctTotal: 30,
+    incorrectTotal: 12,
+    accuracyPercent: 71.4,
+    bySubject: [],
+    byTaskNumber: [],
+    byTopic: [],
+  });
 });
 
 describe('ResultMobile — correct state', () => {
@@ -157,17 +165,6 @@ describe('ResultMobile — incorrect state', () => {
   it('shows the task number via the meta chip on the task chrome', async () => {
     renderResult(false);
     expect(await screen.findByText(`Задание №${TASK_NUMBER}`)).toBeInTheDocument();
-  });
-});
-
-describe('ResultMobile — badges', () => {
-  it('uses the shared StreakBadge PNG for the streak stat, never an emoji', async () => {
-    renderResult(true);
-    await screen.findByText('Правильно!');
-    expect(
-      document.querySelector(`img[src="${getStreakAsset(userStats.streakDays)}"]`),
-    ).toBeInTheDocument();
-    expect(document.body.textContent).not.toMatch(/🔥/);
   });
 });
 
