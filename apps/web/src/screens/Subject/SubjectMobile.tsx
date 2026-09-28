@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { CollectionListItem, ProgressByTopicResponse } from '@zybrilka/shared';
-import { useNavigation } from '../../lib/navigation.js';
+import { useNavigation, type Route } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
 import { startRealTask } from '../../lib/startTraining.js';
 import { getProgressByTaskNumber, getProgressByTopic, listCollections } from '../../lib/api.js';
@@ -164,8 +164,28 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
     };
   }, [subject.id, effectiveTopicsSlug]);
 
+  // Where Task's back arrow returns — this subject page in whichever
+  // mode/source is currently active (audit Block 3), so Subject → Task
+  // → Back lands back here instead of falling through to Home.
+  function currentReturnTo(): Route {
+    const slug =
+      mode === 'byNumber'
+        ? (effectiveByNumberSlug ?? undefined)
+        : mode === 'random'
+          ? (effectiveRandomSlug ?? undefined)
+          : mode === 'topics'
+            ? (effectiveTopicsSlug ?? undefined)
+            : (collectionSlug ?? undefined);
+    return { screen: 'subject', subjectId: subject.id, collectionSlug: slug, initialMode: mode };
+  }
+
   function startTraining(taskNumber: number, collection?: string) {
-    startRealTask(navigate, { subject: subject.id, taskNumber, collection });
+    startRealTask(navigate, {
+      subject: subject.id,
+      taskNumber,
+      collection,
+      returnTo: currentReturnTo(),
+    });
   }
 
   function startTopicTraining(topic: TopicProgressItem) {
@@ -173,6 +193,7 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
       subject: subject.id,
       topic: topic.topicId,
       collection: effectiveTopicsSlug ?? undefined,
+      returnTo: currentReturnTo(),
     });
   }
 

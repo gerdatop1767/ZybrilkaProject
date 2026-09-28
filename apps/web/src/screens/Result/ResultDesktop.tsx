@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigation } from '../../lib/navigation.js';
+import { useNavigation, type Route } from '../../lib/navigation.js';
 import { gradeMultiPart, parseMultiPartSpec, parseMultiPartUserAnswer } from '@zybrilka/shared';
 import { getTask, listTasksByNumber } from '../../lib/api.js';
 import {
@@ -30,6 +30,9 @@ export interface ResultDesktopProps {
   userAnswer: string;
   collectionSlug?: string;
   variantId?: string;
+  /** Where the back arrow returns to — see `returnTo` on the `result`
+   * route in navigation.tsx (audit Block 3). */
+  returnTo?: Route;
 }
 
 const XP_REWARD = 20;
@@ -50,10 +53,23 @@ export function ResultDesktop({
   userAnswer,
   collectionSlug,
   variantId,
+  returnTo,
 }: ResultDesktopProps) {
   const { navigate, back } = useNavigation();
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
-  const taskNav = useTaskNavigation({ subjectId, taskId, collectionSlug, variantId });
+  const taskNav = useTaskNavigation({ subjectId, taskId, collectionSlug, variantId, returnTo });
+  const goBack = returnTo ? () => navigate(returnTo) : back;
+  function retryTask() {
+    navigate({
+      screen: 'task',
+      subjectId,
+      taskNumber,
+      taskId,
+      collectionSlug,
+      variantId: taskNav.variantId ?? undefined,
+      returnTo,
+    });
+  }
   // The router remounts this component (key={taskId}) whenever the task
   // or its correctness changes, so state starts fresh here.
   const [task, setTask] = useState<SampleTask | null>(null);
@@ -80,7 +96,7 @@ export function ResultDesktop({
     return (
       <FadeIn className={styles.page}>
         <p className="text-body-sm text-secondary">Не удалось загрузить результат.</p>
-        <Button variant="secondary" onClick={back}>
+        <Button variant="secondary" onClick={goBack}>
           Назад
         </Button>
       </FadeIn>
@@ -125,7 +141,7 @@ export function ResultDesktop({
   return (
     <FadeIn key={`${taskId}-${correct}`} className={styles.page}>
       <div className={styles.breadcrumb}>
-        <button type="button" className={styles.backButton} onClick={back} aria-label="Назад">
+        <button type="button" className={styles.backButton} onClick={goBack} aria-label="Назад">
           <Icon name="back" size={18} />
         </button>
         <span>{subject.shortName}</span>
@@ -138,7 +154,12 @@ export function ResultDesktop({
       <div className={styles.grid}>
         <div className={styles.main}>
           <div className={styles.progressHeader}>
-            <button type="button" className={styles.roundButton} onClick={back} aria-label="Назад">
+            <button
+              type="button"
+              className={styles.roundButton}
+              onClick={goBack}
+              aria-label="Назад"
+            >
               <Icon name="back" size={18} />
             </button>
             <div className={styles.progressHeaderBar}>
@@ -322,7 +343,7 @@ export function ResultDesktop({
             )}
 
             <div className={styles.actions}>
-              <Button variant="secondary" onClick={correct ? goToTaskList : back}>
+              <Button variant="secondary" onClick={correct ? goToTaskList : retryTask}>
                 {correct ? <Icon name="grid" size={16} /> : <Icon name="retry" size={16} />}
                 {correct ? 'К списку заданий' : 'Попробовать ещё раз'}
               </Button>

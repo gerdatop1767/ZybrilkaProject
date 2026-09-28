@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getVariant, getVariantForTask } from './api.js';
-import { useNavigation } from './navigation.js';
+import { useNavigation, type Route } from './navigation.js';
 
 export interface TaskNavigationEntry {
   taskId: string;
@@ -58,8 +58,13 @@ export function useTaskNavigation(params: {
   taskId: string;
   collectionSlug?: string;
   variantId?: string;
+  /** Carried onto every `goTo()` navigation (Prev/Next/Skip/number
+   * strip), so the back-arrow return context set on the current task
+   * (audit Block 3) survives moving to a sibling task instead of
+   * resetting on every step. */
+  returnTo?: Route;
 }): TaskNavigationContext {
-  const { subjectId, taskId, collectionSlug, variantId } = params;
+  const { subjectId, taskId, collectionSlug, variantId, returnTo } = params;
   const { navigate } = useNavigation();
   const hasContext = Boolean(collectionSlug || variantId);
   // Identifies "which request this is for" — resolution depends on all
@@ -123,6 +128,7 @@ export function useTaskNavigation(params: {
       taskId: entry.taskId,
       collectionSlug,
       variantId: resolvedVariantId ?? undefined,
+      returnTo,
     });
   }
 

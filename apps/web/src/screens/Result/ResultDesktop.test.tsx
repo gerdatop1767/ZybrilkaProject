@@ -248,7 +248,7 @@ describe('ResultDesktop — "К списку заданий"', () => {
     );
   });
 
-  it('does not change onClick for "Попробовать ещё раз" (incorrect path stays a plain back())', async () => {
+  it('"Попробовать ещё раз" reopens the same task, not a plain back() to Home (audit Block 3)', async () => {
     const user = userEvent.setup();
     render(
       <NavigationProvider>
@@ -264,6 +264,6 @@ describe('ResultDesktop — "К списку заданий"', () => {
     );
     await screen.findByText(EXPLANATION);
     await user.click(screen.getByRole('button', { name: 'Попробовать ещё раз' }));
-    expect(screen.getByTestId('overlay')).toHaveTextContent('none');
+    expect(screen.getByTestId('overlay')).toHaveTextContent('task');
   });
 });

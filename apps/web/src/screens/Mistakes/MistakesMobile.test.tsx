@@ -28,6 +28,9 @@ const apiMistakes = [
 
 function OverlayMarker() {
   const { overlay } = useNavigation();
+  if (overlay?.screen === 'task') {
+    return <p data-testid="overlay">task:returnTo={overlay.returnTo?.screen ?? 'none'}</p>;
+  }
   return <p data-testid="overlay">{overlay?.screen ?? 'none'}</p>;
 }
 
@@ -62,5 +65,14 @@ describe('MistakesMobile', () => {
     await screen.findByText(apiMistakes[0]!.conditionMd);
     await user.click(screen.getByText(apiMistakes[0]!.conditionMd));
     expect(screen.getByTestId('overlay')).toHaveTextContent('task');
+  });
+
+  it('opens the task with a returnTo back to Mistakes (audit Block 3)', async () => {
+    vi.mocked(api.getMistakes).mockResolvedValue(apiMistakes);
+    const user = userEvent.setup();
+    renderScreen();
+    await screen.findByText(apiMistakes[0]!.conditionMd);
+    await user.click(screen.getByText(apiMistakes[0]!.conditionMd));
+    expect(screen.getByTestId('overlay')).toHaveTextContent('task:returnTo=mistakes');
   });
 });

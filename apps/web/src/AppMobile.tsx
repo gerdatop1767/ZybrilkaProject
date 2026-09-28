@@ -84,6 +84,7 @@ export function AppMobile() {
             taskId={contentOverlay.taskId}
             collectionSlug={contentOverlay.collectionSlug}
             variantId={contentOverlay.variantId}
+            returnTo={contentOverlay.returnTo}
           />
         )}
         {contentOverlay.screen === 'result' && (
@@ -96,6 +97,7 @@ export function AppMobile() {
             userAnswer={contentOverlay.userAnswer}
             collectionSlug={contentOverlay.collectionSlug}
             variantId={contentOverlay.variantId}
+            returnTo={contentOverlay.returnTo}
           />
         )}
         {contentOverlay.screen === 'mistakes' && <MistakesMobile />}
