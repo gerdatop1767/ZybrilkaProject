@@ -75,7 +75,7 @@ export function HomeMobile() {
           variant="primary"
           fullWidth
           className={styles.heroCta}
-          onClick={() => navigate({ screen: 'training' })}
+          onClick={() => navigate({ screen: 'subjectCatalog' })}
         >
           Начать тренировку <Icon name="arrowRight" size={18} />
         </Button>
@@ -161,7 +161,7 @@ export function HomeMobile() {
           <button
             type="button"
             className={styles.sectionLink}
-            onClick={() => navigate({ screen: 'training' })}
+            onClick={() => navigate({ screen: 'subjectCatalog' })}
           >
             Все тренировки <Icon name="chevronRight" size={16} />
           </button>

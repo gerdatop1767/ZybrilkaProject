@@ -106,6 +106,20 @@ describe('HomeMobile', () => {
     expect(screen.getByTestId('overlay')).toHaveTextContent('subject');
   });
 
+  it('navigates to the subject catalog when the hero CTA is tapped, not a WIP training tab', async () => {
+    const user = userEvent.setup();
+    renderHome();
+    await user.click(screen.getByRole('button', { name: /Начать тренировку/ }));
+    expect(screen.getByTestId('overlay')).toHaveTextContent('subjectCatalog');
+  });
+
+  it('navigates to the subject catalog from "Все тренировки", not a WIP training tab', async () => {
+    const user = userEvent.setup();
+    renderHome();
+    await user.click(screen.getByRole('button', { name: /Все тренировки/ }));
+    expect(screen.getByTestId('overlay')).toHaveTextContent('subjectCatalog');
+  });
+
   it('navigates to the continue-training task', async () => {
     vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
     const user = userEvent.setup();
