@@ -286,6 +286,16 @@
   gap: var(--space-3);
 }
 
+/* Generic flex-row content wrapper (a solution step's title+text, a
+   hint's title+text, ...) — without this, a wide formula inside it
+   (which now scrolls within its own bounds — MathText.module.css)
+   drags this flex item's intrinsic min-width along with it,
+   overflowing the card and stretching its siblings past it too. */
+.stepBody {
+  min-width: 0;
+  flex: 1;
+}
+
 .stepIndex {
   display: flex;
   align-items: center;

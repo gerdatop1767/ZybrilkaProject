@@ -247,7 +247,7 @@ export function ResultMobile({
               ? multiPartGrade.parts.map((part, i) => (
                   <div key={part.id} className={styles.solutionStep}>
                     <span className={styles.solutionStepIndex}>{i + 1}</span>
-                    <p className="text-body-sm">
+                    <p className={clsx('text-body-sm', styles.solutionStepBody)}>
                       <strong>{part.label}) </strong>
                       <InlineMathText text={explanationForPart(explanationSections, part.label)} />
                     </p>
@@ -256,7 +256,7 @@ export function ResultMobile({
               : task.steps.map((step, i) => (
                   <div key={i} className={styles.solutionStep}>
                     <span className={styles.solutionStepIndex}>{i + 1}</span>
-                    <div>
+                    <div className={styles.solutionStepBody}>
                       {step.title && (
                         <p className="text-body-sm" style={{ fontWeight: 700 }}>
                           <InlineMathText text={step.title} />
