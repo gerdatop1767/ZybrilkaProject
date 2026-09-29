@@ -21,6 +21,12 @@
   margin-left: calc(var(--space-3) * -1);
 }
 
+/* Real favorite state (Task Workspace block), not just hover — filled
+   icon + accent color so "saved" is visible without hovering. */
+.iconButtonActive {
+  color: var(--color-accent-primary);
+}
+
 .navRow {
   display: flex;
   align-items: center;

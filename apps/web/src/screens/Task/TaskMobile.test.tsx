@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { TaskMobile } from './TaskMobile.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
 import * as api from '../../lib/api.js';
+import { resetFavoritesCacheForTests } from '../../lib/useFavorite.js';
 
 vi.mock('../../lib/api.js', () => ({
   getTask: vi.fn(),
@@ -11,6 +12,9 @@ vi.mock('../../lib/api.js', () => ({
   submitAttempt: vi.fn(),
   getVariant: vi.fn(),
   getVariantForTask: vi.fn(),
+  listFavoriteTaskIds: vi.fn(() => Promise.resolve({ taskIds: [] })),
+  addFavorite: vi.fn(() => Promise.resolve()),
+  removeFavorite: vi.fn(() => Promise.resolve()),
 }));
 
 const TASK_ID = '11111111-1111-1111-1111-111111111111';
@@ -148,6 +152,7 @@ async function pasteAnswer(user: ReturnType<typeof userEvent.setup>, text: strin
 
 describe('TaskMobile', () => {
   beforeEach(() => {
+    resetFavoritesCacheForTests();
     vi.mocked(api.getTask).mockResolvedValue(baseTask);
     vi.mocked(api.listTasksByNumber).mockResolvedValue(siblings);
     vi.mocked(api.submitAttempt).mockImplementation((_taskId, { answer }) =>

@@ -2,6 +2,7 @@ import type {
   AttemptRequest,
   AttemptResult,
   CollectionListItem,
+  FavoritesListResponse,
   Mistake,
   ProgressByTaskNumberResponse,
   ProgressByTopicResponse,
@@ -53,7 +54,12 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     ...init,
     headers: {
-      'content-type': 'application/json',
+      // Only when there's a body to describe — Fastify's default JSON
+      // parser rejects a request that *declares* 'application/json'
+      // but sends no body at all (e.g. DELETE /favorites/:taskId),
+      // with a 400 "Body cannot be empty" rather than treating no
+      // content-type as no body to parse.
+      ...(init?.body ? { 'content-type': 'application/json' } : {}),
       'x-anon-id': getAnonId(),
       ...init?.headers,
     },
@@ -67,6 +73,10 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new ApiError(response.status, body);
   }
+  // A 204 (e.g. favorites' add/remove) has no body — calling .json() on
+  // it throws (SyntaxError: Unexpected end of JSON input), not the
+  // empty-but-valid result callers expect.
+  if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
 
@@ -185,4 +195,19 @@ export function getProgressDaily(params: { days?: number } = {}): Promise<Progre
   if (params.days) query.set('days', String(params.days));
   const qs = query.toString();
   return apiFetch(`/progress/daily${qs ? `?${qs}` : ''}`);
+}
+
+/** All of the current user's favorited task ids — see apps/api's
+ * favorites module. Used to answer "is this task favorited?" for
+ * whichever task is currently open without a separate round trip. */
+export function listFavoriteTaskIds(): Promise<FavoritesListResponse> {
+  return apiFetch('/favorites');
+}
+
+export function addFavorite(taskId: string): Promise<void> {
+  return apiFetch('/favorites', { method: 'POST', body: JSON.stringify({ taskId }) });
+}
+
+export function removeFavorite(taskId: string): Promise<void> {
+  return apiFetch(`/favorites/${taskId}`, { method: 'DELETE' });
 }

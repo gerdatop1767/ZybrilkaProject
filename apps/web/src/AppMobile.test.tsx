@@ -11,6 +11,9 @@ vi.mock('./lib/api.js', () => ({
   listTasksByNumber: vi.fn(),
   getProgressSummary: vi.fn(() => new Promise(() => {})),
   getMistakes: vi.fn(() => new Promise(() => {})),
+  listFavoriteTaskIds: vi.fn(() => Promise.resolve({ taskIds: [] })),
+  addFavorite: vi.fn(() => Promise.resolve()),
+  removeFavorite: vi.fn(() => Promise.resolve()),
 }));
 
 const RANDOM_TASK = {

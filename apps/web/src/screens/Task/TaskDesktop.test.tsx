@@ -5,6 +5,7 @@ import { TaskDesktop } from './TaskDesktop.js';
 import { subjects } from '../../data/subjects.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
 import * as api from '../../lib/api.js';
+import { resetFavoritesCacheForTests } from '../../lib/useFavorite.js';
 
 vi.mock('../../lib/api.js', () => ({
   getTask: vi.fn(),
@@ -12,6 +13,9 @@ vi.mock('../../lib/api.js', () => ({
   submitAttempt: vi.fn(),
   getVariant: vi.fn(),
   getVariantForTask: vi.fn(),
+  listFavoriteTaskIds: vi.fn(() => Promise.resolve({ taskIds: [] })),
+  addFavorite: vi.fn(() => Promise.resolve()),
+  removeFavorite: vi.fn(() => Promise.resolve()),
 }));
 
 const TASK_ID = '11111111-1111-1111-1111-111111111111';
@@ -137,6 +141,7 @@ async function pasteAnswer(user: ReturnType<typeof userEvent.setup>, text: strin
 
 describe('TaskDesktop', () => {
   beforeEach(() => {
+    resetFavoritesCacheForTests();
     vi.mocked(api.getTask).mockResolvedValue(baseTask);
     vi.mocked(api.listTasksByNumber).mockResolvedValue(siblings);
     vi.mocked(api.submitAttempt).mockImplementation((_taskId, { answer }) =>
@@ -240,6 +245,62 @@ describe('TaskDesktop', () => {
     renderTask();
     await screen.findByText(CONDITION);
     expect(document.querySelector('svg[role="img"]')).toBeInTheDocument();
+  });
+
+  describe('favorite (Task Workspace block — real bookmark, not local-only state)', () => {
+    it('starts unfavorited, toggles to favorited via a real POST, and reflects it visually', async () => {
+      vi.mocked(api.listFavoriteTaskIds).mockResolvedValue({ taskIds: [] });
+      vi.mocked(api.addFavorite).mockResolvedValue(undefined);
+      const user = userEvent.setup();
+      renderTask();
+      await screen.findByText(CONDITION);
+
+      const button = await screen.findByRole('button', { name: 'В избранное' });
+      expect(button).toHaveAttribute('aria-pressed', 'false');
+
+      await user.click(button);
+      await waitFor(() => expect(api.addFavorite).toHaveBeenCalledWith(TASK_ID));
+      expect(await screen.findByRole('button', { name: 'Убрать из избранного' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+    });
+
+    it('starts favorited when the server says so, and toggling off calls DELETE', async () => {
+      vi.mocked(api.listFavoriteTaskIds).mockResolvedValue({ taskIds: [TASK_ID] });
+      vi.mocked(api.removeFavorite).mockResolvedValue(undefined);
+      const user = userEvent.setup();
+      renderTask();
+      await screen.findByText(CONDITION);
+
+      const button = await screen.findByRole('button', { name: 'Убрать из избранного' });
+      expect(button).toHaveAttribute('aria-pressed', 'true');
+
+      await user.click(button);
+      await waitFor(() => expect(api.removeFavorite).toHaveBeenCalledWith(TASK_ID));
+      expect(await screen.findByRole('button', { name: 'В избранное' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
+    });
+
+    it('a different task never inherits another task’s favorite state (task-specific, not global)', async () => {
+      vi.mocked(api.listFavoriteTaskIds).mockResolvedValue({ taskIds: [TASK_ID] });
+      renderTask();
+      await screen.findByRole('button', { name: 'Убрать из избранного' });
+
+      vi.mocked(api.getTask).mockResolvedValue({ ...baseTask, id: SIBLING_A });
+      render(
+        <NavigationProvider>
+          <TaskDesktop
+            subjectId={baseTask.subjectId}
+            taskNumber={baseTask.taskNumber}
+            taskId={SIBLING_A}
+          />
+        </NavigationProvider>,
+      );
+      expect(await screen.findAllByRole('button', { name: 'В избранное' })).not.toHaveLength(0);
+    });
   });
 
   describe('multi_part task', () => {

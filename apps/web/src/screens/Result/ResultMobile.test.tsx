@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { serializeMultiPartSpec, serializeMultiPartUserAnswer } from '@zybrilka/shared';
 import { ResultMobile } from './ResultMobile.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
+import { resetFavoritesCacheForTests } from '../../lib/useFavorite.js';
 import * as api from '../../lib/api.js';
 
 vi.mock('../../lib/api.js', () => ({
@@ -12,6 +13,9 @@ vi.mock('../../lib/api.js', () => ({
   getVariant: vi.fn(),
   getVariantForTask: vi.fn(),
   getProgressSummary: vi.fn(),
+  listFavoriteTaskIds: vi.fn(() => Promise.resolve({ taskIds: [] })),
+  addFavorite: vi.fn(() => Promise.resolve()),
+  removeFavorite: vi.fn(() => Promise.resolve()),
 }));
 
 const TASK_ID = '11111111-1111-1111-1111-111111111111';
@@ -78,6 +82,7 @@ function renderResult(correct: boolean, userAnswer = correct ? CORRECT_ANSWER : 
 }
 
 beforeEach(() => {
+  resetFavoritesCacheForTests();
   vi.mocked(api.getTask).mockResolvedValue(taskWithSolution);
   vi.mocked(api.listTasksByNumber).mockResolvedValue(siblings);
   vi.mocked(api.getProgressSummary).mockResolvedValue({

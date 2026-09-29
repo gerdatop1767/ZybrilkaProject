@@ -134,6 +134,12 @@
   background: var(--color-bg-elevated);
 }
 
+/* Real favorite state (Task Workspace block), not just hover — filled
+   icon + accent color so "saved" is visible without hovering. */
+.iconButtonActive {
+  color: var(--color-accent-primary);
+}
+
 .condition {
   color: var(--color-text-primary);
 }

@@ -4,6 +4,7 @@ import type { TaskPublic } from '@zybrilka/shared';
 import { serializeMultiPartUserAnswer } from '@zybrilka/shared';
 import { getTask, listTasksByNumber, submitAttempt } from '../../lib/api.js';
 import { toSampleTask } from '../../lib/taskAdapter.js';
+import { useFavorite } from '../../lib/useFavorite.js';
 import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
@@ -51,6 +52,7 @@ export function TaskDesktop({
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
   const taskNav = useTaskNavigation({ subjectId, taskId, collectionSlug, variantId, returnTo });
   const goBack = returnTo ? () => navigate(returnTo) : back;
+  const favorite = useFavorite(taskId);
 
   // The router remounts this component (key={taskId}) on every task
   // change, so state starts fresh here — no manual reset-on-taskId-change
@@ -199,8 +201,14 @@ export function TaskDesktop({
                 {task.difficultyLabel === 'Сложное' ? 'Базовый уровень' : task.difficultyLabel}
               </span>
               <span className={styles.metaSpacer} />
-              <button type="button" className={styles.iconButton} aria-label="Сохранить">
-                <Icon name="bookmark" size={18} />
+              <button
+                type="button"
+                className={clsx(styles.iconButton, favorite.isFavorite && styles.iconButtonActive)}
+                aria-label={favorite.isFavorite ? 'Убрать из избранного' : 'В избранное'}
+                aria-pressed={favorite.isFavorite ?? false}
+                onClick={favorite.toggle}
+              >
+                <Icon name="bookmark" size={18} filled={favorite.isFavorite ?? false} />
               </button>
               <button type="button" className={styles.iconButton} aria-label="Ещё">
                 <Icon name="more" size={18} />

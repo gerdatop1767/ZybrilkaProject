@@ -4,6 +4,8 @@ import { TaskNumberStrip, type TaskNumberStripEntry } from './TaskNumberStrip.js
 import { ProgressBar } from '../Progress/ProgressBar.js';
 import type { Subject } from '../../data/subjects.js';
 import type { SampleTask } from '../../data/sampleTask.js';
+import { useFavorite } from '../../lib/useFavorite.js';
+import { clsx } from '../../lib/clsx.js';
 import styles from './TaskChrome.module.css';
 
 export interface TaskChromeProps {
@@ -39,6 +41,7 @@ export function TaskChrome({
   onGoTo,
 }: TaskChromeProps) {
   const progressPercent = (task.indexInSession / task.totalInSession) * 100;
+  const favorite = useFavorite(task.id);
 
   return (
     <>
@@ -53,11 +56,14 @@ export function TaskChrome({
           </p>
           <p className="text-body-sm text-secondary">Задание №{task.number}</p>
         </div>
-        <button type="button" className={styles.iconButton} aria-label="В избранное">
-          <Icon name="favorite" size={20} />
-        </button>
-        <button type="button" className={styles.iconButton} aria-label="Сохранить">
-          <Icon name="bookmark" size={20} />
+        <button
+          type="button"
+          className={clsx(styles.iconButton, favorite.isFavorite && styles.iconButtonActive)}
+          aria-label={favorite.isFavorite ? 'Убрать из избранного' : 'В избранное'}
+          aria-pressed={favorite.isFavorite ?? false}
+          onClick={favorite.toggle}
+        >
+          <Icon name="bookmark" size={20} filled={favorite.isFavorite ?? false} />
         </button>
       </div>
 
