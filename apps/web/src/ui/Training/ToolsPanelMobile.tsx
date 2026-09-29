@@ -21,6 +21,10 @@ export interface ToolsPanelMobileProps {
    * renders there. Result has no such trigger, so it keeps the
    * self-contained summary+chevron toggle (default). */
   hideSummary?: boolean;
+  /** Called with a tool's id when its tile is tapped — only
+   * 'calculator' and 'canvas' currently open something real; the rest
+   * stay decorative until their own block. */
+  onSelect?: (toolId: string) => void;
 }
 
 /**
@@ -30,11 +34,16 @@ export interface ToolsPanelMobileProps {
  * (`hideSummary`), so the tools never take up permanent space in the
  * page when collapsed.
  */
-export function ToolsPanelMobile({ open, onToggle, hideSummary }: ToolsPanelMobileProps) {
+export function ToolsPanelMobile({ open, onToggle, hideSummary, onSelect }: ToolsPanelMobileProps) {
   const grid = (
     <div className={styles.grid}>
       {tools.map((tool) => (
-        <button key={tool.id} type="button" className={styles.tool}>
+        <button
+          key={tool.id}
+          type="button"
+          className={styles.tool}
+          onClick={() => onSelect?.(tool.id)}
+        >
           <Icon name={tool.icon} size={20} />
           <span className="text-label">{tool.label}</span>
         </button>

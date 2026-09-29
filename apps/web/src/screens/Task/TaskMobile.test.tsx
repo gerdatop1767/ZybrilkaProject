@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TaskMobile } from './TaskMobile.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
@@ -216,6 +216,26 @@ describe('TaskMobile', () => {
     expect(screen.getByRole('button', { name: 'Полотно' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Шаблоны' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Справочник' })).toBeInTheDocument();
+  });
+
+  it('opens the calculator from "Кальк.", computes a real result, closes without losing the typed answer (Task Workspace block 3)', async () => {
+    const user = userEvent.setup();
+    renderTask();
+    await screen.findByText(CONDITION);
+    await pasteAnswer(user, '(−∞; 2]');
+    await user.click(screen.getByRole('button', { name: /Дополнительные инструменты/ }));
+    await user.click(screen.getByRole('button', { name: 'Кальк.' }));
+
+    const dialog = screen.getByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: '9' }));
+    await user.click(within(dialog).getByRole('button', { name: '÷' }));
+    await user.click(within(dialog).getByRole('button', { name: '3' }));
+    await user.click(within(dialog).getByRole('button', { name: '=' }));
+    expect(within(dialog).getByTestId('calculator-display')).toHaveTextContent('3');
+
+    await user.click(within(dialog).getByRole('button', { name: 'Закрыть' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Ответ')).toHaveValue('(−∞; 2]');
   });
 
   it('renders "Другие задания" collapsed by default with real sibling tasks', async () => {

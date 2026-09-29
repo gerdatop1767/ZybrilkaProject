@@ -12,7 +12,9 @@ import type { SampleTask, TaskVariant } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { getProgressSummary } from '../../lib/api.js';
 import { Button } from '../../ui/Button/Button.js';
+import { Calculator } from '../../ui/Calculator/Calculator.js';
 import { Icon } from '../../ui/Icon/Icon.js';
+import { BottomSheet } from '../../ui/BottomSheet/BottomSheet.js';
 import { TaskChrome } from '../../ui/Training/TaskChrome.js';
 import { ToolsPanelMobile } from '../../ui/Training/ToolsPanelMobile.js';
 import { OtherVariantsSection } from '../../ui/Training/OtherVariantsSection.js';
@@ -73,6 +75,7 @@ export function ResultMobile({
   const [task, setTask] = useState<SampleTask | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
   const [otherOpen, setOtherOpen] = useState(false);
   const [solutionOpen, setSolutionOpen] = useState(false);
   const [accuracyPercent, setAccuracyPercent] = useState<number | null>(null);
@@ -300,7 +303,13 @@ export function ResultMobile({
         </div>
       </div>
 
-      <ToolsPanelMobile open={toolsOpen} onToggle={() => setToolsOpen((v) => !v)} />
+      <ToolsPanelMobile
+        open={toolsOpen}
+        onToggle={() => setToolsOpen((v) => !v)}
+        onSelect={(toolId) => {
+          if (toolId === 'calculator') setCalculatorOpen(true);
+        }}
+      />
 
       <OtherVariantsSection
         taskNumber={task.number}
@@ -310,6 +319,14 @@ export function ResultMobile({
         onSelectVariant={handleSelectVariant}
         summarySubtitle="Похожее на это задание"
       />
+
+      <BottomSheet
+        open={calculatorOpen}
+        onClose={() => setCalculatorOpen(false)}
+        title="Калькулятор"
+      >
+        <Calculator />
+      </BottomSheet>
     </SlideUp>
   );
 }

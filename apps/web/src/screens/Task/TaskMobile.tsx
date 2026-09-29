@@ -7,7 +7,9 @@ import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
 import type { TaskVariant } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
+import { Calculator } from '../../ui/Calculator/Calculator.js';
 import { Icon } from '../../ui/Icon/Icon.js';
+import { BottomSheet } from '../../ui/BottomSheet/BottomSheet.js';
 import { DifficultyTag } from '../../ui/Training/DifficultyTag.js';
 import { TaskChrome } from '../../ui/Training/TaskChrome.js';
 import { ToolsPanelMobile, AnswerFieldTools } from '../../ui/Training/ToolsPanelMobile.js';
@@ -75,6 +77,7 @@ export function TaskMobile({
   const [fxOpen, setFxOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [otherOpen, setOtherOpen] = useState(false);
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -306,7 +309,14 @@ export function TaskMobile({
         </div>
       </div>
 
-      <ToolsPanelMobile open={toolsOpen} onToggle={() => setToolsOpen((v) => !v)} hideSummary />
+      <ToolsPanelMobile
+        open={toolsOpen}
+        onToggle={() => setToolsOpen((v) => !v)}
+        hideSummary
+        onSelect={(toolId) => {
+          if (toolId === 'calculator') setCalculatorOpen(true);
+        }}
+      />
 
       <OtherVariantsSection
         taskNumber={task.number}
@@ -316,6 +326,14 @@ export function TaskMobile({
         onSelectVariant={handleSelectVariant}
         summarySubtitle="Похожие задания на эту тему"
       />
+
+      <BottomSheet
+        open={calculatorOpen}
+        onClose={() => setCalculatorOpen(false)}
+        title="Калькулятор"
+      >
+        <Calculator />
+      </BottomSheet>
     </SlideUp>
   );
 }

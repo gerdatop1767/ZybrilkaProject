@@ -13,7 +13,19 @@ const tools: { id: string; label: string; icon: IconName }[] = [
  * always visible (no collapse — desktop has the room mobile doesn't),
  * matching desktop/04_training.png exactly.
  */
-export function DesktopToolsCard({ onSelectHint }: { onSelectHint: () => void }) {
+export function DesktopToolsCard({
+  onSelectHint,
+  onSelectCalculator,
+}: {
+  onSelectHint: () => void;
+  onSelectCalculator: () => void;
+}) {
+  function handleClick(id: string) {
+    if (id === 'hint') return onSelectHint;
+    if (id === 'calculator') return onSelectCalculator;
+    return undefined;
+  }
+
   return (
     <div className={styles.card}>
       <p className="text-h3">Инструменты</p>
@@ -23,7 +35,7 @@ export function DesktopToolsCard({ onSelectHint }: { onSelectHint: () => void })
             key={tool.id}
             type="button"
             className={styles.item}
-            onClick={tool.id === 'hint' ? onSelectHint : undefined}
+            onClick={handleClick(tool.id)}
           >
             <span className={styles.itemIcon}>
               <Icon name={tool.icon} size={18} />

@@ -8,7 +8,9 @@ import { useFavorite } from '../../lib/useFavorite.js';
 import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
+import { Calculator } from '../../ui/Calculator/Calculator.js';
 import { Icon } from '../../ui/Icon/Icon.js';
+import { Modal } from '../../ui/Modal/Modal.js';
 import { DesktopToolsCard } from '../../ui/Training/DesktopToolsCard.js';
 import { SessionProgressCard } from '../../ui/Training/SessionProgressCard.js';
 import { SessionTaskListCard } from '../../ui/Training/SessionTaskListCard.js';
@@ -74,6 +76,7 @@ export function TaskDesktop({
   const [partAnswers, setPartAnswers] = useState<Record<string, string>>({});
   const [checking, setChecking] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -340,7 +343,10 @@ export function TaskDesktop({
         </div>
 
         <div className={styles.sidebar}>
-          <DesktopToolsCard onSelectHint={() => setHintOpen((v) => !v)} />
+          <DesktopToolsCard
+            onSelectHint={() => setHintOpen((v) => !v)}
+            onSelectCalculator={() => setCalculatorOpen(true)}
+          />
           <SessionProgressCard
             sessionTasks={task.sessionTasks}
             totalInSession={task.totalInSession}
@@ -352,6 +358,9 @@ export function TaskDesktop({
           />
         </div>
       </div>
+      <Modal open={calculatorOpen} onClose={() => setCalculatorOpen(false)} title="Калькулятор">
+        <Calculator />
+      </Modal>
     </FadeIn>
   );
 }

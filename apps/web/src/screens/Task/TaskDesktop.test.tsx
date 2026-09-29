@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TaskDesktop } from './TaskDesktop.js';
 import { subjects } from '../../data/subjects.js';
@@ -245,6 +245,28 @@ describe('TaskDesktop', () => {
     renderTask();
     await screen.findByText(CONDITION);
     expect(document.querySelector('svg[role="img"]')).toBeInTheDocument();
+  });
+
+  describe('calculator (Task Workspace block 3)', () => {
+    it('opens from "Инструменты" → "Калькулятор", computes a real result, and closes without touching the typed answer', async () => {
+      const user = userEvent.setup();
+      renderTask();
+      await screen.findByText(CONDITION);
+
+      await pasteAnswer(user, '42');
+      await user.click(screen.getByRole('button', { name: 'Калькулятор' }));
+
+      const dialog = screen.getByRole('dialog');
+      await user.click(within(dialog).getByRole('button', { name: '7' }));
+      await user.click(within(dialog).getByRole('button', { name: '+' }));
+      await user.click(within(dialog).getByRole('button', { name: '3' }));
+      await user.click(within(dialog).getByRole('button', { name: '=' }));
+      expect(within(dialog).getByTestId('calculator-display')).toHaveTextContent('10');
+
+      await user.click(within(dialog).getByRole('button', { name: 'Закрыть' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Ответ')).toHaveValue('42');
+    });
   });
 
   describe('favorite (Task Workspace block — real bookmark, not local-only state)', () => {

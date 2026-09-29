@@ -11,7 +11,9 @@ import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
 import type { SampleTask } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
+import { Calculator } from '../../ui/Calculator/Calculator.js';
 import { Icon } from '../../ui/Icon/Icon.js';
+import { Modal } from '../../ui/Modal/Modal.js';
 import { DesktopToolsCard } from '../../ui/Training/DesktopToolsCard.js';
 import { SessionTaskListCard } from '../../ui/Training/SessionTaskListCard.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
@@ -88,6 +90,7 @@ export function ResultDesktop({
   const [task, setTask] = useState<SampleTask | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [detailedSolution, setDetailedSolution] = useState(true);
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
   const xp = useCountUp(correct ? XP_REWARD : 0, 500);
 
   useEffect(() => {
@@ -411,11 +414,17 @@ export function ResultDesktop({
                 sessionTasks={task.sessionTasks}
                 onSelect={() => undefined}
               />
-              <DesktopToolsCard onSelectHint={() => undefined} />
+              <DesktopToolsCard
+                onSelectHint={() => undefined}
+                onSelectCalculator={() => setCalculatorOpen(true)}
+              />
             </>
           )}
         </div>
       </div>
+      <Modal open={calculatorOpen} onClose={() => setCalculatorOpen(false)} title="Калькулятор">
+        <Calculator />
+      </Modal>
     </FadeIn>
   );
 }
