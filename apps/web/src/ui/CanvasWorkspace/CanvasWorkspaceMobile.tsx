@@ -3,11 +3,6 @@ import type { SampleTask } from '../../data/sampleTask.js';
 import { getCanvasState, setCanvasState } from '../../lib/canvasSessionStore.js';
 import { clearCanvas, type CanvasState } from '../../lib/canvasEngine.js';
 import { Icon } from '../Icon/Icon.js';
-import { MathText } from '../MathText/MathText.js';
-import {
-  TaskExamIllustration,
-  TaskSolutionIllustration,
-} from '../TaskIllustration/TaskIllustration.js';
 import { Overlay, usePanelFocus } from '../Overlay/Overlay.js';
 import { CanvasBoard } from './CanvasBoard.js';
 import { clsx } from '../../lib/clsx.js';
@@ -21,13 +16,13 @@ export interface CanvasWorkspaceMobileProps {
 }
 
 /**
- * "Полотно" (Task Workspace block 4, CLAUDE.md Section 13 —
- * "Расширить поле"): near-fullscreen on mobile, not a small card, per
- * the spec. Shows a copy of the *current* task's condition/illustration
- * above the drawing board — the same MathText renderer and
- * source-accurate SVG components Task screen itself uses, never a
- * re-typed duplicate — so the user can solve the task right next to
- * their own working. Drawing state is read/written through
+ * "Полотно" (CLAUDE.md Section 13 — "Расширить поле"): near-fullscreen
+ * on mobile. `CanvasBoard` owns the entire body below the header — the
+ * current task's condition/illustration and the white, zoomable/
+ * pannable drawing surface are one unified canvas (canvas mobile fix
+ * block: previously a separate fixed reference panel sat above a
+ * small canvas, wasting most of the screen and preventing drawing
+ * over the task itself). Drawing state is read/written through
  * canvasSessionStore, keyed by `taskId`: it survives this overlay
  * closing and reopening within the same task, and switching to a
  * different task and back, but is never shared between two different
@@ -94,25 +89,8 @@ export function CanvasWorkspaceMobile({ open, onClose, taskId, task }: CanvasWor
             </button>
           </div>
 
-          <div className={styles.reference}>
-            <p className={styles.referenceLabel}>Задание №{task.number}</p>
-            <div className={clsx('text-body-sm', styles.condition)}>
-              <MathText text={task.condition} />
-            </div>
-            <TaskExamIllustration
-              subjectId={task.subjectId}
-              taskNumber={task.number}
-              className={styles.referenceImage}
-            />
-            <TaskSolutionIllustration
-              subjectId={task.subjectId}
-              taskNumber={task.number}
-              className={styles.referenceImage}
-            />
-          </div>
-
           <div className={styles.boardWrap}>
-            <CanvasBoard state={state} onChangeState={handleChangeState} />
+            <CanvasBoard state={state} onChangeState={handleChangeState} task={task} />
           </div>
         </div>
       )}

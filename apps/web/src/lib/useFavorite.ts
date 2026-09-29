@@ -21,6 +21,17 @@ function invalidate() {
   cache = null;
 }
 
+/**
+ * Invalidates the shared favorites cache from outside `useFavorite`
+ * itself — used by the real favorites list (Subject → Избранное) after
+ * it removes a task directly, so a bookmark button elsewhere (e.g. if
+ * the user reopens that task) re-fetches instead of showing stale
+ * "favorited" state from before the removal.
+ */
+export function invalidateFavoritesCache() {
+  invalidate();
+}
+
 /** Test-only: the module-level cache otherwise outlives a single `it()`
  * within a test file (there's only one real "this browser" in
  * production, so one cache is correct there), which would leak one

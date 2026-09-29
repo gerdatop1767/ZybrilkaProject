@@ -62,38 +62,11 @@
   color: var(--color-text-primary);
 }
 
+/* CanvasBoard now owns the task card + white canvas as one unified
+ * surface (canvas mobile fix block) — .body just gives it the full
+ * remaining panel height. */
 .body {
   flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
-  gap: var(--space-4);
-}
-
-.reference {
-  min-height: 0;
-  overflow-y: auto;
-  padding: var(--space-4);
-  border-radius: var(--radius-input);
-  background: var(--color-bg-surface);
-}
-
-.referenceLabel {
-  font-size: var(--font-size-body-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-accent-secondary);
-  margin-bottom: var(--space-2);
-}
-
-.condition {
-  color: var(--color-text-primary);
-}
-
-.referenceImage {
-  margin-top: var(--space-3);
-}
-
-.boardWrap {
   min-height: 0;
 }
 

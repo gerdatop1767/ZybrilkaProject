@@ -55,33 +55,10 @@
   opacity: 0.35;
 }
 
-.reference {
-  flex-shrink: 0;
-  max-height: 30vh;
-  overflow-y: auto;
-  padding: var(--space-3);
-  border-radius: var(--radius-input);
-  background: var(--color-bg-surface);
-  margin-bottom: var(--space-2);
-}
-
-.referenceLabel {
-  font-size: var(--font-size-body-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-accent-secondary);
-  margin-bottom: var(--space-1);
-}
-
-.condition {
-  color: var(--color-text-primary);
-}
-
-.referenceImage {
-  margin-top: var(--space-2);
-  max-height: 12rem;
-  overflow: hidden;
-}
-
+/* CanvasBoard now owns the task card + white canvas as one unified,
+ * fullscreen surface (canvas mobile fix block) — the old fixed 30vh
+ * reference panel + separate small canvas (which left most of the
+ * screen dark and empty below it) is gone. */
 .boardWrap {
   flex: 1;
   min-height: 0;

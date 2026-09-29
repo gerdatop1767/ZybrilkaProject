@@ -323,6 +323,71 @@ describe('TaskDesktop', () => {
 
       expect(getCanvasState(TASK_ID)).toEqual(initialCanvasState());
     });
+
+    it('pinch (two simultaneous pointers moving apart) zooms the canvas in, shown by the zoom reset pill', async () => {
+      const user = userEvent.setup();
+      renderTask();
+      await screen.findByText(CONDITION);
+      await user.click(screen.getByRole('button', { name: 'Полотно' }));
+      const dialog = screen.getByRole('dialog', { name: 'Полотно' });
+      const board = within(dialog).getByRole('img', { name: 'Рабочее полотно для рисования' });
+
+      // Two fingers land close together, then spread apart — a pinch-out
+      // (zoom in). Real pinch gestures fire pointerdown/move per finger
+      // with distinct pointerIds, which is exactly what CanvasBoard's
+      // gesture tracking keys off of.
+      fireEvent.pointerDown(board, { pointerId: 1, clientX: 100, clientY: 100 });
+      fireEvent.pointerDown(board, { pointerId: 2, clientX: 110, clientY: 100 });
+      fireEvent.pointerMove(board, { pointerId: 1, clientX: 60, clientY: 100 });
+      fireEvent.pointerMove(board, { pointerId: 2, clientX: 150, clientY: 100 });
+
+      expect(within(dialog).getByText(/%$/)).toBeInTheDocument();
+    });
+
+    it('a single-finger stroke commits nothing once a 2nd finger turns it into a pinch gesture', async () => {
+      const user = userEvent.setup();
+      renderTask();
+      await screen.findByText(CONDITION);
+      await user.click(screen.getByRole('button', { name: 'Полотно' }));
+      const dialog = screen.getByRole('dialog', { name: 'Полотно' });
+      const board = within(dialog).getByRole('img', { name: 'Рабочее полотно для рисования' });
+
+      fireEvent.pointerDown(board, { pointerId: 1, clientX: 10, clientY: 10 });
+      fireEvent.pointerMove(board, { pointerId: 1, clientX: 40, clientY: 40 });
+      // A 2nd finger lands mid-stroke — this must cancel the in-progress
+      // mark, not commit a stray line right as the pinch starts.
+      fireEvent.pointerDown(board, { pointerId: 2, clientX: 200, clientY: 200 });
+      fireEvent.pointerUp(board, { pointerId: 1, clientX: 40, clientY: 40 });
+      fireEvent.pointerUp(board, { pointerId: 2, clientX: 200, clientY: 200 });
+
+      expect(within(dialog).getByRole('button', { name: 'Отменить' })).toBeDisabled();
+    });
+  });
+
+  describe('report task (canvas mobile fix block — "Пожаловаться на задание")', () => {
+    it('opens from the warning icon and shows a placeholder confirmation once reported', async () => {
+      const user = userEvent.setup();
+      renderTask();
+      await screen.findByText(CONDITION);
+
+      await user.click(screen.getByRole('button', { name: 'Пожаловаться на задание' }));
+      const dialog = screen.getByRole('dialog', { name: 'Задание' });
+      await user.click(within(dialog).getByRole('button', { name: 'Пожаловаться на задание' }));
+
+      expect(within(dialog).getByRole('status')).toHaveTextContent('Жалоба отправлена');
+    });
+
+    it('no longer shows the old bare "Ещё" (three dots) button', async () => {
+      renderTask();
+      await screen.findByText(CONDITION);
+      expect(screen.queryByRole('button', { name: 'Ещё' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('does not show "Заметки" in the desktop tools sidebar (canvas mobile fix block, section 4)', async () => {
+    renderTask();
+    await screen.findByText(CONDITION);
+    expect(screen.queryByRole('button', { name: 'Заметки' })).not.toBeInTheDocument();
   });
 
   describe('favorite (Task Workspace block — real bookmark, not local-only state)', () => {

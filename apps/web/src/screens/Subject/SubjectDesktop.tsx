@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { CollectionListItem, ProgressByTopicResponse } from '@zybrilka/shared';
+import type { CollectionListItem, ProgressByTopicResponse, TaskPublic } from '@zybrilka/shared';
 import { useNavigation, type Route } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
 import { startCustomVariant, startRealTask } from '../../lib/startTraining.js';
@@ -13,6 +13,7 @@ import type { IconName } from '../../ui/Icon/icons.js';
 import { Select } from '../../ui/Select/Select.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { CircularProgress } from '../../ui/Progress/CircularProgress.js';
+import { FavoritesList } from '../../ui/Favorites/FavoritesList.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './SubjectDesktop.module.css';
 
@@ -231,6 +232,16 @@ export function SubjectDesktop({
     });
   }
 
+  function handleSelectFavorite(task: TaskPublic) {
+    navigate({
+      screen: 'task',
+      subjectId: task.subjectId,
+      taskNumber: task.taskNumber,
+      taskId: task.id,
+      returnTo: currentReturnTo(),
+    });
+  }
+
   const parentLabel = from === 'learningCenter' ? 'К учебному центру' : 'К предметам';
   const parentScreen: 'subjectCatalog' | 'learningCenter' = from ?? 'subjectCatalog';
   const backProps: BackRowProps = selectedTopic
@@ -345,11 +356,12 @@ export function SubjectDesktop({
             />
           )}
           {mode === 'favorites' && (
-            <ModePlaceholder
-              icon="favorite"
-              title="Избранное"
-              note="Сохранённые задания появятся здесь, как только ты добавишь первое."
-            />
+            <Card>
+              <p className="text-h3" style={{ marginBottom: 'var(--space-3)' }}>
+                Избранное
+              </p>
+              <FavoritesList subjectId={subject.id} onSelect={handleSelectFavorite} />
+            </Card>
           )}
         </div>
 
@@ -766,35 +778,6 @@ function VariantBuilder({
       >
         <Icon name="play" size={16} /> Собрать вариант и начать решать
       </Button>
-    </Card>
-  );
-}
-
-function ModePlaceholder({
-  icon,
-  title,
-  note,
-  actionLabel,
-  onAction,
-}: {
-  icon: IconName;
-  title: string;
-  note: string;
-  actionLabel?: string;
-  onAction?: () => void;
-}) {
-  return (
-    <Card className={styles.placeholderCard}>
-      <span className={styles.placeholderIcon}>
-        <Icon name={icon} size={28} />
-      </span>
-      <p className="text-h3">{title}</p>
-      <p className="text-body-sm text-secondary">{note}</p>
-      {actionLabel && onAction && (
-        <Button variant="secondary" onClick={onAction} style={{ marginTop: 'var(--space-4)' }}>
-          {actionLabel}
-        </Button>
-      )}
     </Card>
   );
 }
