@@ -5,7 +5,6 @@ import styles from './DesktopToolsCard.module.css';
 const tools: { id: string; label: string; icon: IconName }[] = [
   { id: 'calculator', label: 'Калькулятор', icon: 'calculator' },
   { id: 'canvas', label: 'Полотно', icon: 'brush' },
-  { id: 'notes', label: 'Заметки', icon: 'notes' },
   { id: 'hint', label: 'Подсказка', icon: 'hint' },
 ];
 

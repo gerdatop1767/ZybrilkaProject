@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { Icon } from '../Icon/Icon.js';
 import { SubjectTile } from '../SubjectTile/SubjectTile.js';
 import { TaskNumberStrip, type TaskNumberStripEntry } from './TaskNumberStrip.js';
 import { ProgressBar } from '../Progress/ProgressBar.js';
+import { BottomSheet } from '../BottomSheet/BottomSheet.js';
+import { ReportTaskContent } from '../ReportTask/ReportTaskContent.js';
 import type { Subject } from '../../data/subjects.js';
 import type { SampleTask } from '../../data/sampleTask.js';
 import { useFavorite } from '../../lib/useFavorite.js';
@@ -42,6 +45,7 @@ export function TaskChrome({
 }: TaskChromeProps) {
   const progressPercent = (task.indexInSession / task.totalInSession) * 100;
   const favorite = useFavorite(task.id);
+  const [reportOpen, setReportOpen] = useState(false);
 
   return (
     <>
@@ -58,6 +62,14 @@ export function TaskChrome({
         </div>
         <button
           type="button"
+          className={styles.iconButton}
+          aria-label="Пожаловаться на задание"
+          onClick={() => setReportOpen(true)}
+        >
+          <Icon name="warning" size={20} />
+        </button>
+        <button
+          type="button"
           className={clsx(styles.iconButton, favorite.isFavorite && styles.iconButtonActive)}
           aria-label={favorite.isFavorite ? 'Убрать из избранного' : 'В избранное'}
           aria-pressed={favorite.isFavorite ?? false}
@@ -66,6 +78,10 @@ export function TaskChrome({
           <Icon name="bookmark" size={20} filled={favorite.isFavorite ?? false} />
         </button>
       </div>
+
+      <BottomSheet open={reportOpen} onClose={() => setReportOpen(false)} title="Задание">
+        <ReportTaskContent taskId={task.id} />
+      </BottomSheet>
 
       <div className={styles.navRow}>
         <button

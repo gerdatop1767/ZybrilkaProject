@@ -13,6 +13,7 @@ import { CanvasWorkspaceDesktop } from '../../ui/CanvasWorkspace/CanvasWorkspace
 import { clearCanvasState } from '../../lib/canvasSessionStore.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { Modal } from '../../ui/Modal/Modal.js';
+import { ReportTaskContent } from '../../ui/ReportTask/ReportTaskContent.js';
 import { DesktopToolsCard } from '../../ui/Training/DesktopToolsCard.js';
 import { SessionProgressCard } from '../../ui/Training/SessionProgressCard.js';
 import { SessionTaskListCard } from '../../ui/Training/SessionTaskListCard.js';
@@ -80,6 +81,7 @@ export function TaskDesktop({
   const [hintOpen, setHintOpen] = useState(false);
   const [calculatorOpen, setCalculatorOpen] = useState(false);
   const [canvasOpen, setCanvasOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -227,8 +229,13 @@ export function TaskDesktop({
               >
                 <Icon name="bookmark" size={18} filled={favorite.isFavorite ?? false} />
               </button>
-              <button type="button" className={styles.iconButton} aria-label="Ещё">
-                <Icon name="more" size={18} />
+              <button
+                type="button"
+                className={styles.iconButton}
+                aria-label="Пожаловаться на задание"
+                onClick={() => setReportOpen(true)}
+              >
+                <Icon name="warning" size={18} />
               </button>
             </div>
 
@@ -372,6 +379,9 @@ export function TaskDesktop({
         taskId={task.id}
         task={task}
       />
+      <Modal open={reportOpen} onClose={() => setReportOpen(false)} title="Задание">
+        <ReportTaskContent taskId={task.id} />
+      </Modal>
     </FadeIn>
   );
 }

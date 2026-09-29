@@ -3,11 +3,6 @@ import type { SampleTask } from '../../data/sampleTask.js';
 import { getCanvasState, setCanvasState } from '../../lib/canvasSessionStore.js';
 import { clearCanvas, type CanvasState } from '../../lib/canvasEngine.js';
 import { Icon } from '../Icon/Icon.js';
-import { MathText } from '../MathText/MathText.js';
-import {
-  TaskExamIllustration,
-  TaskSolutionIllustration,
-} from '../TaskIllustration/TaskIllustration.js';
 import { Overlay, usePanelFocus } from '../Overlay/Overlay.js';
 import { CanvasBoard } from './CanvasBoard.js';
 import { clsx } from '../../lib/clsx.js';
@@ -21,12 +16,13 @@ export interface CanvasWorkspaceDesktopProps {
 }
 
 /**
- * "Полотно" desktop/iPad presentation (Task Workspace block 4): a large
- * modal, not a small dialog — left column is the current task's
- * condition/illustration (same renderers Task screen itself uses),
- * right column is the shared CanvasBoard. Same session-scoped
- * persistence as CanvasWorkspaceMobile via canvasSessionStore, keyed
- * by taskId.
+ * "Полотно" desktop/iPad presentation: a large modal, not a small
+ * dialog. `CanvasBoard` owns the entire body — the current task's
+ * condition/illustration and the white, zoomable/pannable drawing
+ * surface are one unified canvas (canvas mobile fix block), not a
+ * separate static reference panel next to a small canvas. Same
+ * session-scoped persistence as CanvasWorkspaceMobile via
+ * canvasSessionStore, keyed by taskId.
  */
 export function CanvasWorkspaceDesktop({
   open,
@@ -82,26 +78,7 @@ export function CanvasWorkspaceDesktop({
           </div>
 
           <div className={styles.body}>
-            <div className={styles.reference}>
-              <p className={styles.referenceLabel}>Задание №{task.number}</p>
-              <div className={clsx('text-body', styles.condition)}>
-                <MathText text={task.condition} />
-              </div>
-              <TaskExamIllustration
-                subjectId={task.subjectId}
-                taskNumber={task.number}
-                className={styles.referenceImage}
-              />
-              <TaskSolutionIllustration
-                subjectId={task.subjectId}
-                taskNumber={task.number}
-                className={styles.referenceImage}
-              />
-            </div>
-
-            <div className={styles.boardWrap}>
-              <CanvasBoard state={state} onChangeState={handleChangeState} />
-            </div>
+            <CanvasBoard state={state} onChangeState={handleChangeState} task={task} />
           </div>
         </div>
       )}

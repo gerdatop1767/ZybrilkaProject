@@ -84,22 +84,91 @@
   background: var(--color-text-primary);
 }
 
-.canvasWrap {
+.zoomReset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--touch-target-min);
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-input);
+  background: var(--color-bg-surface);
+  color: var(--color-accent-secondary);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-semibold);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* The drawing surface itself: real white paper, not the app's dark
+ * theme — "canvas mobile fix" block. overflow:hidden here is the pan
+ * clip; pan/zoom is applied to `.world` via a JS-driven transform, not
+ * native scrolling, so nothing here needs to scroll. */
+.viewport {
   position: relative;
   flex: 1;
   min-height: 0;
   border-radius: var(--radius-input);
-  background: var(--color-bg-surface);
+  background: #ffffff;
+  background-image: radial-gradient(circle, #e4e4ea 1px, transparent 1px);
+  background-size: 20px 20px;
   overflow: hidden;
+  touch-action: none;
+}
+
+.world {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* A dark card for the task's condition/illustration, floating at the
+ * top of the white world. Kept as its own opaque card (not text/SVG
+ * inked directly onto bare white) so the app's existing, individually
+ * audited illustration SVGs — calibrated for a dark background — never
+ * need re-coloring: recoloring each one was out of scope for this
+ * pass. The card still lives inside the same pannable/zoomable world
+ * as the canvas, and the canvas layer above it is transparent except
+ * where painted, so drawing directly over the card works exactly like
+ * drawing over the free white area below it. */
+.taskCard {
+  position: relative;
+  box-sizing: border-box;
+}
+
+.taskCardInner {
+  margin: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-input);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-e2, 0 4px 16px rgba(0, 0, 0, 0.25));
+}
+
+.taskLabel {
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-accent-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.taskCondition {
+  color: var(--color-text-primary);
+}
+
+.taskImage {
+  margin-top: var(--space-2);
 }
 
 .canvas {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  top: 0;
+  left: 0;
   /* Drawing must never also scroll the page underneath a touch drag —
-     this is the standard fix, not a preventDefault() call per event. */
+     this is the standard fix, not a preventDefault() call per event.
+     Pinch-zoom/two-finger-pan are handled ourselves in JS (see
+     CanvasBoard's pointer handlers), so the browser's own native
+     touch gestures must stay fully out of the way here. */
   touch-action: none;
   cursor: crosshair;
 }

@@ -266,6 +266,18 @@ describe('TaskMobile', () => {
     expect(within(reopened).getByRole('button', { name: 'Отменить' })).toBeEnabled();
   });
 
+  it('opens "Пожаловаться на задание" from the header warning icon (canvas mobile fix block)', async () => {
+    const user = userEvent.setup();
+    renderTask();
+    await screen.findByText(CONDITION);
+
+    await user.click(screen.getByRole('button', { name: 'Пожаловаться на задание' }));
+    const dialog = screen.getByRole('dialog', { name: 'Задание' });
+    await user.click(within(dialog).getByRole('button', { name: 'Пожаловаться на задание' }));
+
+    expect(within(dialog).getByRole('status')).toHaveTextContent('Жалоба отправлена');
+  });
+
   it('renders "Другие задания" collapsed by default with real sibling tasks', async () => {
     const user = userEvent.setup();
     renderTask();

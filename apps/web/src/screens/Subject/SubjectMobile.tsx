@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { CollectionListItem, ProgressByTopicResponse } from '@zybrilka/shared';
+import type { CollectionListItem, ProgressByTopicResponse, TaskPublic } from '@zybrilka/shared';
 import { useNavigation, type Route } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
 import { startCustomVariant, startRealTask } from '../../lib/startTraining.js';
@@ -13,6 +13,7 @@ import type { IconName } from '../../ui/Icon/icons.js';
 import { Select } from '../../ui/Select/Select.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { CircularProgress } from '../../ui/Progress/CircularProgress.js';
+import { FavoritesList } from '../../ui/Favorites/FavoritesList.js';
 import { clsx } from '../../lib/clsx.js';
 import { FadeIn, SlideUp } from '../../ui/motion/motion.js';
 import styles from './SubjectMobile.module.css';
@@ -206,6 +207,16 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
     });
   }
 
+  function handleSelectFavorite(task: TaskPublic) {
+    navigate({
+      screen: 'task',
+      subjectId: task.subjectId,
+      taskNumber: task.taskNumber,
+      taskId: task.id,
+      returnTo: currentReturnTo(),
+    });
+  }
+
   function selectMode(id: SubjectModeId) {
     setMode(id);
     setSelectedTopic(null);
@@ -332,11 +343,12 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
         />
       )}
       {mode === 'favorites' && (
-        <ModePlaceholder
-          icon="favorite"
-          title="Избранное"
-          note="Сохранённые задания появятся здесь, как только ты добавишь первое."
-        />
+        <Card>
+          <p className="text-h3" style={{ marginBottom: 'var(--space-3)' }}>
+            Избранное
+          </p>
+          <FavoritesList subjectId={subject.id} onSelect={handleSelectFavorite} />
+        </Card>
       )}
 
       {!selectedTopic && selectedNumber === null && (
@@ -736,18 +748,6 @@ function VariantBuilder({
       >
         <Icon name="play" size={16} /> Собрать вариант и начать решать
       </Button>
-    </Card>
-  );
-}
-
-function ModePlaceholder({ icon, title, note }: { icon: IconName; title: string; note: string }) {
-  return (
-    <Card className={styles.placeholderCard}>
-      <span className={styles.placeholderIcon}>
-        <Icon name={icon} size={26} />
-      </span>
-      <p className="text-h3">{title}</p>
-      <p className="text-body-sm text-secondary">{note}</p>
     </Card>
   );
 }
