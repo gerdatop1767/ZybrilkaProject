@@ -63,6 +63,17 @@ export type OverlayRoute =
        * NOT required for source/variant isolation, which collectionSlug
        * alone already provides. */
       variantId?: string;
+      /** A user-assembled task list (Subject → Варианты → "Собери
+       * собственный вариант") that has no real `variants` row of its
+       * own — the exact task numbers the user picked, in that order,
+       * each already resolved to a real task id. When present, this
+       * *is* the ordered context (useTaskNavigation uses it directly,
+       * never re-resolving from collectionSlug/variantId), so the
+       * number strip and prev/next show exactly this set — never
+       * `taskNumber ± 1` and never the full canonical variant's 1..19
+       * when the user picked a subset. Carried forward on every
+       * `goTo()` the same way collectionSlug/variantId are. */
+      customOrderedTasks?: readonly { taskId: string; taskNumber: number }[];
       /** Where the back arrow should go — this router has no general
        * overlay-to-overlay back-stack, so an overlay opened from
        * another overlay (Subject/Variants/Mistakes → Task) needs its
@@ -84,6 +95,10 @@ export type OverlayRoute =
       userAnswer: string;
       collectionSlug?: string;
       variantId?: string;
+      /** Same purpose as `task.customOrderedTasks` above — a custom
+       * variant's ordering survives into Result the same way a real
+       * variant's does. */
+      customOrderedTasks?: readonly { taskId: string; taskNumber: number }[];
       /** Same purpose as `task.returnTo` above — Result's back arrow
        * needs the same parent-overlay context Task had. */
       returnTo?: Route;

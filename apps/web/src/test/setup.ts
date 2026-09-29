@@ -53,3 +53,21 @@ if (typeof window.ResizeObserver === 'undefined') {
     disconnect() {}
   } as unknown as typeof ResizeObserver;
 }
+
+// jsdom doesn't implement the Pointer Events capture API (CanvasBoard's
+// drawing uses setPointerCapture/releasePointerCapture — Task Workspace
+// block 4). No-op stubs are enough: tests only need the handlers to run
+// without throwing, not real capture semantics.
+if (!Element.prototype.setPointerCapture) {
+  Element.prototype.setPointerCapture = () => {};
+}
+if (!Element.prototype.releasePointerCapture) {
+  Element.prototype.releasePointerCapture = () => {};
+}
+
+// jsdom has no canvas 2D backend (would need the native `canvas`
+// package) — HTMLCanvasElement.getContext() logs a "not implemented"
+// warning and returns null. CanvasBoard's own state (strokes/undo/redo)
+// is plain data managed outside the canvas element, so tests can still
+// exercise the real pointer-event → stroke → onChangeState flow; they
+// just never see actual pixels, which they don't assert on anyway.

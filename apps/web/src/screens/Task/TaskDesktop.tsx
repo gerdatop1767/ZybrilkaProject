@@ -4,10 +4,15 @@ import type { TaskPublic } from '@zybrilka/shared';
 import { serializeMultiPartUserAnswer } from '@zybrilka/shared';
 import { getTask, listTasksByNumber, submitAttempt } from '../../lib/api.js';
 import { toSampleTask } from '../../lib/taskAdapter.js';
+import { useFavorite } from '../../lib/useFavorite.js';
 import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
+import { Calculator } from '../../ui/Calculator/Calculator.js';
+import { CanvasWorkspaceDesktop } from '../../ui/CanvasWorkspace/CanvasWorkspaceDesktop.js';
+import { clearCanvasState } from '../../lib/canvasSessionStore.js';
 import { Icon } from '../../ui/Icon/Icon.js';
+import { Modal } from '../../ui/Modal/Modal.js';
 import { DesktopToolsCard } from '../../ui/Training/DesktopToolsCard.js';
 import { SessionProgressCard } from '../../ui/Training/SessionProgressCard.js';
 import { SessionTaskListCard } from '../../ui/Training/SessionTaskListCard.js';
@@ -27,6 +32,8 @@ export interface TaskDesktopProps {
   taskId: string;
   collectionSlug?: string;
   variantId?: string;
+  /** A user-assembled task list (see navigation.tsx's `task.customOrderedTasks`) — takes over the number strip / prev-next ordering when present. */
+  customOrderedTasks?: readonly { taskId: string; taskNumber: number }[];
   /** Where the back arrow returns to — see `returnTo` on the `task`
    * route in navigation.tsx (audit Block 3). */
   returnTo?: Route;
@@ -45,12 +52,21 @@ export function TaskDesktop({
   taskId,
   collectionSlug,
   variantId,
+  customOrderedTasks,
   returnTo,
 }: TaskDesktopProps) {
   const { navigate, back } = useNavigation();
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
-  const taskNav = useTaskNavigation({ subjectId, taskId, collectionSlug, variantId, returnTo });
+  const taskNav = useTaskNavigation({
+    subjectId,
+    taskId,
+    collectionSlug,
+    variantId,
+    customOrderedTasks,
+    returnTo,
+  });
   const goBack = returnTo ? () => navigate(returnTo) : back;
+  const favorite = useFavorite(taskId);
 
   // The router remounts this component (key={taskId}) on every task
   // change, so state starts fresh here — no manual reset-on-taskId-change
@@ -62,6 +78,8 @@ export function TaskDesktop({
   const [partAnswers, setPartAnswers] = useState<Record<string, string>>({});
   const [checking, setChecking] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const [canvasOpen, setCanvasOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -111,6 +129,7 @@ export function TaskDesktop({
       : (submittedAnswer as string);
     void submitAttempt(task.id, { answer: submittedAnswer })
       .then((result) => {
+        clearCanvasState(task.id);
         navigate({
           screen: 'result',
           subjectId: task.subjectId,
@@ -199,8 +218,14 @@ export function TaskDesktop({
                 {task.difficultyLabel === 'Сложное' ? 'Базовый уровень' : task.difficultyLabel}
               </span>
               <span className={styles.metaSpacer} />
-              <button type="button" className={styles.iconButton} aria-label="Сохранить">
-                <Icon name="bookmark" size={18} />
+              <button
+                type="button"
+                className={clsx(styles.iconButton, favorite.isFavorite && styles.iconButtonActive)}
+                aria-label={favorite.isFavorite ? 'Убрать из избранного' : 'В избранное'}
+                aria-pressed={favorite.isFavorite ?? false}
+                onClick={favorite.toggle}
+              >
+                <Icon name="bookmark" size={18} filled={favorite.isFavorite ?? false} />
               </button>
               <button type="button" className={styles.iconButton} aria-label="Ещё">
                 <Icon name="more" size={18} />
@@ -322,7 +347,11 @@ export function TaskDesktop({
         </div>
 
         <div className={styles.sidebar}>
-          <DesktopToolsCard onSelectHint={() => setHintOpen((v) => !v)} />
+          <DesktopToolsCard
+            onSelectHint={() => setHintOpen((v) => !v)}
+            onSelectCalculator={() => setCalculatorOpen(true)}
+            onSelectCanvas={() => setCanvasOpen(true)}
+          />
           <SessionProgressCard
             sessionTasks={task.sessionTasks}
             totalInSession={task.totalInSession}
@@ -334,6 +363,15 @@ export function TaskDesktop({
           />
         </div>
       </div>
+      <Modal open={calculatorOpen} onClose={() => setCalculatorOpen(false)} title="Калькулятор">
+        <Calculator />
+      </Modal>
+      <CanvasWorkspaceDesktop
+        open={canvasOpen}
+        onClose={() => setCanvasOpen(false)}
+        taskId={task.id}
+        task={task}
+      />
     </FadeIn>
   );
 }

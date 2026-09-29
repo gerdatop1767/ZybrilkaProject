@@ -12,7 +12,10 @@ import type { SampleTask, TaskVariant } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { getProgressSummary } from '../../lib/api.js';
 import { Button } from '../../ui/Button/Button.js';
+import { Calculator } from '../../ui/Calculator/Calculator.js';
+import { CanvasWorkspaceMobile } from '../../ui/CanvasWorkspace/CanvasWorkspaceMobile.js';
 import { Icon } from '../../ui/Icon/Icon.js';
+import { BottomSheet } from '../../ui/BottomSheet/BottomSheet.js';
 import { TaskChrome } from '../../ui/Training/TaskChrome.js';
 import { ToolsPanelMobile } from '../../ui/Training/ToolsPanelMobile.js';
 import { OtherVariantsSection } from '../../ui/Training/OtherVariantsSection.js';
@@ -30,6 +33,8 @@ export interface ResultMobileProps {
   userAnswer: string;
   collectionSlug?: string;
   variantId?: string;
+  /** A user-assembled task list (see navigation.tsx's `task.customOrderedTasks`) — takes over the number strip / prev-next ordering when present. */
+  customOrderedTasks?: readonly { taskId: string; taskNumber: number }[];
   /** Where the back arrow returns to — see `returnTo` on the `result`
    * route in navigation.tsx (audit Block 3). */
   returnTo?: Route;
@@ -52,17 +57,27 @@ export function ResultMobile({
   userAnswer,
   collectionSlug,
   variantId,
+  customOrderedTasks,
   returnTo,
 }: ResultMobileProps) {
   const { navigate, back } = useNavigation();
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
-  const taskNav = useTaskNavigation({ subjectId, taskId, collectionSlug, variantId, returnTo });
+  const taskNav = useTaskNavigation({
+    subjectId,
+    taskId,
+    collectionSlug,
+    variantId,
+    customOrderedTasks,
+    returnTo,
+  });
   const goBack = returnTo ? () => navigate(returnTo) : back;
   // The router remounts this component (key={taskId}) whenever the task
   // or its correctness changes, so state starts fresh here.
   const [task, setTask] = useState<SampleTask | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const [canvasOpen, setCanvasOpen] = useState(false);
   const [otherOpen, setOtherOpen] = useState(false);
   const [solutionOpen, setSolutionOpen] = useState(false);
   const [accuracyPercent, setAccuracyPercent] = useState<number | null>(null);
@@ -290,7 +305,14 @@ export function ResultMobile({
         </div>
       </div>
 
-      <ToolsPanelMobile open={toolsOpen} onToggle={() => setToolsOpen((v) => !v)} />
+      <ToolsPanelMobile
+        open={toolsOpen}
+        onToggle={() => setToolsOpen((v) => !v)}
+        onSelect={(toolId) => {
+          if (toolId === 'calculator') setCalculatorOpen(true);
+          if (toolId === 'canvas') setCanvasOpen(true);
+        }}
+      />
 
       <OtherVariantsSection
         taskNumber={task.number}
@@ -299,6 +321,21 @@ export function ResultMobile({
         onToggle={() => setOtherOpen((v) => !v)}
         onSelectVariant={handleSelectVariant}
         summarySubtitle="Похожее на это задание"
+      />
+
+      <BottomSheet
+        open={calculatorOpen}
+        onClose={() => setCalculatorOpen(false)}
+        title="Калькулятор"
+      >
+        <Calculator />
+      </BottomSheet>
+
+      <CanvasWorkspaceMobile
+        open={canvasOpen}
+        onClose={() => setCanvasOpen(false)}
+        taskId={task.id}
+        task={task}
       />
     </SlideUp>
   );

@@ -1,10 +1,13 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TaskDesktop } from './TaskDesktop.js';
 import { subjects } from '../../data/subjects.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
 import * as api from '../../lib/api.js';
+import { resetFavoritesCacheForTests } from '../../lib/useFavorite.js';
+import { getCanvasState, resetCanvasStoreForTests } from '../../lib/canvasSessionStore.js';
+import { initialCanvasState } from '../../lib/canvasEngine.js';
 
 vi.mock('../../lib/api.js', () => ({
   getTask: vi.fn(),
@@ -12,6 +15,9 @@ vi.mock('../../lib/api.js', () => ({
   submitAttempt: vi.fn(),
   getVariant: vi.fn(),
   getVariantForTask: vi.fn(),
+  listFavoriteTaskIds: vi.fn(() => Promise.resolve({ taskIds: [] })),
+  addFavorite: vi.fn(() => Promise.resolve()),
+  removeFavorite: vi.fn(() => Promise.resolve()),
 }));
 
 const TASK_ID = '11111111-1111-1111-1111-111111111111';
@@ -137,6 +143,8 @@ async function pasteAnswer(user: ReturnType<typeof userEvent.setup>, text: strin
 
 describe('TaskDesktop', () => {
   beforeEach(() => {
+    resetFavoritesCacheForTests();
+    resetCanvasStoreForTests();
     vi.mocked(api.getTask).mockResolvedValue(baseTask);
     vi.mocked(api.listTasksByNumber).mockResolvedValue(siblings);
     vi.mocked(api.submitAttempt).mockImplementation((_taskId, { answer }) =>
@@ -240,6 +248,137 @@ describe('TaskDesktop', () => {
     renderTask();
     await screen.findByText(CONDITION);
     expect(document.querySelector('svg[role="img"]')).toBeInTheDocument();
+  });
+
+  describe('calculator (Task Workspace block 3)', () => {
+    it('opens from "Инструменты" → "Калькулятор", computes a real result, and closes without touching the typed answer', async () => {
+      const user = userEvent.setup();
+      renderTask();
+      await screen.findByText(CONDITION);
+
+      await pasteAnswer(user, '42');
+      await user.click(screen.getByRole('button', { name: 'Калькулятор' }));
+
+      const dialog = screen.getByRole('dialog');
+      await user.click(within(dialog).getByRole('button', { name: '7' }));
+      await user.click(within(dialog).getByRole('button', { name: '+' }));
+      await user.click(within(dialog).getByRole('button', { name: '3' }));
+      await user.click(within(dialog).getByRole('button', { name: '=' }));
+      expect(within(dialog).getByTestId('calculator-display')).toHaveTextContent('10');
+
+      await user.click(within(dialog).getByRole('button', { name: 'Закрыть' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Ответ')).toHaveValue('42');
+    });
+  });
+
+  describe('canvas workspace "Полотно" (Task Workspace block 4)', () => {
+    it('opens from "Инструменты" → "Полотно", shows the current task condition, draws a stroke, and restores it on reopen without losing the typed answer', async () => {
+      const user = userEvent.setup();
+      renderTask();
+      await screen.findByText(CONDITION);
+
+      await pasteAnswer(user, '42');
+      await user.click(screen.getByRole('button', { name: 'Полотно' }));
+
+      const dialog = screen.getByRole('dialog', { name: 'Полотно' });
+      expect(within(dialog).getByText(CONDITION)).toBeInTheDocument();
+
+      const board = within(dialog).getByRole('img', { name: 'Рабочее полотно для рисования' });
+      fireEvent.pointerDown(board, { pointerId: 1, clientX: 10, clientY: 10 });
+      fireEvent.pointerMove(board, { pointerId: 1, clientX: 40, clientY: 40 });
+      fireEvent.pointerUp(board, { pointerId: 1, clientX: 40, clientY: 40 });
+
+      const undoButton = within(dialog).getByRole('button', { name: 'Отменить' });
+      expect(undoButton).toBeEnabled();
+
+      await user.click(within(dialog).getByRole('button', { name: 'Закрыть' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Ответ')).toHaveValue('42');
+
+      await user.click(screen.getByRole('button', { name: 'Полотно' }));
+      const reopened = screen.getByRole('dialog', { name: 'Полотно' });
+      expect(within(reopened).getByRole('button', { name: 'Отменить' })).toBeEnabled();
+    });
+
+    it('clears the canvas for this task once a real attempt is submitted (a new attempt starts with an empty board)', async () => {
+      const user = userEvent.setup();
+      renderTask();
+      await screen.findByText(CONDITION);
+
+      await user.click(screen.getByRole('button', { name: 'Полотно' }));
+      const dialog = screen.getByRole('dialog', { name: 'Полотно' });
+      const board = within(dialog).getByRole('img', { name: 'Рабочее полотно для рисования' });
+      fireEvent.pointerDown(board, { pointerId: 1, clientX: 10, clientY: 10 });
+      fireEvent.pointerMove(board, { pointerId: 1, clientX: 40, clientY: 40 });
+      fireEvent.pointerUp(board, { pointerId: 1, clientX: 40, clientY: 40 });
+      expect(within(dialog).getByRole('button', { name: 'Отменить' })).toBeEnabled();
+      await user.click(within(dialog).getByRole('button', { name: 'Закрыть' }));
+
+      await pasteAnswer(user, CORRECT_ANSWER);
+      await user.click(screen.getByRole('button', { name: /Проверить ответ/ }));
+      await waitFor(() => {
+        expect(screen.getByTestId('overlay')).toHaveTextContent('result:correct');
+      });
+
+      expect(getCanvasState(TASK_ID)).toEqual(initialCanvasState());
+    });
+  });
+
+  describe('favorite (Task Workspace block — real bookmark, not local-only state)', () => {
+    it('starts unfavorited, toggles to favorited via a real POST, and reflects it visually', async () => {
+      vi.mocked(api.listFavoriteTaskIds).mockResolvedValue({ taskIds: [] });
+      vi.mocked(api.addFavorite).mockResolvedValue(undefined);
+      const user = userEvent.setup();
+      renderTask();
+      await screen.findByText(CONDITION);
+
+      const button = await screen.findByRole('button', { name: 'В избранное' });
+      expect(button).toHaveAttribute('aria-pressed', 'false');
+
+      await user.click(button);
+      await waitFor(() => expect(api.addFavorite).toHaveBeenCalledWith(TASK_ID));
+      expect(await screen.findByRole('button', { name: 'Убрать из избранного' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+    });
+
+    it('starts favorited when the server says so, and toggling off calls DELETE', async () => {
+      vi.mocked(api.listFavoriteTaskIds).mockResolvedValue({ taskIds: [TASK_ID] });
+      vi.mocked(api.removeFavorite).mockResolvedValue(undefined);
+      const user = userEvent.setup();
+      renderTask();
+      await screen.findByText(CONDITION);
+
+      const button = await screen.findByRole('button', { name: 'Убрать из избранного' });
+      expect(button).toHaveAttribute('aria-pressed', 'true');
+
+      await user.click(button);
+      await waitFor(() => expect(api.removeFavorite).toHaveBeenCalledWith(TASK_ID));
+      expect(await screen.findByRole('button', { name: 'В избранное' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
+    });
+
+    it('a different task never inherits another task’s favorite state (task-specific, not global)', async () => {
+      vi.mocked(api.listFavoriteTaskIds).mockResolvedValue({ taskIds: [TASK_ID] });
+      renderTask();
+      await screen.findByRole('button', { name: 'Убрать из избранного' });
+
+      vi.mocked(api.getTask).mockResolvedValue({ ...baseTask, id: SIBLING_A });
+      render(
+        <NavigationProvider>
+          <TaskDesktop
+            subjectId={baseTask.subjectId}
+            taskNumber={baseTask.taskNumber}
+            taskId={SIBLING_A}
+          />
+        </NavigationProvider>,
+      );
+      expect(await screen.findAllByRole('button', { name: 'В избранное' })).not.toHaveLength(0);
+    });
   });
 
   describe('multi_part task', () => {

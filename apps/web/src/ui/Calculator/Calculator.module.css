@@ -1,0 +1,93 @@
+.calculator {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  /* Compact and self-contained — this sits inside a Modal/BottomSheet
+     panel that already has its own max-width, so the calculator never
+     needs to know about viewport size itself. */
+  width: min(320px, 100%);
+}
+
+.display {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border-radius: var(--radius-input);
+  background: var(--color-bg-elevated);
+  min-height: 4.5rem;
+  overflow-x: auto;
+}
+
+.expressionLine {
+  font-size: var(--font-size-body-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.resultLine {
+  font-size: 2rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.resultError {
+  color: var(--color-error);
+  font-size: var(--font-size-h3);
+}
+
+.percentRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.percentButton {
+  border: none;
+  background: transparent;
+  color: var(--color-accent-secondary);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-semibold);
+  padding: var(--space-1) var(--space-2);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.key {
+  aspect-ratio: 1;
+  border: none;
+  border-radius: var(--radius-input);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--duration-fast) var(--easing-standard);
+}
+
+.key:active {
+  transform: scale(0.94);
+}
+
+.keyOp {
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+}
+
+.keyAccent {
+  background: var(--color-bg-surface);
+  color: var(--color-accent-secondary);
+}
+
+.keyEquals {
+  background: var(--gradient-primary);
+  color: var(--color-text-primary);
+}

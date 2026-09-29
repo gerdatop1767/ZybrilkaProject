@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { CollectionListItem, ProgressByTopicResponse } from '@zybrilka/shared';
 import { useNavigation, type Route } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
-import { startRealTask } from '../../lib/startTraining.js';
+import { startCustomVariant, startRealTask } from '../../lib/startTraining.js';
 import { getProgressByTaskNumber, getProgressByTopic, listCollections } from '../../lib/api.js';
 import { getSubjectContent, type SubjectModeId } from '../../data/subjectContent.js';
 import { Card } from '../../ui/Card/Card.js';
@@ -188,6 +188,15 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
     });
   }
 
+  function startVariant(taskNumbers: readonly number[], collection?: string) {
+    startCustomVariant(navigate, {
+      subject: subject.id,
+      taskNumbers,
+      collection,
+      returnTo: currentReturnTo(),
+    });
+  }
+
   function startTopicTraining(topic: TopicProgressItem) {
     startRealTask(navigate, {
       subject: subject.id,
@@ -311,7 +320,7 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
         <VariantBuilder
           taskNumberCount={content.taskNumberCount}
           collections={collections}
-          onStart={startTraining}
+          onStart={startVariant}
         />
       )}
       {mode === 'random' && (
@@ -627,7 +636,7 @@ function VariantBuilder({
 }: {
   taskNumberCount: number;
   collections: readonly CollectionListItem[];
-  onStart: (firstNumber: number, collection?: string) => void;
+  onStart: (taskNumbers: readonly number[], collection?: string) => void;
 }) {
   const allNumbers = Array.from({ length: taskNumberCount }, (_, i) => i + 1);
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
@@ -722,7 +731,7 @@ function VariantBuilder({
         variant="primary"
         fullWidth
         disabled={selected.size === 0}
-        onClick={() => onStart(sortedSelected[0]!, selectedSlug ?? undefined)}
+        onClick={() => onStart(sortedSelected, selectedSlug ?? undefined)}
         style={{ marginTop: 'var(--space-4)' }}
       >
         <Icon name="play" size={16} /> Собрать вариант и начать решать

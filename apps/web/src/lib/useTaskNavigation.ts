@@ -40,14 +40,21 @@ export interface TaskNavigationContext {
  * invents its own ordering or drops the source/variant context.
  *
  * Resolution order:
- * 1. `variantId` already known (e.g. picked explicitly in Training's
+ * 1. `customOrderedTasks` already known (a user-assembled variant from
+ *    Subject → Варианты → "Собери собственный вариант" — see
+ *    navigation.tsx's `task.customOrderedTasks`) — use it directly, no
+ *    fetch: it has no `variants` row of its own to resolve from, and
+ *    is already the exact real ordering the user picked (Task
+ *    Workspace block — never `taskNumber ± 1`, never the full
+ *    canonical 1..19 when the user picked a subset).
+ * 2. `variantId` already known (e.g. picked explicitly in Training's
  *    "Вариант" mode) — fetch that variant directly, no guessing.
- * 2. Only `collectionSlug` known — resolve which variant this task
+ * 3. Only `collectionSlug` known — resolve which variant this task
  *    belongs to *within that collection* (GET /variants/for-task),
  *    so a different source's task with the same number never leaks
  *    in (source isolation) and a different variant's copy never does
  *    either (variant isolation).
- * 3. Neither known (e.g. reached via "Темы", or a cross-source sibling
+ * 4. None known (e.g. reached via "Темы", or a cross-source sibling
  *    from "Другие задания") — no ordered list. `previous`/`next` stay
  *    null and `orderedTasks` stays empty; callers render a single-item
  *    context (just the current number, no strip/arrows) rather than
@@ -58,15 +65,17 @@ export function useTaskNavigation(params: {
   taskId: string;
   collectionSlug?: string;
   variantId?: string;
+  customOrderedTasks?: readonly TaskNavigationEntry[];
   /** Carried onto every `goTo()` navigation (Prev/Next/Skip/number
    * strip), so the back-arrow return context set on the current task
    * (audit Block 3) survives moving to a sibling task instead of
    * resetting on every step. */
   returnTo?: Route;
 }): TaskNavigationContext {
-  const { subjectId, taskId, collectionSlug, variantId, returnTo } = params;
+  const { subjectId, taskId, collectionSlug, variantId, customOrderedTasks, returnTo } = params;
   const { navigate } = useNavigation();
-  const hasContext = Boolean(collectionSlug || variantId);
+  const hasCustomList = Boolean(customOrderedTasks && customOrderedTasks.length > 0);
+  const hasContext = !hasCustomList && Boolean(collectionSlug || variantId);
   // Identifies "which request this is for" — resolution depends on all
   // three, so any of them changing means the previous fetch's result
   // (if it lands late) must not be applied. Compared against on render
@@ -110,8 +119,8 @@ export function useTaskNavigation(params: {
 
   const resolved = hasContext && fetched && fetched.key === requestKey ? fetched : null;
   const loading = hasContext && resolved === null;
-  const orderedTasks = resolved?.orderedTasks ?? [];
-  const resolvedVariantId = resolved?.resolvedVariantId ?? null;
+  const orderedTasks = hasCustomList ? customOrderedTasks! : (resolved?.orderedTasks ?? []);
+  const resolvedVariantId = hasCustomList ? null : (resolved?.resolvedVariantId ?? null);
 
   const currentIndex = orderedTasks.findIndex((t) => t.taskId === taskId);
   const previous = currentIndex > 0 ? (orderedTasks[currentIndex - 1] ?? null) : null;
@@ -128,6 +137,7 @@ export function useTaskNavigation(params: {
       taskId: entry.taskId,
       collectionSlug,
       variantId: resolvedVariantId ?? undefined,
+      customOrderedTasks,
       returnTo,
     });
   }

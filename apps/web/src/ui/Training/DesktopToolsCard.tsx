@@ -4,6 +4,7 @@ import styles from './DesktopToolsCard.module.css';
 
 const tools: { id: string; label: string; icon: IconName }[] = [
   { id: 'calculator', label: 'Калькулятор', icon: 'calculator' },
+  { id: 'canvas', label: 'Полотно', icon: 'brush' },
   { id: 'notes', label: 'Заметки', icon: 'notes' },
   { id: 'hint', label: 'Подсказка', icon: 'hint' },
 ];
@@ -13,7 +14,22 @@ const tools: { id: string; label: string; icon: IconName }[] = [
  * always visible (no collapse — desktop has the room mobile doesn't),
  * matching desktop/04_training.png exactly.
  */
-export function DesktopToolsCard({ onSelectHint }: { onSelectHint: () => void }) {
+export function DesktopToolsCard({
+  onSelectHint,
+  onSelectCalculator,
+  onSelectCanvas,
+}: {
+  onSelectHint: () => void;
+  onSelectCalculator: () => void;
+  onSelectCanvas: () => void;
+}) {
+  function handleClick(id: string) {
+    if (id === 'hint') return onSelectHint;
+    if (id === 'calculator') return onSelectCalculator;
+    if (id === 'canvas') return onSelectCanvas;
+    return undefined;
+  }
+
   return (
     <div className={styles.card}>
       <p className="text-h3">Инструменты</p>
@@ -23,7 +39,7 @@ export function DesktopToolsCard({ onSelectHint }: { onSelectHint: () => void })
             key={tool.id}
             type="button"
             className={styles.item}
-            onClick={tool.id === 'hint' ? onSelectHint : undefined}
+            onClick={handleClick(tool.id)}
           >
             <span className={styles.itemIcon}>
               <Icon name={tool.icon} size={18} />

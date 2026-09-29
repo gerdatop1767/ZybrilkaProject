@@ -283,3 +283,43 @@ describe('SubjectMobile', () => {
     });
   });
 });
+
+describe('SubjectMobile — VariantBuilder (Task Workspace block — "Варианты → Общие → сформировать вариант")', () => {
+  it('resolves every picked number (not just the first) into a real customOrderedTasks list', async () => {
+    mockCollections();
+    mockProgress();
+    vi.mocked(api.getRandomTask).mockImplementation(({ taskNumber }) =>
+      Promise.resolve({ ...RANDOM_TASK, id: `task-${taskNumber}`, taskNumber: taskNumber! }),
+    );
+    function TaskOverlayProbe() {
+      const { overlay } = useNavigation();
+      if (overlay?.screen !== 'task') return <p data-testid="task-overlay">none</p>;
+      return (
+        <p data-testid="task-overlay">
+          {JSON.stringify({
+            taskId: overlay.taskId,
+            customOrderedNumbers: overlay.customOrderedTasks?.map((t) => t.taskNumber) ?? null,
+          })}
+        </p>
+      );
+    }
+    const user = userEvent.setup();
+    render(
+      <NavigationProvider>
+        <SubjectMobile subjectId="math" from="subjectCatalog" />
+        <TaskOverlayProbe />
+      </NavigationProvider>,
+    );
+    await user.click(screen.getByText('Варианты'));
+    for (const n of [1, 3, 4, 7]) {
+      await user.click(screen.getByRole('button', { name: String(n) }));
+    }
+    await user.click(screen.getByRole('button', { name: /Собрать вариант/ }));
+
+    await waitFor(() => expect(screen.getByTestId('task-overlay')).not.toHaveTextContent('none'));
+    const probeData = JSON.parse(screen.getByTestId('task-overlay').textContent!);
+    expect(probeData.taskId).toBe('task-1');
+    expect(probeData.customOrderedNumbers).toEqual([1, 3, 4, 7]);
+    expect(vi.mocked(api.getRandomTask)).toHaveBeenCalledTimes(4);
+  });
+});

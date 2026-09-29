@@ -6,3 +6,4 @@ export * from './tasks.js';
 export * from './variants.js';
 export * from './mistakes.js';
 export * from './progress.js';
+export * from './favorites.js';

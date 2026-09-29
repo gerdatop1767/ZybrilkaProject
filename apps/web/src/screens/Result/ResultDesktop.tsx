@@ -11,7 +11,10 @@ import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
 import type { SampleTask } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
+import { Calculator } from '../../ui/Calculator/Calculator.js';
+import { CanvasWorkspaceDesktop } from '../../ui/CanvasWorkspace/CanvasWorkspaceDesktop.js';
 import { Icon } from '../../ui/Icon/Icon.js';
+import { Modal } from '../../ui/Modal/Modal.js';
 import { DesktopToolsCard } from '../../ui/Training/DesktopToolsCard.js';
 import { SessionTaskListCard } from '../../ui/Training/SessionTaskListCard.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
@@ -33,6 +36,8 @@ export interface ResultDesktopProps {
   userAnswer: string;
   collectionSlug?: string;
   variantId?: string;
+  /** A user-assembled task list (see navigation.tsx's `task.customOrderedTasks`) — takes over the number strip / prev-next ordering when present. */
+  customOrderedTasks?: readonly { taskId: string; taskNumber: number }[];
   /** Where the back arrow returns to — see `returnTo` on the `result`
    * route in navigation.tsx (audit Block 3). */
   returnTo?: Route;
@@ -56,11 +61,19 @@ export function ResultDesktop({
   userAnswer,
   collectionSlug,
   variantId,
+  customOrderedTasks,
   returnTo,
 }: ResultDesktopProps) {
   const { navigate, back } = useNavigation();
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
-  const taskNav = useTaskNavigation({ subjectId, taskId, collectionSlug, variantId, returnTo });
+  const taskNav = useTaskNavigation({
+    subjectId,
+    taskId,
+    collectionSlug,
+    variantId,
+    customOrderedTasks,
+    returnTo,
+  });
   const goBack = returnTo ? () => navigate(returnTo) : back;
   function retryTask() {
     navigate({
@@ -78,6 +91,8 @@ export function ResultDesktop({
   const [task, setTask] = useState<SampleTask | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [detailedSolution, setDetailedSolution] = useState(true);
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const [canvasOpen, setCanvasOpen] = useState(false);
   const xp = useCountUp(correct ? XP_REWARD : 0, 500);
 
   useEffect(() => {
@@ -401,11 +416,24 @@ export function ResultDesktop({
                 sessionTasks={task.sessionTasks}
                 onSelect={() => undefined}
               />
-              <DesktopToolsCard onSelectHint={() => undefined} />
+              <DesktopToolsCard
+                onSelectHint={() => undefined}
+                onSelectCalculator={() => setCalculatorOpen(true)}
+                onSelectCanvas={() => setCanvasOpen(true)}
+              />
             </>
           )}
         </div>
       </div>
+      <Modal open={calculatorOpen} onClose={() => setCalculatorOpen(false)} title="Калькулятор">
+        <Calculator />
+      </Modal>
+      <CanvasWorkspaceDesktop
+        open={canvasOpen}
+        onClose={() => setCanvasOpen(false)}
+        taskId={task.id}
+        task={task}
+      />
     </FadeIn>
   );
 }

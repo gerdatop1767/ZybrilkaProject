@@ -416,6 +416,62 @@ describe('SubjectDesktop — Варианты (real collections, source isolatio
     await user.click(screen.getByRole('button', { name: '1' }));
     expect(screen.getByRole('button', { name: /Собрать вариант/ })).toBeEnabled();
   });
+
+  it('resolves every picked number (not just the first) into a real customOrderedTasks list — the "Варианты → Общие → сформировать вариант" bug', async () => {
+    mockCollections();
+    mockProgress(aggregateProgress());
+    vi.mocked(api.getRandomTask).mockImplementation(({ taskNumber }) =>
+      Promise.resolve({
+        id: `task-${taskNumber}`,
+        subjectId: 'math',
+        taskNumber: taskNumber!,
+        topicId: null,
+        topicName: null,
+        difficulty: 2 as const,
+        conditionMd: 'Условие',
+        imageUrl: null,
+        hintMd: null,
+        answerType: 'short_answer' as const,
+        answerOptions: null,
+        answerParts: null,
+        source: 'Ященко',
+        sourceUrl: null,
+        sourceYear: 2026,
+        tags: [],
+        status: 'published' as const,
+      }),
+    );
+    function TaskOverlayProbe() {
+      const { overlay } = useNavigation();
+      if (overlay?.screen !== 'task') return <p data-testid="task-overlay">none</p>;
+      return (
+        <p data-testid="task-overlay">
+          {JSON.stringify({
+            taskId: overlay.taskId,
+            customOrderedNumbers: overlay.customOrderedTasks?.map((t) => t.taskNumber) ?? null,
+          })}
+        </p>
+      );
+    }
+    const user = userEvent.setup();
+    render(
+      <NavigationProvider>
+        <SubjectDesktop subjectId="math" from="subjectCatalog" />
+        <TaskOverlayProbe />
+      </NavigationProvider>,
+    );
+    await user.click(screen.getByText('Полные варианты ЕГЭ'));
+    for (const n of [1, 3, 4, 7]) {
+      await user.click(screen.getByRole('button', { name: String(n) }));
+    }
+    await user.click(screen.getByRole('button', { name: /Собрать вариант/ }));
+
+    await waitFor(() => expect(screen.getByTestId('task-overlay')).not.toHaveTextContent('none'));
+    const probeData = JSON.parse(screen.getByTestId('task-overlay').textContent!);
+    expect(probeData.taskId).toBe('task-1');
+    expect(probeData.customOrderedNumbers).toEqual([1, 3, 4, 7]);
+    expect(vi.mocked(api.getRandomTask)).toHaveBeenCalledTimes(4);
+  });
 });
 
 describe('SubjectDesktop — BackRow', () => {

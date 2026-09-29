@@ -299,3 +299,26 @@ export const mistakes = pgTable(
   },
   (table) => [uniqueIndex('mistakes_user_task_idx').on(table.userId, table.taskId)],
 );
+
+/**
+ * A user's saved tasks ("В избранное" bookmark on the Task screen) —
+ * the (userId, taskId) unique index is what makes toggling idempotent
+ * from the client (add is a plain insert that 409s on a duplicate,
+ * remove is a plain delete) without a read-then-write race. Keyed by
+ * the same anonymous `userId` every other per-user table uses (see
+ * apps/api/src/plugins/anonUser.ts) — no separate identity system.
+ */
+export const favorites = pgTable(
+  'favorites',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('favorites_user_task_idx').on(table.userId, table.taskId)],
+);
