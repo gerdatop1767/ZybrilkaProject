@@ -1,57 +1,57 @@
-import { getCustomIllustration } from './illustrations.js';
+import { getCustomIllustration, illustrationReconstructsOriginal } from './illustrations.js';
 import styles from './TaskIllustration.module.css';
 
-export interface TaskConditionImageProps {
-  /** The task's own imageUrl — a PDF-cropped scan, i.e. the actual
-   * figure given in the source ЕГЭ material. Never a reconstruction:
-   * this is the only illustration that may render inside "Условие"
-   * (audit Block 5). */
-  imageUrl: string | null;
+export interface TaskExamIllustrationProps {
+  subjectId: string;
+  taskNumber: number;
   className?: string;
 }
 
 /**
- * The task's real given image, if the source material has one (e.g.
- * task 8's derivative graph). Renders inside "Условие" — this is
- * exactly what the ЕГЭ material shows, so it's fine to present as part
- * of the condition. Renders nothing when there's no real image; a
- * custom SVG reconstruction is never shown here — see
- * `TaskSolutionIllustration` below.
+ * The task's real given figure — but always as our own verified SVG
+ * reconstruction, never the source's raw scan image (EGE Fidelity
+ * audit, Block 4: "Мы НЕ хотим вставлять оригинальные изображения ЕГЭ
+ * как готовые картинки"). Renders inside "Условие" only when this
+ * task's SVG is confirmed to reconstruct a diagram the source material
+ * actually prints (tasks 1, 3, 8, 11 — verified against the PDF, see
+ * illustrations.tsx); every other task renders nothing here, even if
+ * it has a `task.imageUrl` — that raster field is no longer displayed
+ * anywhere in the UI at all.
  */
-export function TaskConditionImage({ imageUrl, className }: TaskConditionImageProps) {
-  if (!imageUrl) return null;
-  const combinedClassName = className ? `${className} ${styles.pdfFallback}` : styles.pdfFallback;
-  return <img src={imageUrl} alt="Иллюстрация к заданию" className={combinedClassName} />;
+export function TaskExamIllustration({
+  subjectId,
+  taskNumber,
+  className,
+}: TaskExamIllustrationProps) {
+  if (!illustrationReconstructsOriginal(subjectId, taskNumber)) return null;
+  const custom = getCustomIllustration(subjectId, taskNumber);
+  if (!custom) return null;
+  return <div className={className}>{custom}</div>;
 }
 
 export interface TaskSolutionIllustrationProps {
   subjectId: string;
   taskNumber: number;
-  /** When the task has a real given image, the custom SVG is
-   * redundant (and, worse, could be a diagram for a *different*
-   * variant's numbers) — the real image already rendered in
-   * TaskConditionImage above takes priority and this renders nothing
-   * (audit Block 6). */
-  imageUrl: string | null;
   className?: string;
 }
 
 /**
- * A custom SVG diagram reconstructed from the task's own given data,
- * for tasks whose original material has no image of its own. Labelled
- * "Иллюстрация к решению" and rendered outside "Условие" — it is our
- * reconstruction, not something the ЕГЭ material actually shows, so it
- * must never be visually mistaken for the original condition (audit
- * Block 5). Renders nothing once a real `imageUrl` exists (Block 6) or
- * no custom illustration exists for this task at all.
+ * A custom SVG diagram built from the task's own given/derived data,
+ * for tasks whose original material prints no diagram at all (2, 14,
+ * 17 — text-only Part 2 proofs). Labelled "Иллюстрация к решению" and
+ * rendered outside "Условие" — it is our own solving aid, not
+ * something the ЕГЭ material actually shows, so it must never be
+ * visually mistaken for the original condition (audit Block 5).
+ * Renders nothing for a task whose SVG already reconstructs a real
+ * original diagram (that one belongs in `TaskExamIllustration` above,
+ * not duplicated here) or has no custom illustration at all.
  */
 export function TaskSolutionIllustration({
   subjectId,
   taskNumber,
-  imageUrl,
   className,
 }: TaskSolutionIllustrationProps) {
-  if (imageUrl) return null;
+  if (illustrationReconstructsOriginal(subjectId, taskNumber)) return null;
   const custom = getCustomIllustration(subjectId, taskNumber);
   if (!custom) return null;
   return (
