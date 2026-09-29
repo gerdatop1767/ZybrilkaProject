@@ -89,6 +89,18 @@ export const tasks = pgTable(
     answerType: text('answer_type', { enum: taskAnswerTypes }).notNull().default('short_answer'),
     /** Never sent to the client before an attempt exists for it — see modules/tasks/service.ts. */
     correctAnswer: text('correct_answer').notNull(),
+    /**
+     * Optional presentation-only version of `correctAnswer` — LaTeX
+     * ($...$) for a value whose plain form isn't real math typography
+     * (e.g. "arccos(√10/5)", an interval-set string). Never read by
+     * checkAnswer/checkIntervalAnswer/gradeMultiPart — those always
+     * grade against `correctAnswer` itself, so this column can never
+     * change what counts as a correct answer (EGE Fidelity: Final
+     * Polish audit, Block 2 — machine value vs display value). Null
+     * means `correctAnswer` is already fine to show as-is (most tasks
+     * — a plain number needs no separate display form).
+     */
+    correctAnswerDisplay: text('correct_answer_display'),
     answerOptions: jsonb('answer_options').$type<readonly string[] | null>(),
     explanationMd: text('explanation_md').notNull(),
     /**

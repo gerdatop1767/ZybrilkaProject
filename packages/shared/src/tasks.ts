@@ -63,6 +63,11 @@ export type SolutionStep = z.infer<typeof solutionStepSchema>;
 /** Same task, once the current user has attempted it — includes the answer key. */
 export const taskWithSolutionSchema = taskPublicSchema.extend({
   correctAnswer: z.string(),
+  /** Presentation-only LaTeX form of `correctAnswer`, when the plain
+   * value isn't real math typography (e.g. "arccos(√10/5)") — the
+   * client should render this (via MathText) when present and fall
+   * back to `correctAnswer` otherwise. Never used for grading. */
+  correctAnswerDisplay: z.string().nullable(),
   explanationMd: z.string(),
   /** `explanationMd` broken into named, task-specific steps for a
    * step-by-step UI. Null falls back to rendering `explanationMd` as
@@ -133,6 +138,9 @@ export type AttemptPartResult = z.infer<typeof attemptPartResultSchema>;
 export const attemptResultSchema = z.object({
   correct: z.boolean(),
   correctAnswer: z.string(),
+  /** Same purpose as `TaskWithSolution.correctAnswerDisplay` — the
+   * presentation-only LaTeX form, never used for grading. */
+  correctAnswerDisplay: z.string().nullable(),
   explanation: z.string(),
   attemptId: z.uuid(),
   mistakeId: z.uuid().nullable(),

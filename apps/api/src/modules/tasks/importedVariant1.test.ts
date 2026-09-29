@@ -141,4 +141,43 @@ describe('imported EGE-2026 Variant 1 tasks via the real Task Engine', () => {
     });
     expect(withSolution.json().explanationMd).toContain('Ответ: −71.');
   });
+
+  it('carries correctAnswerDisplay through the attempt result and getTask, only for tasks that need it (Final Polish, machine vs display)', async () => {
+    const [task14] = await testDb.db
+      .select()
+      .from(schema.tasks)
+      .where(and(eq(schema.tasks.subjectId, 'math'), eq(schema.tasks.taskNumber, 14)));
+    const anonId = randomUUID();
+
+    const attempt = await app.inject({
+      method: 'POST',
+      url: `/api/v1/tasks/${task14!.id}/attempt`,
+      headers: { 'x-anon-id': anonId },
+      payload: { answer: 'что-то другое' },
+    });
+    expect(attempt.json()).toMatchObject({
+      correctAnswer: 'arccos(√10/5)',
+      correctAnswerDisplay: '$\\arccos\\dfrac{\\sqrt{10}}{5}$',
+    });
+
+    const withSolution = await app.inject({
+      method: 'GET',
+      url: `/api/v1/tasks/${task14!.id}`,
+      headers: { 'x-anon-id': anonId },
+    });
+    expect(withSolution.json().correctAnswerDisplay).toBe('$\\arccos\\dfrac{\\sqrt{10}}{5}$');
+
+    // Task 1's correctAnswer ("102") is already plain — no display override needed.
+    const [task1] = await testDb.db
+      .select()
+      .from(schema.tasks)
+      .where(and(eq(schema.tasks.subjectId, 'math'), eq(schema.tasks.taskNumber, 1)));
+    const attempt1 = await app.inject({
+      method: 'POST',
+      url: `/api/v1/tasks/${task1!.id}/attempt`,
+      headers: { 'x-anon-id': anonId },
+      payload: { answer: '0' },
+    });
+    expect(attempt1.json().correctAnswerDisplay).toBeNull();
+  });
 });

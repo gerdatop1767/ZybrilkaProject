@@ -43,6 +43,13 @@
       "when": 1790531444891,
       "tag": "0005_task_hint_solution_steps",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790681812012,
+      "tag": "0006_correct_answer_display",
+      "breakpoints": true
     }
   ]
 }

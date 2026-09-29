@@ -145,6 +145,7 @@ describe('TaskDesktop', () => {
           ? {
               correct: true,
               correctAnswer: CORRECT_ANSWER,
+              correctAnswerDisplay: null,
               explanation: EXPLANATION,
               attemptId: 'a1',
               mistakeId: null,
@@ -152,6 +153,7 @@ describe('TaskDesktop', () => {
           : {
               correct: false,
               correctAnswer: CORRECT_ANSWER,
+              correctAnswerDisplay: null,
               explanation: EXPLANATION,
               attemptId: 'a2',
               mistakeId: 'm1',

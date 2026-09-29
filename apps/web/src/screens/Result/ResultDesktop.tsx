@@ -288,7 +288,7 @@ export function ResultDesktop({
                     <>
                       <span className="text-body-sm text-secondary">Правильный ответ:</span>
                       <p className={clsx(styles.answerValue, styles.answerValueReference)}>
-                        <InlineMathText text={task.correctAnswer} />
+                        <InlineMathText text={task.correctAnswerDisplay ?? task.correctAnswer} />
                       </p>
                     </>
                   )}
@@ -379,7 +379,7 @@ export function ResultDesktop({
             correctAnswer={
               multiPartSpec
                 ? multiPartSpec.parts.map((p) => `${p.label}) ${p.correctAnswer}`).join(', ')
-                : task.correctAnswer
+                : (task.correctAnswerDisplay ?? task.correctAnswer)
             }
             resultSummary={
               multiPartGrade
