@@ -8,6 +8,8 @@ import type { TaskVariant } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Calculator } from '../../ui/Calculator/Calculator.js';
+import { CanvasWorkspaceMobile } from '../../ui/CanvasWorkspace/CanvasWorkspaceMobile.js';
+import { clearCanvasState } from '../../lib/canvasSessionStore.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { BottomSheet } from '../../ui/BottomSheet/BottomSheet.js';
 import { DifficultyTag } from '../../ui/Training/DifficultyTag.js';
@@ -78,6 +80,7 @@ export function TaskMobile({
   const [toolsOpen, setToolsOpen] = useState(false);
   const [otherOpen, setOtherOpen] = useState(false);
   const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const [canvasOpen, setCanvasOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -109,6 +112,7 @@ export function TaskMobile({
       : (submittedAnswer as string);
     void submitAttempt(task.id, { answer: submittedAnswer })
       .then((result) => {
+        clearCanvasState(task.id);
         navigate({
           screen: 'result',
           subjectId: task.subjectId,
@@ -315,6 +319,7 @@ export function TaskMobile({
         hideSummary
         onSelect={(toolId) => {
           if (toolId === 'calculator') setCalculatorOpen(true);
+          if (toolId === 'canvas') setCanvasOpen(true);
         }}
       />
 
@@ -334,6 +339,13 @@ export function TaskMobile({
       >
         <Calculator />
       </BottomSheet>
+
+      <CanvasWorkspaceMobile
+        open={canvasOpen}
+        onClose={() => setCanvasOpen(false)}
+        taskId={task.id}
+        task={task}
+      />
     </SlideUp>
   );
 }

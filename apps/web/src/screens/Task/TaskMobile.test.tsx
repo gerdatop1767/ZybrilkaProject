@@ -1,10 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TaskMobile } from './TaskMobile.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
 import * as api from '../../lib/api.js';
 import { resetFavoritesCacheForTests } from '../../lib/useFavorite.js';
+import { resetCanvasStoreForTests } from '../../lib/canvasSessionStore.js';
 
 vi.mock('../../lib/api.js', () => ({
   getTask: vi.fn(),
@@ -153,6 +154,7 @@ async function pasteAnswer(user: ReturnType<typeof userEvent.setup>, text: strin
 describe('TaskMobile', () => {
   beforeEach(() => {
     resetFavoritesCacheForTests();
+    resetCanvasStoreForTests();
     vi.mocked(api.getTask).mockResolvedValue(baseTask);
     vi.mocked(api.listTasksByNumber).mockResolvedValue(siblings);
     vi.mocked(api.submitAttempt).mockImplementation((_taskId, { answer }) =>
@@ -236,6 +238,32 @@ describe('TaskMobile', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Закрыть' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Ответ')).toHaveValue('(−∞; 2]');
+  });
+
+  it('opens the canvas workspace from "Полотно", shows the task condition, draws a stroke, closes without losing the typed answer, and restores the drawing on reopen (Task Workspace block 4)', async () => {
+    const user = userEvent.setup();
+    renderTask();
+    await screen.findByText(CONDITION);
+    await pasteAnswer(user, '(−∞; 2]');
+    await user.click(screen.getByRole('button', { name: /Дополнительные инструменты/ }));
+    await user.click(screen.getByRole('button', { name: 'Полотно' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Полотно' });
+    expect(within(dialog).getByText(CONDITION)).toBeInTheDocument();
+
+    const board = within(dialog).getByRole('img', { name: 'Рабочее полотно для рисования' });
+    fireEvent.pointerDown(board, { pointerId: 1, clientX: 5, clientY: 5 });
+    fireEvent.pointerMove(board, { pointerId: 1, clientX: 30, clientY: 30 });
+    fireEvent.pointerUp(board, { pointerId: 1, clientX: 30, clientY: 30 });
+    expect(within(dialog).getByRole('button', { name: 'Отменить' })).toBeEnabled();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Закрыть' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Ответ')).toHaveValue('(−∞; 2]');
+
+    await user.click(screen.getByRole('button', { name: 'Полотно' }));
+    const reopened = screen.getByRole('dialog', { name: 'Полотно' });
+    expect(within(reopened).getByRole('button', { name: 'Отменить' })).toBeEnabled();
   });
 
   it('renders "Другие задания" collapsed by default with real sibling tasks', async () => {

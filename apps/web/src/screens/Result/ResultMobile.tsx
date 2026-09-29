@@ -13,6 +13,7 @@ import { subjects } from '../../data/subjects.js';
 import { getProgressSummary } from '../../lib/api.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Calculator } from '../../ui/Calculator/Calculator.js';
+import { CanvasWorkspaceMobile } from '../../ui/CanvasWorkspace/CanvasWorkspaceMobile.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { BottomSheet } from '../../ui/BottomSheet/BottomSheet.js';
 import { TaskChrome } from '../../ui/Training/TaskChrome.js';
@@ -76,6 +77,7 @@ export function ResultMobile({
   const [loadError, setLoadError] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const [canvasOpen, setCanvasOpen] = useState(false);
   const [otherOpen, setOtherOpen] = useState(false);
   const [solutionOpen, setSolutionOpen] = useState(false);
   const [accuracyPercent, setAccuracyPercent] = useState<number | null>(null);
@@ -308,6 +310,7 @@ export function ResultMobile({
         onToggle={() => setToolsOpen((v) => !v)}
         onSelect={(toolId) => {
           if (toolId === 'calculator') setCalculatorOpen(true);
+          if (toolId === 'canvas') setCanvasOpen(true);
         }}
       />
 
@@ -327,6 +330,13 @@ export function ResultMobile({
       >
         <Calculator />
       </BottomSheet>
+
+      <CanvasWorkspaceMobile
+        open={canvasOpen}
+        onClose={() => setCanvasOpen(false)}
+        taskId={task.id}
+        task={task}
+      />
     </SlideUp>
   );
 }

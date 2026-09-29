@@ -1,11 +1,13 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TaskDesktop } from './TaskDesktop.js';
 import { subjects } from '../../data/subjects.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
 import * as api from '../../lib/api.js';
 import { resetFavoritesCacheForTests } from '../../lib/useFavorite.js';
+import { getCanvasState, resetCanvasStoreForTests } from '../../lib/canvasSessionStore.js';
+import { initialCanvasState } from '../../lib/canvasEngine.js';
 
 vi.mock('../../lib/api.js', () => ({
   getTask: vi.fn(),
@@ -142,6 +144,7 @@ async function pasteAnswer(user: ReturnType<typeof userEvent.setup>, text: strin
 describe('TaskDesktop', () => {
   beforeEach(() => {
     resetFavoritesCacheForTests();
+    resetCanvasStoreForTests();
     vi.mocked(api.getTask).mockResolvedValue(baseTask);
     vi.mocked(api.listTasksByNumber).mockResolvedValue(siblings);
     vi.mocked(api.submitAttempt).mockImplementation((_taskId, { answer }) =>
@@ -266,6 +269,59 @@ describe('TaskDesktop', () => {
       await user.click(within(dialog).getByRole('button', { name: 'Закрыть' }));
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       expect(screen.getByLabelText('Ответ')).toHaveValue('42');
+    });
+  });
+
+  describe('canvas workspace "Полотно" (Task Workspace block 4)', () => {
+    it('opens from "Инструменты" → "Полотно", shows the current task condition, draws a stroke, and restores it on reopen without losing the typed answer', async () => {
+      const user = userEvent.setup();
+      renderTask();
+      await screen.findByText(CONDITION);
+
+      await pasteAnswer(user, '42');
+      await user.click(screen.getByRole('button', { name: 'Полотно' }));
+
+      const dialog = screen.getByRole('dialog', { name: 'Полотно' });
+      expect(within(dialog).getByText(CONDITION)).toBeInTheDocument();
+
+      const board = within(dialog).getByRole('img', { name: 'Рабочее полотно для рисования' });
+      fireEvent.pointerDown(board, { pointerId: 1, clientX: 10, clientY: 10 });
+      fireEvent.pointerMove(board, { pointerId: 1, clientX: 40, clientY: 40 });
+      fireEvent.pointerUp(board, { pointerId: 1, clientX: 40, clientY: 40 });
+
+      const undoButton = within(dialog).getByRole('button', { name: 'Отменить' });
+      expect(undoButton).toBeEnabled();
+
+      await user.click(within(dialog).getByRole('button', { name: 'Закрыть' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Ответ')).toHaveValue('42');
+
+      await user.click(screen.getByRole('button', { name: 'Полотно' }));
+      const reopened = screen.getByRole('dialog', { name: 'Полотно' });
+      expect(within(reopened).getByRole('button', { name: 'Отменить' })).toBeEnabled();
+    });
+
+    it('clears the canvas for this task once a real attempt is submitted (a new attempt starts with an empty board)', async () => {
+      const user = userEvent.setup();
+      renderTask();
+      await screen.findByText(CONDITION);
+
+      await user.click(screen.getByRole('button', { name: 'Полотно' }));
+      const dialog = screen.getByRole('dialog', { name: 'Полотно' });
+      const board = within(dialog).getByRole('img', { name: 'Рабочее полотно для рисования' });
+      fireEvent.pointerDown(board, { pointerId: 1, clientX: 10, clientY: 10 });
+      fireEvent.pointerMove(board, { pointerId: 1, clientX: 40, clientY: 40 });
+      fireEvent.pointerUp(board, { pointerId: 1, clientX: 40, clientY: 40 });
+      expect(within(dialog).getByRole('button', { name: 'Отменить' })).toBeEnabled();
+      await user.click(within(dialog).getByRole('button', { name: 'Закрыть' }));
+
+      await pasteAnswer(user, CORRECT_ANSWER);
+      await user.click(screen.getByRole('button', { name: /Проверить ответ/ }));
+      await waitFor(() => {
+        expect(screen.getByTestId('overlay')).toHaveTextContent('result:correct');
+      });
+
+      expect(getCanvasState(TASK_ID)).toEqual(initialCanvasState());
     });
   });
 

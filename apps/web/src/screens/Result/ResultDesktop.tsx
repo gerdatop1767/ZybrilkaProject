@@ -12,6 +12,7 @@ import type { SampleTask } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Calculator } from '../../ui/Calculator/Calculator.js';
+import { CanvasWorkspaceDesktop } from '../../ui/CanvasWorkspace/CanvasWorkspaceDesktop.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { Modal } from '../../ui/Modal/Modal.js';
 import { DesktopToolsCard } from '../../ui/Training/DesktopToolsCard.js';
@@ -91,6 +92,7 @@ export function ResultDesktop({
   const [loadError, setLoadError] = useState(false);
   const [detailedSolution, setDetailedSolution] = useState(true);
   const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const [canvasOpen, setCanvasOpen] = useState(false);
   const xp = useCountUp(correct ? XP_REWARD : 0, 500);
 
   useEffect(() => {
@@ -417,6 +419,7 @@ export function ResultDesktop({
               <DesktopToolsCard
                 onSelectHint={() => undefined}
                 onSelectCalculator={() => setCalculatorOpen(true)}
+                onSelectCanvas={() => setCanvasOpen(true)}
               />
             </>
           )}
@@ -425,6 +428,12 @@ export function ResultDesktop({
       <Modal open={calculatorOpen} onClose={() => setCalculatorOpen(false)} title="Калькулятор">
         <Calculator />
       </Modal>
+      <CanvasWorkspaceDesktop
+        open={canvasOpen}
+        onClose={() => setCanvasOpen(false)}
+        taskId={task.id}
+        task={task}
+      />
     </FadeIn>
   );
 }

@@ -4,6 +4,7 @@ import styles from './DesktopToolsCard.module.css';
 
 const tools: { id: string; label: string; icon: IconName }[] = [
   { id: 'calculator', label: 'Калькулятор', icon: 'calculator' },
+  { id: 'canvas', label: 'Полотно', icon: 'brush' },
   { id: 'notes', label: 'Заметки', icon: 'notes' },
   { id: 'hint', label: 'Подсказка', icon: 'hint' },
 ];
@@ -16,13 +17,16 @@ const tools: { id: string; label: string; icon: IconName }[] = [
 export function DesktopToolsCard({
   onSelectHint,
   onSelectCalculator,
+  onSelectCanvas,
 }: {
   onSelectHint: () => void;
   onSelectCalculator: () => void;
+  onSelectCanvas: () => void;
 }) {
   function handleClick(id: string) {
     if (id === 'hint') return onSelectHint;
     if (id === 'calculator') return onSelectCalculator;
+    if (id === 'canvas') return onSelectCanvas;
     return undefined;
   }
 

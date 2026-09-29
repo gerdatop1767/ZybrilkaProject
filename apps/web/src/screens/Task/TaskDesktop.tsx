@@ -9,6 +9,8 @@ import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Calculator } from '../../ui/Calculator/Calculator.js';
+import { CanvasWorkspaceDesktop } from '../../ui/CanvasWorkspace/CanvasWorkspaceDesktop.js';
+import { clearCanvasState } from '../../lib/canvasSessionStore.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { Modal } from '../../ui/Modal/Modal.js';
 import { DesktopToolsCard } from '../../ui/Training/DesktopToolsCard.js';
@@ -77,6 +79,7 @@ export function TaskDesktop({
   const [checking, setChecking] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
   const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const [canvasOpen, setCanvasOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -126,6 +129,7 @@ export function TaskDesktop({
       : (submittedAnswer as string);
     void submitAttempt(task.id, { answer: submittedAnswer })
       .then((result) => {
+        clearCanvasState(task.id);
         navigate({
           screen: 'result',
           subjectId: task.subjectId,
@@ -346,6 +350,7 @@ export function TaskDesktop({
           <DesktopToolsCard
             onSelectHint={() => setHintOpen((v) => !v)}
             onSelectCalculator={() => setCalculatorOpen(true)}
+            onSelectCanvas={() => setCanvasOpen(true)}
           />
           <SessionProgressCard
             sessionTasks={task.sessionTasks}
@@ -361,6 +366,12 @@ export function TaskDesktop({
       <Modal open={calculatorOpen} onClose={() => setCalculatorOpen(false)} title="Калькулятор">
         <Calculator />
       </Modal>
+      <CanvasWorkspaceDesktop
+        open={canvasOpen}
+        onClose={() => setCanvasOpen(false)}
+        taskId={task.id}
+        task={task}
+      />
     </FadeIn>
   );
 }
