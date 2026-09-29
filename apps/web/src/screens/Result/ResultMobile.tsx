@@ -240,7 +240,7 @@ export function ResultMobile({
               <>
                 <p className="text-body-sm text-secondary">Правильный ответ:</p>
                 <p className={clsx(styles.answerBox, styles.answerBoxReference)}>
-                  <InlineMathText text={task.correctAnswer} />
+                  <InlineMathText text={task.correctAnswerDisplay ?? task.correctAnswer} />
                 </p>
               </>
             )}

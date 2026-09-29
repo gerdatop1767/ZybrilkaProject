@@ -48,6 +48,7 @@ export function toSampleTask(
     answerType: task.answerType,
     answerParts: task.answerParts,
     correctAnswer: hasSolution ? task.correctAnswer : '',
+    correctAnswerDisplay: hasSolution ? task.correctAnswerDisplay : null,
     explanation: hasSolution ? task.explanationMd : '',
     hint: task.hintMd ?? '',
     steps: hasSolution

@@ -1,42 +1,44 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { TaskConditionImage, TaskSolutionIllustration } from './TaskIllustration.js';
+import { TaskExamIllustration, TaskSolutionIllustration } from './TaskIllustration.js';
 
-describe('TaskConditionImage — the real given figure, shown inside "Условие" (audit Block 5)', () => {
-  it('renders the real imageUrl when present', () => {
-    render(<TaskConditionImage imageUrl="/tasks/task-08-graph.png" />);
-    const img = screen.getByRole('img', { name: 'Иллюстрация к заданию' });
-    expect(img).toHaveAttribute('src', '/tasks/task-08-graph.png');
+describe('TaskExamIllustration — our SVG reconstruction of a real original diagram (EGE Fidelity audit)', () => {
+  it('renders the verified SVG inside "Условие" for a task whose source material has a diagram (e.g. task 11)', () => {
+    render(<TaskExamIllustration subjectId="math" taskNumber={11} />);
+    expect(screen.getByRole('img')).toBeInTheDocument();
   });
 
-  it('renders nothing when there is no real image', () => {
-    const { container } = render(<TaskConditionImage imageUrl={null} />);
+  it('never renders a raster image — only our own SVG, or nothing', () => {
+    const { container } = render(<TaskExamIllustration subjectId="math" taskNumber={11} />);
+    expect(container.querySelector('img')).not.toBeInTheDocument();
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('renders nothing for a task whose SVG is only a solving aid (no original diagram, e.g. task 14)', () => {
+    const { container } = render(<TaskExamIllustration subjectId="math" taskNumber={14} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('renders nothing for a task with no custom illustration at all', () => {
+    const { container } = render(<TaskExamIllustration subjectId="math" taskNumber={6} />);
     expect(container).toBeEmptyDOMElement();
   });
 });
 
-describe('TaskSolutionIllustration — our reconstruction, never shown as the original condition (audit Block 5)', () => {
-  it('renders a custom illustration, labelled, for a task with no real image (e.g. task 14)', () => {
-    render(<TaskSolutionIllustration subjectId="math" taskNumber={14} imageUrl={null} />);
+describe('TaskSolutionIllustration — our solving aid, never shown as the original condition (audit Block 5)', () => {
+  it('renders a labelled custom illustration for a task with no real diagram (e.g. task 14)', () => {
+    render(<TaskSolutionIllustration subjectId="math" taskNumber={14} />);
     expect(screen.getByText('Иллюстрация к решению')).toBeInTheDocument();
-    expect(screen.getByRole('img')).toBeInTheDocument(); // the custom <svg role="img">
+    expect(screen.getByRole('img')).toBeInTheDocument();
   });
 
-  it('renders nothing for a task with no custom illustration at all', () => {
-    const { container } = render(
-      <TaskSolutionIllustration subjectId="math" taskNumber={6} imageUrl={null} />,
-    );
+  it('renders nothing for a task whose SVG already reconstructs a real original diagram (e.g. task 11)', () => {
+    const { container } = render(<TaskSolutionIllustration subjectId="math" taskNumber={11} />);
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('renders nothing once a real imageUrl exists, even for a task with a custom SVG (task 11, audit Block 6)', () => {
-    const { container } = render(
-      <TaskSolutionIllustration
-        subjectId="math"
-        taskNumber={11}
-        imageUrl="/tasks/task-11-graph.png"
-      />,
-    );
+  it('renders nothing for a task with no custom illustration at all', () => {
+    const { container } = render(<TaskSolutionIllustration subjectId="math" taskNumber={6} />);
     expect(container).toBeEmptyDOMElement();
   });
 });

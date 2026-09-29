@@ -145,6 +145,7 @@ describe('TaskDesktop', () => {
           ? {
               correct: true,
               correctAnswer: CORRECT_ANSWER,
+              correctAnswerDisplay: null,
               explanation: EXPLANATION,
               attemptId: 'a1',
               mistakeId: null,
@@ -152,6 +153,7 @@ describe('TaskDesktop', () => {
           : {
               correct: false,
               correctAnswer: CORRECT_ANSWER,
+              correctAnswerDisplay: null,
               explanation: EXPLANATION,
               attemptId: 'a2',
               mistakeId: 'm1',
@@ -224,18 +226,20 @@ describe('TaskDesktop', () => {
     expect(screen.getByTestId('overlay')).toHaveTextContent('none');
   });
 
-  it('renders the task image when the task has one (e.g. a derivative-graph task)', async () => {
+  it('never renders the task.imageUrl as a raw image — even a task with one (EGE Fidelity audit, Block 4)', async () => {
     const imageUrl = '/tasks/imports/ege-2026-variant-1/task-08-graph.png';
     vi.mocked(api.getTask).mockResolvedValue({ ...baseTask, imageUrl });
     renderTask();
-    const img = await screen.findByRole('img', { name: 'Иллюстрация к заданию' });
-    expect(img).toHaveAttribute('src', imageUrl);
-  });
-
-  it('renders no image element when the task has none', async () => {
-    renderTask();
     await screen.findByText(CONDITION);
     expect(screen.queryByRole('img', { name: 'Иллюстрация к заданию' })).not.toBeInTheDocument();
+  });
+
+  it('renders our own verified SVG reconstruction for a task with a real original diagram (e.g. task 11)', async () => {
+    vi.mocked(api.getTask).mockResolvedValue({ ...baseTask, taskNumber: 11 });
+    vi.mocked(api.listTasksByNumber).mockResolvedValue([{ ...baseTask, taskNumber: 11 }]);
+    renderTask();
+    await screen.findByText(CONDITION);
+    expect(document.querySelector('svg[role="img"]')).toBeInTheDocument();
   });
 
   describe('multi_part task', () => {

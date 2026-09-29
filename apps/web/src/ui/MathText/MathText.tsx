@@ -1,6 +1,7 @@
-import { Fragment, useMemo } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type Ref } from 'react';
 import katex from 'katex';
 import { tokenizeMathText } from './mathTokenizer.js';
+import { clsx } from '../../lib/clsx.js';
 import styles from './MathText.module.css';
 
 /**
@@ -74,14 +75,51 @@ function KatexSpan({ tex, block }: { tex: string; block: boolean }) {
     }
   }, [tex, block]);
 
+  // Tracks whether this formula is actually wider than its box, and
+  // (once it is) which edge still has more to scroll to — drives the
+  // fade cues below so a long formula on mobile never just looks
+  // silently cut off (EGE Fidelity Final Polish, Block 2: #15's
+  // horizontal scroll had no visible affordance).
+  const scrollRef = useRef<HTMLElement>(null);
+  const [overflow, setOverflow] = useState({ scrollable: false, atStart: true, atEnd: true });
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    function update() {
+      if (!el) return;
+      setOverflow({
+        scrollable: el.scrollWidth > el.clientWidth + 1,
+        atStart: el.scrollLeft <= 1,
+        atEnd: el.scrollLeft + el.clientWidth >= el.scrollWidth - 1,
+      });
+    }
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    const resizeObserver = new ResizeObserver(update);
+    resizeObserver.observe(el);
+    return () => {
+      el.removeEventListener('scroll', update);
+      resizeObserver.disconnect();
+    };
+  }, [html]);
+
   if (html === null) {
     return <>{tex}</>;
   }
   const Tag = block ? 'div' : 'span';
   return (
-    <Tag
-      className={block ? styles.scrollBlock : styles.scrollInline}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <span
+      className={clsx(styles.scrollWrap, block && styles.scrollWrapBlock)}
+      data-scrollable={overflow.scrollable}
+      data-at-start={overflow.atStart}
+      data-at-end={overflow.atEnd}
+    >
+      <Tag
+        ref={scrollRef as Ref<HTMLDivElement>}
+        className={block ? styles.scrollBlock : styles.scrollInline}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    </span>
   );
 }

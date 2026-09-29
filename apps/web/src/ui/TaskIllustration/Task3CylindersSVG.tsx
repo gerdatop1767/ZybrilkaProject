@@ -58,13 +58,15 @@ function Cylinder({ x, baseY, radiusX, height }: CylinderProps) {
 }
 
 /**
- * Task 3 gives no picture in the source at all (a text-only problem —
- * "Дано два цилиндра...") and names no r/h symbols, only the ratios
- * between the two cylinders (height ×3, radius ÷2) and V₁=102. So this
- * schematic shows only what the condition actually states: two
- * cylinders drawn in that same proportion (second visibly taller and
- * narrower) with just V₁=102 and V₂=? labelled — no invented r/h
- * annotations that never appear in the original text.
+ * Task 3's own diagram (EGE Fidelity audit, Block 6): the source PDF
+ * DOES print a picture here — two bare, unlabelled cylinder outlines,
+ * the second visibly taller and narrower than the first, no text of
+ * any kind on the drawing itself (V₁/V₂ only appear in the problem's
+ * prose). An earlier pass wrongly assumed this task had no picture and
+ * added "V₁ = 102" / "V₂ = ?" labels that never existed in the
+ * original — removed here to match the source exactly: shape and
+ * relative proportions only (height ×3, radius ÷2), nothing written on
+ * the figure.
  */
 export function Task3CylindersSVG() {
   const baseY = 190;
@@ -79,25 +81,6 @@ export function Task3CylindersSVG() {
     >
       <Cylinder x={85} baseY={baseY} radiusX={r1} height={h1} />
       <Cylinder x={255} baseY={baseY} radiusX={r1 / 2} height={h1 * 1.6} />
-
-      <text
-        x={85}
-        y={baseY + 22}
-        fontSize={13}
-        textAnchor="middle"
-        fill="var(--color-text-primary)"
-      >
-        V₁ = 102
-      </text>
-      <text
-        x={255}
-        y={baseY + 22}
-        fontSize={13}
-        textAnchor="middle"
-        fill="var(--color-text-primary)"
-      >
-        V₂ = ?
-      </text>
     </svg>
   );
 }

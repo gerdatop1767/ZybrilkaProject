@@ -7,17 +7,98 @@
    stray next line. Lives on this wrapper, not .katex itself: KaTeX's
    fraction/vlist internals use absolutely-positioned spans whose true
    painted width isn't reliably captured by overflow/scrollWidth
-   applied directly to .katex. */
+   applied directly to .katex.
+
+   The scroll itself is never silent (EGE Fidelity Final Polish, Block
+   2): a thin, always-visible themed scrollbar plus edge fade cues
+   (.scrollWrap below) tell the user there's more to see, without a
+   permanent full-width native scrollbar look. */
+.scrollInline,
+.scrollBlock {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-accent-secondary) transparent;
+}
+
+.scrollInline::-webkit-scrollbar,
+.scrollBlock::-webkit-scrollbar {
+  height: 5px;
+}
+
+.scrollInline::-webkit-scrollbar-track,
+.scrollBlock::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollInline::-webkit-scrollbar-thumb,
+.scrollBlock::-webkit-scrollbar-thumb {
+  background: var(--color-accent-secondary);
+  border-radius: 3px;
+}
+
 .scrollInline {
-  display: inline-block;
+  display: block;
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  vertical-align: middle;
 }
 
 .scrollBlock {
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
+}
+
+/* Wraps the scrollable element (not replacing it) so an edge fade can
+   sit on top without affecting the scroll container's own box. Fade
+   is a dark vignette rather than a solid color matched to the
+   surrounding card — this renders on any of MathText's many
+   containers (condition, hint, solution step, answer box, ...)
+   without needing to know that container's exact background. */
+.scrollWrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.scrollWrapBlock {
+  display: block;
+}
+
+.scrollWrap::before,
+.scrollWrap::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 18px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--duration-fast) ease;
+}
+
+.scrollWrap::before {
+  left: 0;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--color-accent-secondary) 45%, transparent),
+    transparent
+  );
+}
+
+.scrollWrap::after {
+  right: 0;
+  background: linear-gradient(
+    to left,
+    color-mix(in srgb, var(--color-accent-secondary) 45%, transparent),
+    transparent
+  );
+}
+
+.scrollWrap[data-scrollable='true']:not([data-at-start='true'])::before {
+  opacity: 1;
+}
+
+.scrollWrap[data-scrollable='true']:not([data-at-end='true'])::after {
+  opacity: 1;
 }

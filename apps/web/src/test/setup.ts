@@ -39,3 +39,17 @@ if (!window.matchMedia) {
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
 }
+
+// jsdom has no ResizeObserver at all (MathText's KatexSpan uses one to
+// detect an overflowing formula for its scroll-fade cues — EGE
+// Fidelity Final Polish, Block 2). A stub that never actually fires is
+// enough for tests: they only need the effect to mount/unmount without
+// throwing, not real layout measurement (jsdom's scrollWidth/clientWidth
+// are always 0).
+if (typeof window.ResizeObserver === 'undefined') {
+  window.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+}

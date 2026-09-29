@@ -55,6 +55,7 @@ function toTaskWithSolution(row: repo.TaskWithTopic): TaskWithSolution {
   return {
     ...toPublicTask(row),
     correctAnswer: row.task.correctAnswer,
+    correctAnswerDisplay: row.task.correctAnswerDisplay,
     explanationMd: row.task.explanationMd,
     solutionSteps: row.task.solutionSteps ? [...row.task.solutionSteps] : null,
   };
@@ -131,6 +132,7 @@ export async function submitAttempt(
   return {
     correct,
     correctAnswer: row.task.correctAnswer,
+    correctAnswerDisplay: row.task.correctAnswerDisplay,
     explanation: row.task.explanationMd,
     attemptId: attempt.id,
     mistakeId,
@@ -170,6 +172,7 @@ async function submitMultiPartAttempt(
   return {
     correct: grading.status === 'all_correct',
     correctAnswer: row.task.correctAnswer,
+    correctAnswerDisplay: row.task.correctAnswerDisplay,
     explanation: row.task.explanationMd,
     attemptId: attempt.id,
     mistakeId,

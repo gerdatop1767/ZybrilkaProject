@@ -39,7 +39,12 @@ const baseTask = {
   status: 'published' as const,
 };
 
-const taskWithSolution = { ...baseTask, correctAnswer: CORRECT_ANSWER, explanationMd: EXPLANATION };
+const taskWithSolution = {
+  ...baseTask,
+  correctAnswer: CORRECT_ANSWER,
+  correctAnswerDisplay: null,
+  explanationMd: EXPLANATION,
+};
 const siblings = [baseTask, { ...baseTask, id: SIBLING_A, conditionMd: 'log₅(x − 1) ≤ 2' }];
 
 function OverlayMarker() {
@@ -178,6 +183,31 @@ describe('ResultDesktop — correct answer goes through MathText (audit Block 7)
     await screen.findAllByText('Неверно');
     expect(screen.getAllByText('102').length).toBeGreaterThan(0);
     expect(document.querySelector('.katex')).not.toBeInTheDocument();
+  });
+});
+
+describe('ResultDesktop — correctAnswerDisplay takes priority over correctAnswer (Final Polish, machine vs display)', () => {
+  it('renders correctAnswerDisplay via KaTeX when present, never the plain machine value', async () => {
+    vi.mocked(api.getTask).mockResolvedValue({
+      ...taskWithSolution,
+      correctAnswer: 'arccos(√10/5)',
+      correctAnswerDisplay: '$\\arccos\\dfrac{\\sqrt{10}}{5}$',
+    });
+    renderResult(false, 'что-то другое');
+    await screen.findAllByText('Неверно');
+    expect(document.querySelector('.katex')).toBeInTheDocument();
+    expect(screen.queryByText('arccos(√10/5)')).not.toBeInTheDocument();
+  });
+
+  it('falls back to the plain correctAnswer when correctAnswerDisplay is null', async () => {
+    vi.mocked(api.getTask).mockResolvedValue({
+      ...taskWithSolution,
+      correctAnswer: '102',
+      correctAnswerDisplay: null,
+    });
+    renderResult(false, '99');
+    await screen.findAllByText('Неверно');
+    expect(screen.getAllByText('102').length).toBeGreaterThan(0);
   });
 });
 

@@ -1,0 +1,1 @@
+ALTER TABLE "tasks" ADD COLUMN "correct_answer_display" text;
