@@ -253,7 +253,12 @@ export function ResultDesktop({
                         <>
                           <span className="text-body-sm text-secondary">Правильный ответ:</span>
                           <p className={clsx(styles.answerValue, styles.answerValueReference)}>
-                            {multiPartSpec!.parts.find((p) => p.id === part.id)?.correctAnswer}
+                            <InlineMathText
+                              text={
+                                multiPartSpec!.parts.find((p) => p.id === part.id)?.correctAnswer ??
+                                ''
+                              }
+                            />
                           </p>
                         </>
                       )}
@@ -280,7 +285,7 @@ export function ResultDesktop({
                     <>
                       <span className="text-body-sm text-secondary">Правильный ответ:</span>
                       <p className={clsx(styles.answerValue, styles.answerValueReference)}>
-                        {task.correctAnswer}
+                        <InlineMathText text={task.correctAnswer} />
                       </p>
                     </>
                   )}
@@ -446,7 +451,9 @@ function ResultCard({
         </div>
         <div className={styles.resultRow}>
           <span className="text-body-sm text-secondary">Правильный ответ</span>
-          <span className="text-body-sm">{correctAnswer}</span>
+          <span className="text-body-sm">
+            <InlineMathText text={correctAnswer} />
+          </span>
         </div>
         <div className={styles.resultRow}>
           <span className="text-body-sm text-secondary">Получено опыта</span>

@@ -216,7 +216,9 @@ export function ResultMobile({
                 </p>
                 {!part.correct && (
                   <p className={clsx(styles.answerBox, styles.answerBoxReference)}>
-                    {multiPartSpec!.parts.find((p) => p.id === part.id)?.correctAnswer}
+                    <InlineMathText
+                      text={multiPartSpec!.parts.find((p) => p.id === part.id)?.correctAnswer ?? ''}
+                    />
                   </p>
                 )}
               </div>
@@ -238,7 +240,7 @@ export function ResultMobile({
               <>
                 <p className="text-body-sm text-secondary">Правильный ответ:</p>
                 <p className={clsx(styles.answerBox, styles.answerBoxReference)}>
-                  {task.correctAnswer}
+                  <InlineMathText text={task.correctAnswer} />
                 </p>
               </>
             )}
