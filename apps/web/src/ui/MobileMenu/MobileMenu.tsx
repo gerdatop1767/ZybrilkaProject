@@ -33,10 +33,11 @@ const primaryItems: readonly MenuItem[] = [
     icon: 'variant',
     color: 'var(--chart-1)',
     // The approved screenshots have no idle "Тренировка" screen —
-    // jump straight into a real task, same as the bottom nav's own
-    // shortcut (AppMobile's `selectTab`). The actual navigation is
-    // special-cased below (`startRealTask`); this route only needs a
-    // valid `screen` for the `isActive` highlight check.
+    // jump straight into a real task, same as AppMobile's `selectTab`
+    // special-case for the id (the bottom nav itself now points its
+    // second slot at "Мои ошибки" instead — audit Block 2). The actual
+    // navigation is special-cased below (`startRealTask`); this route
+    // only needs a valid `screen` for the `isActive` highlight check.
     route: { screen: 'training' },
   },
   {

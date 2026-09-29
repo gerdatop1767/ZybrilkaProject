@@ -176,6 +176,26 @@ describe('ResultMobile — incorrect state', () => {
   });
 });
 
+describe('ResultMobile — correct answer goes through MathText (audit Block 7)', () => {
+  it('renders real KaTeX for a correctAnswer using $...$ notation', async () => {
+    vi.mocked(api.getTask).mockResolvedValue({
+      ...taskWithSolution,
+      correctAnswer: '$\\arccos\\left(\\dfrac{\\sqrt{10}}{5}\\right)$',
+    });
+    renderResult(false, 'что-то другое');
+    await screen.findByText('Неправильно!');
+    expect(document.querySelector('.katex')).toBeInTheDocument();
+  });
+
+  it('still shows plain numeric answers unchanged (e.g. 102), never breaking a simple case', async () => {
+    vi.mocked(api.getTask).mockResolvedValue({ ...taskWithSolution, correctAnswer: '102' });
+    renderResult(false, '99');
+    await screen.findByText('Неправильно!');
+    expect(screen.getAllByText('102').length).toBeGreaterThan(0);
+    expect(document.querySelector('.katex')).not.toBeInTheDocument();
+  });
+});
+
 describe('ResultMobile — multi_part task', () => {
   const multiPartTask = {
     ...baseTask,

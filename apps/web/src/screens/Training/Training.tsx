@@ -150,6 +150,7 @@ export function Training() {
           taskId: first.task.id,
           collectionSlug: collectionSlug ?? undefined,
           variantId: variantId ?? undefined,
+          returnTo: { screen: 'training' },
         });
         return;
       }
@@ -170,6 +171,7 @@ export function Training() {
         taskNumber: task.taskNumber,
         taskId: task.id,
         collectionSlug: collectionSlug ?? undefined,
+        returnTo: { screen: 'training' },
       });
     } catch {
       setStartError('Не нашлось подходящих заданий — попробуй другие фильтры.');

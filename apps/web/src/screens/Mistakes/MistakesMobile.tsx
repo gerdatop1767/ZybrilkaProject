@@ -72,6 +72,7 @@ export function MistakesMobile() {
       subjectId: m.subjectId,
       taskNumber: m.taskNumber,
       taskId: m.taskId,
+      returnTo: { screen: 'mistakes' },
     });
   }
 

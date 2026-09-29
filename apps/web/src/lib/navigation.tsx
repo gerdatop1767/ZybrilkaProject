@@ -63,6 +63,15 @@ export type OverlayRoute =
        * NOT required for source/variant isolation, which collectionSlug
        * alone already provides. */
       variantId?: string;
+      /** Where the back arrow should go — this router has no general
+       * overlay-to-overlay back-stack, so an overlay opened from
+       * another overlay (Subject/Variants/Mistakes → Task) needs its
+       * own explicit return route or `back()` collapses straight past
+       * it to the underlying tab (audit Block 3). Absent means "no
+       * known parent overlay", so the back arrow falls back to the old
+       * `back()` behavior — e.g. the "Похожие задания" cross-source
+       * sibling switch, which already intentionally drops context. */
+      returnTo?: Route;
     }
   | {
       screen: 'result';
@@ -75,6 +84,9 @@ export type OverlayRoute =
       userAnswer: string;
       collectionSlug?: string;
       variantId?: string;
+      /** Same purpose as `task.returnTo` above — Result's back arrow
+       * needs the same parent-overlay context Task had. */
+      returnTo?: Route;
     }
   | { screen: 'mistakes' }
   /** Addressable placeholders for training modes not yet built as

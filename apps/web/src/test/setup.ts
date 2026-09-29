@@ -32,3 +32,10 @@ if (!window.matchMedia) {
       dispatchEvent: () => false,
     }) as unknown as MediaQueryList;
 }
+
+// jsdom doesn't implement scrollIntoView (TaskNumberStrip uses it to
+// keep the active task number in view — audit Block 4). A no-op stub
+// is enough here; real scroll position isn't something jsdom tracks.
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}

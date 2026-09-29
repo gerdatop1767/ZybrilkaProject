@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigation } from '../../lib/navigation.js';
+import { useNavigation, type Route } from '../../lib/navigation.js';
 import { serializeMultiPartUserAnswer } from '@zybrilka/shared';
 import { getTask, listTasksByNumber, submitAttempt } from '../../lib/api.js';
 import { toSampleTask } from '../../lib/taskAdapter.js';
@@ -14,7 +14,10 @@ import { ToolsPanelMobile, AnswerFieldTools } from '../../ui/Training/ToolsPanel
 import { OtherVariantsSection } from '../../ui/Training/OtherVariantsSection.js';
 import { Collapse, SlideUp } from '../../ui/motion/motion.js';
 import { MathText } from '../../ui/MathText/MathText.js';
-import { TaskIllustration } from '../../ui/TaskIllustration/TaskIllustration.js';
+import {
+  TaskConditionImage,
+  TaskSolutionIllustration,
+} from '../../ui/TaskIllustration/TaskIllustration.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './TaskMobile.module.css';
 
@@ -24,6 +27,9 @@ export interface TaskMobileProps {
   taskId: string;
   collectionSlug?: string;
   variantId?: string;
+  /** Where the back arrow returns to — see `returnTo` on the `task`
+   * route in navigation.tsx (audit Block 3). */
+  returnTo?: Route;
 }
 
 const mathSymbols = ['∞', '∪', '∩', '≤', '≥', '≠'];
@@ -40,10 +46,12 @@ export function TaskMobile({
   taskId,
   collectionSlug,
   variantId,
+  returnTo,
 }: TaskMobileProps) {
   const { navigate, back } = useNavigation();
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
-  const taskNav = useTaskNavigation({ subjectId, taskId, collectionSlug, variantId });
+  const taskNav = useTaskNavigation({ subjectId, taskId, collectionSlug, variantId, returnTo });
+  const goBack = returnTo ? () => navigate(returnTo) : back;
 
   // The router remounts this component (key={taskId}) on every task
   // change, so state starts fresh here — no manual reset-on-taskId-change
@@ -97,6 +105,7 @@ export function TaskMobile({
           userAnswer: userAnswerForResult,
           collectionSlug,
           variantId: taskNav.variantId ?? undefined,
+          returnTo,
         });
       })
       .finally(() => setChecking(false));
@@ -106,12 +115,16 @@ export function TaskMobile({
     if (!task) return;
     // Cross-source sibling ("Похожие задания на эту тему") — explicitly
     // drop the current source/variant context, same as TaskDesktop's
-    // handleSelectSession.
+    // handleSelectSession. The old return context no longer applies
+    // (it belonged to the source we just left), so back now returns to
+    // the subject's default view rather than falling through to the
+    // stale `returnTo` or the old collapse-to-Home bug.
     navigate({
       screen: 'task',
       subjectId: task.subjectId,
       taskNumber: task.number,
       taskId: variant.id,
+      returnTo: { screen: 'subject', subjectId: task.subjectId },
     });
   }
 
@@ -124,7 +137,7 @@ export function TaskMobile({
     return (
       <SlideUp className={styles.stack}>
         <p className="text-body-sm text-secondary">Не удалось загрузить задание.</p>
-        <Button variant="secondary" onClick={back}>
+        <Button variant="secondary" onClick={goBack}>
           Назад
         </Button>
       </SlideUp>
@@ -144,7 +157,7 @@ export function TaskMobile({
       <TaskChrome
         subject={subject}
         task={task}
-        onBack={back}
+        onBack={goBack}
         numberStripRange={taskNav.orderedTasks}
         onSelectNumber={taskNav.goTo}
         previous={taskNav.previous}
@@ -169,7 +182,8 @@ export function TaskMobile({
         <div className={clsx('text-task', styles.condition)}>
           <MathText text={task.condition} />
         </div>
-        <TaskIllustration
+        <TaskConditionImage imageUrl={task.imageUrl} className={styles.taskImage} />
+        <TaskSolutionIllustration
           subjectId={task.subjectId}
           taskNumber={task.number}
           imageUrl={task.imageUrl}

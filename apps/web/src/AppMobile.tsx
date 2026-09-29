@@ -45,6 +45,13 @@ export function AppMobile() {
       startRealTask(navigate, { subject: 'math' });
       return;
     }
+    // The bottom nav's second slot is "Мои ошибки" (audit Block 2) — a
+    // real overlay screen, not a MainTabId, so it needs its own
+    // navigate() rather than falling through to the tab branch below.
+    if (id === 'mistakes') {
+      navigate({ screen: 'mistakes' });
+      return;
+    }
     // No approved "Профиль" screen exists yet, and the approved Menu
     // screenshot already doubles as the profile/account hub — so the
     // bottom nav's profile slot opens it rather than a dead WIP tab.
@@ -77,6 +84,7 @@ export function AppMobile() {
             taskId={contentOverlay.taskId}
             collectionSlug={contentOverlay.collectionSlug}
             variantId={contentOverlay.variantId}
+            returnTo={contentOverlay.returnTo}
           />
         )}
         {contentOverlay.screen === 'result' && (
@@ -89,6 +97,7 @@ export function AppMobile() {
             userAnswer={contentOverlay.userAnswer}
             collectionSlug={contentOverlay.collectionSlug}
             variantId={contentOverlay.variantId}
+            returnTo={contentOverlay.returnTo}
           />
         )}
         {contentOverlay.screen === 'mistakes' && <MistakesMobile />}

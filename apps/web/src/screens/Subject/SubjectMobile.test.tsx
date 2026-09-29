@@ -73,6 +73,15 @@ const RANDOM_TASK = {
 
 function OverlayMarker() {
   const { overlay } = useNavigation();
+  if (overlay?.screen === 'task') {
+    const returnTo = overlay.returnTo;
+    return (
+      <p data-testid="overlay">
+        task:returnTo=
+        {returnTo?.screen === 'subject' ? `subject:${returnTo.initialMode ?? 'no-mode'}` : 'none'}
+      </p>
+    );
+  }
   return <p data-testid="overlay">{overlay?.screen ?? 'none'}</p>;
 }
 
@@ -254,6 +263,23 @@ describe('SubjectMobile', () => {
         expect.objectContaining({ subject: 'math', topic: 'real-topic-id' }),
       );
       expect(screen.getByTestId('overlay')).toHaveTextContent('task');
+    });
+  });
+
+  it('starting training passes a returnTo back to this subject page (audit Block 3)', async () => {
+    mockCollections();
+    mockProgress();
+    vi.mocked(api.getProgressByTopic).mockResolvedValue({
+      items: [{ topicId: 'real-topic-id', topicName: 'Логарифмы', total: 4, completed: 1 }],
+    });
+    vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
+    const user = userEvent.setup();
+    renderSubject();
+    await waitFor(() => screen.getByText('Логарифмы'));
+    await user.click(screen.getAllByText('Логарифмы')[0]!);
+    await user.click(screen.getByRole('button', { name: /Начать тренировку/ }));
+    await waitFor(() => {
+      expect(screen.getByTestId('overlay')).toHaveTextContent('subject:topics');
     });
   });
 });

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigation } from '../../lib/navigation.js';
+import { useNavigation, type Route } from '../../lib/navigation.js';
 import { gradeMultiPart, parseMultiPartSpec, parseMultiPartUserAnswer } from '@zybrilka/shared';
 import { getTask, listTasksByNumber } from '../../lib/api.js';
 import {
@@ -30,6 +30,9 @@ export interface ResultMobileProps {
   userAnswer: string;
   collectionSlug?: string;
   variantId?: string;
+  /** Where the back arrow returns to — see `returnTo` on the `result`
+   * route in navigation.tsx (audit Block 3). */
+  returnTo?: Route;
 }
 
 const XP_REWARD = 20;
@@ -49,10 +52,12 @@ export function ResultMobile({
   userAnswer,
   collectionSlug,
   variantId,
+  returnTo,
 }: ResultMobileProps) {
   const { navigate, back } = useNavigation();
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
-  const taskNav = useTaskNavigation({ subjectId, taskId, collectionSlug, variantId });
+  const taskNav = useTaskNavigation({ subjectId, taskId, collectionSlug, variantId, returnTo });
+  const goBack = returnTo ? () => navigate(returnTo) : back;
   // The router remounts this component (key={taskId}) whenever the task
   // or its correctness changes, so state starts fresh here.
   const [task, setTask] = useState<SampleTask | null>(null);
@@ -97,7 +102,7 @@ export function ResultMobile({
     return (
       <SlideUp className={styles.stack}>
         <p className="text-body-sm text-secondary">Не удалось загрузить результат.</p>
-        <Button variant="secondary" onClick={back}>
+        <Button variant="secondary" onClick={goBack}>
           Назад
         </Button>
       </SlideUp>
@@ -139,12 +144,14 @@ export function ResultMobile({
   function handleSelectVariant(variant: TaskVariant) {
     if (!task) return;
     // Cross-source sibling — explicitly drop the current source/variant
-    // context, same as TaskMobile's handleSelectVariant.
+    // context, same as TaskMobile's handleSelectVariant (and the old
+    // `returnTo` with it — it belonged to the source we just left).
     navigate({
       screen: 'task',
       subjectId: task.subjectId,
       taskNumber: task.number,
       taskId: variant.id,
+      returnTo: { screen: 'subject', subjectId: task.subjectId },
     });
   }
 
@@ -153,7 +160,7 @@ export function ResultMobile({
       <TaskChrome
         subject={subject}
         task={task}
-        onBack={back}
+        onBack={goBack}
         numberStripRange={taskNav.orderedTasks}
         onSelectNumber={taskNav.goTo}
         previous={taskNav.previous}
@@ -209,7 +216,9 @@ export function ResultMobile({
                 </p>
                 {!part.correct && (
                   <p className={clsx(styles.answerBox, styles.answerBoxReference)}>
-                    {multiPartSpec!.parts.find((p) => p.id === part.id)?.correctAnswer}
+                    <InlineMathText
+                      text={multiPartSpec!.parts.find((p) => p.id === part.id)?.correctAnswer ?? ''}
+                    />
                   </p>
                 )}
               </div>
@@ -231,7 +240,7 @@ export function ResultMobile({
               <>
                 <p className="text-body-sm text-secondary">Правильный ответ:</p>
                 <p className={clsx(styles.answerBox, styles.answerBoxReference)}>
-                  {task.correctAnswer}
+                  <InlineMathText text={task.correctAnswer} />
                 </p>
               </>
             )}

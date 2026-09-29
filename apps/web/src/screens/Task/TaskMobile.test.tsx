@@ -101,6 +101,13 @@ function OverlayMarker() {
       </p>
     );
   }
+  if (overlay?.screen === 'subject') {
+    return (
+      <p data-testid="overlay">
+        subject:{overlay.subjectId}:{overlay.initialMode ?? 'no-mode'}
+      </p>
+    );
+  }
   return <p data-testid="overlay">{overlay?.screen ?? 'none'}</p>;
 }
 
@@ -379,6 +386,61 @@ describe('TaskMobile', () => {
       await waitFor(() => expect(skip).toBeDisabled());
       await user.click(skip);
       expect(screen.getByTestId('overlay')).toHaveTextContent('none');
+    });
+  });
+
+  describe('back-arrow return context (audit Block 3)', () => {
+    it('returns to the given returnTo route instead of collapsing to Home', async () => {
+      const user = userEvent.setup();
+      render(
+        <NavigationProvider>
+          <TaskMobile
+            subjectId={baseTask.subjectId}
+            taskNumber={baseTask.taskNumber}
+            taskId={TASK_ID}
+            returnTo={{ screen: 'subject', subjectId: baseTask.subjectId, initialMode: 'byNumber' }}
+          />
+          <OverlayMarker />
+        </NavigationProvider>,
+      );
+      await screen.findByText(CONDITION);
+      await user.click(screen.getByRole('button', { name: 'Назад' }));
+      expect(screen.getByTestId('overlay')).toHaveTextContent(
+        `subject:${baseTask.subjectId}:byNumber`,
+      );
+    });
+
+    it('falls back to the old back() behavior when no returnTo is given', async () => {
+      const user = userEvent.setup();
+      renderTask();
+      await screen.findByText(CONDITION);
+      await user.click(screen.getByRole('button', { name: 'Назад' }));
+      expect(screen.getByTestId('overlay')).toHaveTextContent('none');
+    });
+
+    it('carries returnTo through Skip, so the parent context survives moving to a sibling task', async () => {
+      vi.mocked(api.getVariantForTask).mockResolvedValue(twoTaskVariant);
+      const user = userEvent.setup();
+      render(
+        <NavigationProvider>
+          <TaskMobile
+            subjectId={baseTask.subjectId}
+            taskNumber={baseTask.taskNumber}
+            taskId={TASK_ID}
+            collectionSlug={COLLECTION_SLUG}
+            returnTo={{ screen: 'mistakes' }}
+          />
+          <OverlayMarker />
+        </NavigationProvider>,
+      );
+      const skip = await screen.findByRole('button', { name: /Пропустить/ });
+      await waitFor(() => expect(skip).toBeEnabled());
+      await user.click(skip);
+      await waitFor(() => {
+        expect(screen.getByTestId('overlay')).toHaveTextContent('task:');
+      });
+      await user.click(screen.getByRole('button', { name: 'Назад' }));
+      expect(screen.getByTestId('overlay')).toHaveTextContent('mistakes');
     });
   });
 });

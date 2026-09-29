@@ -16,7 +16,16 @@ import type { Route } from './navigation.js';
  */
 export function startRealTask(
   navigate: (route: Route) => void,
-  params: { subject?: string; taskNumber?: number; collection?: string; topic?: string } = {},
+  params: {
+    subject?: string;
+    taskNumber?: number;
+    collection?: string;
+    topic?: string;
+    /** Where Task's back arrow should return to (audit Block 3) — see
+     * `returnTo` on the `task` route in navigation.tsx. Absent means
+     * "no known parent overlay", same as before this existed. */
+    returnTo?: Route;
+  } = {},
 ): void {
   void getRandomTask(params).then((task) => {
     navigate({
@@ -25,6 +34,7 @@ export function startRealTask(
       taskNumber: task.taskNumber,
       taskId: task.id,
       collectionSlug: params.collection,
+      returnTo: params.returnTo,
     });
   });
 }

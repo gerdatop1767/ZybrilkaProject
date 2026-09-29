@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Icon } from '../Icon/Icon.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './TaskNumberStrip.module.css';
@@ -29,10 +29,24 @@ export interface TaskNumberStripProps {
  */
 export function TaskNumberStrip({ active, range, onSelect }: TaskNumberStripProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const activeButtonRef = useRef<HTMLButtonElement>(null);
 
   function scrollBy(delta: number) {
     scrollerRef.current?.scrollBy({ left: delta, behavior: 'smooth' });
   }
+
+  // Keeps the active number in view on first open, Prev/Next, a number
+  // click, Skip, and arriving from Result — without this the strip
+  // always opens scrolled to its start, so e.g. task #15 of 19 renders
+  // off-screen (audit Block 4). Deps are deliberately narrow (`active`
+  // + the range's length, not the array itself, which is a fresh
+  // reference on many unrelated re-renders): this must run only when
+  // the active task or the loaded range actually changes, never on
+  // every render, or a manual scroll away from the active number would
+  // keep getting fought back into place.
+  useEffect(() => {
+    activeButtonRef.current?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }, [active, range.length]);
 
   return (
     <div className={styles.row}>
@@ -48,6 +62,7 @@ export function TaskNumberStrip({ active, range, onSelect }: TaskNumberStripProp
         {range.map((entry) => (
           <button
             key={entry.taskId}
+            ref={entry.taskNumber === active ? activeButtonRef : undefined}
             type="button"
             className={clsx(styles.number, entry.taskNumber === active && styles.numberActive)}
             aria-current={entry.taskNumber === active ? 'true' : undefined}

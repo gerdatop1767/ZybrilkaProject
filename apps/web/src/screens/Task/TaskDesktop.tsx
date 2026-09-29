@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigation } from '../../lib/navigation.js';
+import { useNavigation, type Route } from '../../lib/navigation.js';
 import type { TaskPublic } from '@zybrilka/shared';
 import { serializeMultiPartUserAnswer } from '@zybrilka/shared';
 import { getTask, listTasksByNumber, submitAttempt } from '../../lib/api.js';
@@ -14,7 +14,10 @@ import { SessionTaskListCard } from '../../ui/Training/SessionTaskListCard.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { Collapse, FadeIn } from '../../ui/motion/motion.js';
 import { MathText } from '../../ui/MathText/MathText.js';
-import { TaskIllustration } from '../../ui/TaskIllustration/TaskIllustration.js';
+import {
+  TaskConditionImage,
+  TaskSolutionIllustration,
+} from '../../ui/TaskIllustration/TaskIllustration.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './TaskDesktop.module.css';
 
@@ -24,6 +27,9 @@ export interface TaskDesktopProps {
   taskId: string;
   collectionSlug?: string;
   variantId?: string;
+  /** Where the back arrow returns to — see `returnTo` on the `task`
+   * route in navigation.tsx (audit Block 3). */
+  returnTo?: Route;
 }
 
 /**
@@ -39,10 +45,12 @@ export function TaskDesktop({
   taskId,
   collectionSlug,
   variantId,
+  returnTo,
 }: TaskDesktopProps) {
   const { navigate, back } = useNavigation();
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
-  const taskNav = useTaskNavigation({ subjectId, taskId, collectionSlug, variantId });
+  const taskNav = useTaskNavigation({ subjectId, taskId, collectionSlug, variantId, returnTo });
+  const goBack = returnTo ? () => navigate(returnTo) : back;
 
   // The router remounts this component (key={taskId}) on every task
   // change, so state starts fresh here — no manual reset-on-taskId-change
@@ -77,12 +85,14 @@ export function TaskDesktop({
     if (!sibling) return;
     // Cross-source sibling ("Другие задания") — explicitly drop the
     // current source/variant context rather than carrying it into a
-    // task that may belong to a different source entirely.
+    // task that may belong to a different source entirely (and the old
+    // `returnTo` with it — it belonged to the source we just left).
     navigate({
       screen: 'task',
       subjectId: sibling.subjectId,
       taskNumber: sibling.taskNumber,
       taskId: sibling.id,
+      returnTo: { screen: 'subject', subjectId: sibling.subjectId },
     });
   }
 
@@ -110,6 +120,7 @@ export function TaskDesktop({
           userAnswer: userAnswerForResult,
           collectionSlug,
           variantId: taskNav.variantId ?? undefined,
+          returnTo,
         });
       })
       .finally(() => setChecking(false));
@@ -119,7 +130,7 @@ export function TaskDesktop({
     return (
       <FadeIn className={styles.page}>
         <p className="text-body-sm text-secondary">Не удалось загрузить задание.</p>
-        <Button variant="secondary" onClick={back}>
+        <Button variant="secondary" onClick={goBack}>
           Назад
         </Button>
       </FadeIn>
@@ -137,7 +148,7 @@ export function TaskDesktop({
   return (
     <FadeIn key={task.id} className={styles.page}>
       <div className={styles.breadcrumb}>
-        <button type="button" className={styles.backButton} onClick={back} aria-label="Назад">
+        <button type="button" className={styles.backButton} onClick={goBack} aria-label="Назад">
           <Icon name="back" size={18} />
         </button>
         <span>{subject.shortName}</span>
@@ -153,7 +164,7 @@ export function TaskDesktop({
             <button
               type="button"
               className={styles.roundButton}
-              onClick={() => (taskNav.previous ? taskNav.goTo(taskNav.previous) : back())}
+              onClick={() => (taskNav.previous ? taskNav.goTo(taskNav.previous) : goBack())}
               disabled={!taskNav.previous && taskNav.orderedTasks.length > 0}
               aria-label="Предыдущее задание"
             >
@@ -202,7 +213,8 @@ export function TaskDesktop({
             <div className={clsx('text-task', styles.condition)}>
               <MathText text={task.condition} />
             </div>
-            <TaskIllustration
+            <TaskConditionImage imageUrl={task.imageUrl} className={styles.taskImage} />
+            <TaskSolutionIllustration
               subjectId={task.subjectId}
               taskNumber={task.number}
               imageUrl={task.imageUrl}

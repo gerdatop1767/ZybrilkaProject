@@ -72,6 +72,7 @@ export function MistakesDesktop() {
       subjectId: mistake.subjectId,
       taskNumber: mistake.taskNumber,
       taskId: mistake.taskId,
+      returnTo: { screen: 'mistakes' },
     });
   }
 
