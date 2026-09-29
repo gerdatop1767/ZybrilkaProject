@@ -14,6 +14,46 @@ import type { Route } from './navigation.js';
  * `task` route's `collectionSlug` so the selected source isn't lost
  * once the caller's own component unmounts — see navigation.tsx.
  */
+/**
+ * Subject → Варианты → "Собери собственный вариант": resolves every
+ * picked task number to a real task (in parallel, `collection`
+ * unrestricted means "Общий банк" — same single-task pick every other
+ * unrestricted fetch in this app already uses) and navigates straight
+ * into the first one carrying the *whole* resolved list as
+ * `customOrderedTasks` (navigation.tsx) — this is what makes the
+ * number strip show exactly the picked numbers and prev/next follow
+ * them, instead of collapsing to just the first number with no
+ * ordered context at all (Task Workspace block — the reported
+ * "Варианты → Общие → сформировать вариант" bug).
+ */
+export function startCustomVariant(
+  navigate: (route: Route) => void,
+  params: {
+    subject: string;
+    taskNumbers: readonly number[];
+    collection?: string;
+    returnTo?: Route;
+  },
+): void {
+  if (params.taskNumbers.length === 0) return;
+  void Promise.all(
+    params.taskNumbers.map((taskNumber) =>
+      getRandomTask({ subject: params.subject, taskNumber, collection: params.collection }),
+    ),
+  ).then((tasks) => {
+    const first = tasks[0]!;
+    navigate({
+      screen: 'task',
+      subjectId: first.subjectId,
+      taskNumber: first.taskNumber,
+      taskId: first.id,
+      collectionSlug: params.collection,
+      customOrderedTasks: tasks.map((t) => ({ taskId: t.id, taskNumber: t.taskNumber })),
+      returnTo: params.returnTo,
+    });
+  });
+}
+
 export function startRealTask(
   navigate: (route: Route) => void,
   params: {

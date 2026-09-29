@@ -30,6 +30,8 @@ export interface ResultMobileProps {
   userAnswer: string;
   collectionSlug?: string;
   variantId?: string;
+  /** A user-assembled task list (see navigation.tsx's `task.customOrderedTasks`) — takes over the number strip / prev-next ordering when present. */
+  customOrderedTasks?: readonly { taskId: string; taskNumber: number }[];
   /** Where the back arrow returns to — see `returnTo` on the `result`
    * route in navigation.tsx (audit Block 3). */
   returnTo?: Route;
@@ -52,11 +54,19 @@ export function ResultMobile({
   userAnswer,
   collectionSlug,
   variantId,
+  customOrderedTasks,
   returnTo,
 }: ResultMobileProps) {
   const { navigate, back } = useNavigation();
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
-  const taskNav = useTaskNavigation({ subjectId, taskId, collectionSlug, variantId, returnTo });
+  const taskNav = useTaskNavigation({
+    subjectId,
+    taskId,
+    collectionSlug,
+    variantId,
+    customOrderedTasks,
+    returnTo,
+  });
   const goBack = returnTo ? () => navigate(returnTo) : back;
   // The router remounts this component (key={taskId}) whenever the task
   // or its correctness changes, so state starts fresh here.

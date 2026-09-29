@@ -51,6 +51,7 @@ export function AppDesktop() {
             taskId={overlay.taskId}
             collectionSlug={overlay.collectionSlug}
             variantId={overlay.variantId}
+            customOrderedTasks={overlay.customOrderedTasks}
             returnTo={overlay.returnTo}
           />
         )}
@@ -64,6 +65,7 @@ export function AppDesktop() {
             userAnswer={overlay.userAnswer}
             collectionSlug={overlay.collectionSlug}
             variantId={overlay.variantId}
+            customOrderedTasks={overlay.customOrderedTasks}
             returnTo={overlay.returnTo}
           />
         )}

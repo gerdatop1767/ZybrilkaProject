@@ -84,6 +84,7 @@ export function AppMobile() {
             taskId={contentOverlay.taskId}
             collectionSlug={contentOverlay.collectionSlug}
             variantId={contentOverlay.variantId}
+            customOrderedTasks={contentOverlay.customOrderedTasks}
             returnTo={contentOverlay.returnTo}
           />
         )}
@@ -97,6 +98,7 @@ export function AppMobile() {
             userAnswer={contentOverlay.userAnswer}
             collectionSlug={contentOverlay.collectionSlug}
             variantId={contentOverlay.variantId}
+            customOrderedTasks={contentOverlay.customOrderedTasks}
             returnTo={contentOverlay.returnTo}
           />
         )}

@@ -207,4 +207,59 @@ describe('useTaskNavigation', () => {
       variantId: 'variant-1',
     });
   });
+
+  describe('customOrderedTasks (Task Workspace block — a user-assembled variant with no real variants row)', () => {
+    const CUSTOM_LIST = [TASK_A, TASK_C, TASK_D]; // 11, 14, 17 — a subset, not 11..19
+
+    it('uses the list directly — no fetch, not loading, exactly the picked numbers (never taskNumber ± 1)', () => {
+      const { result } = renderHook(
+        () =>
+          useTaskNavigation({
+            subjectId: 'math',
+            taskId: TASK_C.taskId,
+            customOrderedTasks: CUSTOM_LIST,
+          }),
+        { wrapper },
+      );
+      expect(result.current.loading).toBe(false);
+      expect(api.getVariant).not.toHaveBeenCalled();
+      expect(api.getVariantForTask).not.toHaveBeenCalled();
+      expect(result.current.orderedTasks).toEqual(CUSTOM_LIST);
+      expect(result.current.orderedTasks.map((t) => t.taskNumber)).toEqual([11, 14, 17]);
+      // real prev/next from the list, not ±1 (13/15 are not in the list)
+      expect(result.current.previous).toEqual(TASK_A);
+      expect(result.current.next).toEqual(TASK_D);
+    });
+
+    it('goTo carries the same customOrderedTasks forward, not a resolved variantId', async () => {
+      let navigatedRoute: unknown = null;
+      function Probe() {
+        const { overlay } = useNavigation();
+        navigatedRoute = overlay;
+        return null;
+      }
+      const { result } = renderHook(
+        () =>
+          useTaskNavigation({
+            subjectId: 'math',
+            taskId: TASK_A.taskId,
+            customOrderedTasks: CUSTOM_LIST,
+          }),
+        {
+          wrapper: ({ children }: { children: ReactNode }) =>
+            createElement(NavigationProvider, null, children, createElement(Probe)),
+        },
+      );
+      result.current.goTo(TASK_C);
+      await waitFor(() =>
+        expect((navigatedRoute as { taskId?: string } | null)?.taskId).toBe(TASK_C.taskId),
+      );
+      expect(navigatedRoute).toMatchObject({
+        screen: 'task',
+        taskId: TASK_C.taskId,
+        variantId: undefined,
+        customOrderedTasks: CUSTOM_LIST,
+      });
+    });
+  });
 });
