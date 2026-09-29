@@ -888,13 +888,23 @@ export async function importVariant1(db: Database) {
     })
     .returning();
 
-  // variant_tasks references tasks by id, and the tasks below are about
-  // to be deleted and recreated with fresh ids — drop this variant's
-  // membership rows first so that delete never trips the FK constraint.
-  await db.delete(schema.variantTasks).where(eq(schema.variantTasks.variantId, variant!.id));
-
-  await db
-    .delete(schema.tasks)
+  // Content sync, not a reseed: this task's row (found by its stable
+  // identity — subject + source + variant + task number, never by a
+  // freshly-generated id) already exists once a variant has been
+  // imported anywhere, including production. Deleting and reinserting
+  // here would mint a new `tasks.id` every run, which orphans that
+  // task's `attempts`/`mistakes` (hard FK failure the moment a real
+  // user has answered it) and silently breaks bookmarks/links even
+  // when no attempts exist yet — exactly how production ended up stuck
+  // showing the plain-text content from its first-ever import while
+  // this file kept gaining real LaTeX, `correctAnswerDisplay`, and
+  // fidelity fixes underneath it (EGE Fidelity: Final Polish, content
+  // migration). UPDATE-in-place keeps `id` (and therefore every FK
+  // pointing at it) untouched; only a task number genuinely new to
+  // this variant gets INSERTed.
+  const existingRows = await db
+    .select({ id: schema.tasks.id, taskNumber: schema.tasks.taskNumber })
+    .from(schema.tasks)
     .where(
       and(
         eq(schema.tasks.subjectId, 'math'),
@@ -902,43 +912,62 @@ export async function importVariant1(db: Database) {
         eq(schema.tasks.sourceVariant, VARIANT),
       ),
     );
+  const existingIdByNumber = new Map(existingRows.map((r) => [r.taskNumber, r.id]));
 
-  const rows = importTasks.map((t) => ({
-    subjectId: 'math',
-    taskNumber: t.taskNumber,
-    topicId: topicIdBySlug.get(t.topicSlug),
-    difficulty: difficultyForTaskNumber(t.taskNumber),
-    conditionMd: t.conditionMd,
-    imageUrl: t.imageUrl,
-    answerType: t.answerType ?? ('short_answer' as const),
-    correctAnswer: t.correctAnswer,
-    correctAnswerDisplay: t.correctAnswerDisplay ?? null,
-    explanationMd: t.explanationMd,
-    hintMd: t.hintMd,
-    solutionSteps: t.solutionSteps,
-    source: SOURCE,
-    sourceUrl: null,
-    sourceYear: SOURCE_YEAR,
-    sourceDocument: SOURCE_DOCUMENT,
-    sourceVariant: VARIANT,
-    sourcePage: t.sourcePage,
-    rawStatement: t.rawStatement,
-    contentHash: contentHashFor('math', t.taskNumber, t.rawStatement),
-    tags: [IMPORT_TAG],
-    status: t.status,
-  }));
+  const taskIds: string[] = [];
+  for (const t of importTasks) {
+    const values = {
+      subjectId: 'math',
+      taskNumber: t.taskNumber,
+      topicId: topicIdBySlug.get(t.topicSlug),
+      difficulty: difficultyForTaskNumber(t.taskNumber),
+      conditionMd: t.conditionMd,
+      imageUrl: t.imageUrl,
+      answerType: t.answerType ?? ('short_answer' as const),
+      correctAnswer: t.correctAnswer,
+      correctAnswerDisplay: t.correctAnswerDisplay ?? null,
+      explanationMd: t.explanationMd,
+      hintMd: t.hintMd,
+      solutionSteps: t.solutionSteps,
+      source: SOURCE,
+      sourceUrl: null,
+      sourceYear: SOURCE_YEAR,
+      sourceDocument: SOURCE_DOCUMENT,
+      sourceVariant: VARIANT,
+      sourcePage: t.sourcePage,
+      rawStatement: t.rawStatement,
+      contentHash: contentHashFor('math', t.taskNumber, t.rawStatement),
+      tags: [IMPORT_TAG],
+      status: t.status,
+    };
 
-  const inserted = await db.insert(schema.tasks).values(rows).returning();
+    const existingId = existingIdByNumber.get(t.taskNumber);
+    if (existingId) {
+      await db
+        .update(schema.tasks)
+        .set({ ...values, updatedAt: new Date() })
+        .where(eq(schema.tasks.id, existingId));
+      taskIds.push(existingId);
+    } else {
+      const [row] = await db.insert(schema.tasks).values(values).returning({ id: schema.tasks.id });
+      taskIds.push(row!.id);
+    }
+  }
 
   // position = taskNumber: this variant's full-exam order is exactly
-  // the official question numbering, 1-19 with no gaps.
-  await db.insert(schema.variantTasks).values(
-    inserted.map((task) => ({
-      variantId: variant!.id,
-      taskId: task.id,
-      position: task.taskNumber,
-    })),
-  );
+  // the official question numbering, 1-19 with no gaps. Upsert by the
+  // (variantId, taskId) unique index rather than delete-then-insert —
+  // task ids are now stable across re-imports, so this membership can
+  // be too.
+  for (let i = 0; i < importTasks.length; i++) {
+    await db
+      .insert(schema.variantTasks)
+      .values({ variantId: variant!.id, taskId: taskIds[i]!, position: importTasks[i]!.taskNumber })
+      .onConflictDoUpdate({
+        target: [schema.variantTasks.variantId, schema.variantTasks.taskId],
+        set: { position: importTasks[i]!.taskNumber },
+      });
+  }
 
   return {
     total: importTasks.length,

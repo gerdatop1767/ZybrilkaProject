@@ -195,4 +195,110 @@ describe('importVariant1', () => {
     expect(partForTaskNumber(13)).toBe(2);
     expect(partForTaskNumber(19)).toBe(2);
   });
+
+  describe('content migration — re-import updates in place, never reseeds (EGE Fidelity Final Polish)', () => {
+    it('keeps every task id stable across a re-import (production had this break: a fresh id every run orphaned attempts/mistakes/bookmarks)', async () => {
+      const { db } = testDb;
+      await importVariant1(db);
+      const before = await db
+        .select({ id: schema.tasks.id, taskNumber: schema.tasks.taskNumber })
+        .from(schema.tasks)
+        .where(and(eq(schema.tasks.subjectId, 'math'), eq(schema.tasks.sourceVariant, 1)));
+
+      await importVariant1(db);
+      const after = await db
+        .select({ id: schema.tasks.id, taskNumber: schema.tasks.taskNumber })
+        .from(schema.tasks)
+        .where(and(eq(schema.tasks.subjectId, 'math'), eq(schema.tasks.sourceVariant, 1)));
+
+      const idByNumberBefore = new Map(before.map((r) => [r.taskNumber, r.id]));
+      for (const row of after) {
+        expect(row.id).toBe(idByNumberBefore.get(row.taskNumber));
+      }
+    });
+
+    it('a real attempt and mistake recorded against a task survive a re-import untouched (the exact FK break a delete-then-insert import would cause)', async () => {
+      const { db } = testDb;
+      await importVariant1(db);
+      const [task6] = await db
+        .select()
+        .from(schema.tasks)
+        .where(
+          and(
+            eq(schema.tasks.subjectId, 'math'),
+            eq(schema.tasks.sourceVariant, 1),
+            eq(schema.tasks.taskNumber, 6),
+          ),
+        );
+      const [user] = await db.insert(schema.users).values({}).returning();
+      const [attempt] = await db
+        .insert(schema.attempts)
+        .values({ userId: user!.id, taskId: task6!.id, answerRaw: '0', isCorrect: false })
+        .returning();
+      const [mistake] = await db
+        .insert(schema.mistakes)
+        .values({
+          userId: user!.id,
+          taskId: task6!.id,
+          firstAttemptId: attempt!.id,
+          lastAttemptId: attempt!.id,
+        })
+        .returning();
+
+      // Re-importing must not throw an FK violation and must not touch
+      // these rows — this is the scenario a delete-then-insert import
+      // can never survive once a single real user has answered a task.
+      await expect(importVariant1(db)).resolves.toBeDefined();
+
+      const attemptAfter = await db
+        .select()
+        .from(schema.attempts)
+        .where(eq(schema.attempts.id, attempt!.id));
+      expect(attemptAfter).toHaveLength(1);
+      expect(attemptAfter[0]!.taskId).toBe(task6!.id);
+
+      const mistakeAfter = await db
+        .select()
+        .from(schema.mistakes)
+        .where(eq(schema.mistakes.id, mistake!.id));
+      expect(mistakeAfter).toHaveLength(1);
+      expect(mistakeAfter[0]!.taskId).toBe(task6!.id);
+    });
+
+    it('overwrites stale content on an existing row instead of leaving it untouched (the exact production symptom: old plain-text content surviving because nothing ever re-synced it)', async () => {
+      const { db } = testDb;
+      await importVariant1(db);
+      const [task6] = await db
+        .select()
+        .from(schema.tasks)
+        .where(
+          and(
+            eq(schema.tasks.subjectId, 'math'),
+            eq(schema.tasks.sourceVariant, 1),
+            eq(schema.tasks.taskNumber, 6),
+          ),
+        );
+
+      // Simulate a production row stuck with pre-LaTeX plain-text
+      // content from an old import, and no correctAnswerDisplay.
+      await db
+        .update(schema.tasks)
+        .set({
+          conditionMd: 'Найдите корень уравнения sqrt(15x) = 1 2/3 x (plain text, stale).',
+          solutionSteps: [{ title: 'Шаг', explanation: '15x = (25/9)x^2 (plain text, stale)' }],
+        })
+        .where(eq(schema.tasks.id, task6!.id));
+
+      await importVariant1(db);
+
+      const [task6After] = await db
+        .select()
+        .from(schema.tasks)
+        .where(eq(schema.tasks.id, task6!.id));
+      expect(task6After!.conditionMd).toContain('$\\sqrt{15x}');
+      expect(task6After!.conditionMd).not.toContain('stale');
+      expect(task6After!.solutionSteps![0]!.explanation).toContain('$');
+      expect(task6After!.solutionSteps![0]!.explanation).not.toContain('stale');
+    });
+  });
 });

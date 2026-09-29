@@ -60,6 +60,35 @@ services:
     command: ['node', 'node_modules/@zybrilka/db/dist/migrate.js']
     restart: 'no'
 
+  # One-shot: syncs the EGE-2026 Variant 1 content (conditionMd,
+  # solutionSteps, correctAnswerDisplay, ...) into the 19 existing task
+  # rows and exits. Runs after `migrate` (needs the columns it adds,
+  # e.g. correct_answer_display) and before `api`/`worker` start, every
+  # deploy — this is what makes a code-only deploy (no one manually
+  # re-running an import script) actually bring the live content up to
+  # date. Safe to run on a database with real users: `importVariant1`
+  # (packages/db/src/importEge2026Variant1.ts) upserts each of the 19
+  # tasks by its stable identity (subject + source + variant + task
+  # number), never by a freshly-generated id, so re-running this never
+  # touches `attempts`/`mistakes`/bookmarks — it only updates content
+  # columns on the same rows (EGE Fidelity: Final Polish, production
+  # content-migration fix).
+  sync-content:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    image: zybrilka-api:latest
+    container_name: zybrilka-sync-content
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    networks:
+      - internal
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    command: ['node', 'node_modules/@zybrilka/db/dist/importEge2026Variant1.js']
+    restart: 'no'
+
   api:
     build:
       context: ..
@@ -81,7 +110,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      migrate:
+      sync-content:
         condition: service_completed_successfully
     # No `ports:` — reachable only from Caddy, over `internal`.
 
@@ -101,7 +130,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      migrate:
+      sync-content:
         condition: service_completed_successfully
 
   web:

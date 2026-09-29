@@ -49,22 +49,63 @@ docker compose -f infra/docker-compose.yml up -d --build
 Starts, in dependency order: `postgres` (with a persistent named
 volume, `postgres_data` — survives `down`/`up` and a container
 rebuild), a one-shot `migrate` job that applies any pending Drizzle
-migrations and exits, `api` and `worker` (both wait for `migrate` to
-finish successfully), `web`, and `caddy` (the only container
-publishing `80`/`443`), which reverse-proxies `/api/*` and `/health` to
-`api:3000` and everything else to `web:80`, obtaining/renewing its own
-TLS certificate automatically.
+**schema** migrations and exits, a one-shot `sync-content` job that
+upserts the EGE-2026 Variant 1 **content** (conditionMd, solutionSteps,
+correctAnswerDisplay, ...) into the 19 existing task rows and exits,
+`api` and `worker` (both wait for `sync-content` to finish
+successfully), `web`, and `caddy` (the only container publishing
+`80`/`443`), which reverse-proxies `/api/*` and `/health` to `api:3000`
+and everything else to `web:80`, obtaining/renewing its own TLS
+certificate automatically.
 
-Always pass `--build` on a fresh `up` — `migrate`/`api` share one image
-tag (`zybrilka-api:latest`); `--build` guarantees that tag exists
-before `migrate`'s container is created. `migrate` also has its own
-`build:` block (identical to `api`'s, cached after the first build) so
-that a deploy workflow which runs an explicit `pull` step before
-building doesn't try to fetch `zybrilka-api:latest` from a registry —
-it only exists locally, never pushed anywhere.
+`migrate` and `sync-content` solve two different problems and both run
+on every deploy: `migrate` changes the table *shape* (adding a column
+like `correct_answer_display`); `sync-content` changes the *data* in
+it. Before this pair existed, a code change to
+`packages/db/src/importEge2026Variant1.ts` (new LaTeX, a fixed
+illustration, a new `correctAnswerDisplay` value) only ever reached a
+database that had never been imported before — an already-seeded
+production database kept showing whatever content was present the
+first time someone ran the import script by hand, silently drifting
+further from the repo on every content-only deploy (this is exactly
+what happened before the EGE Fidelity: Final Polish content-migration
+fix — production kept the plain-text, pre-LaTeX task content from its
+first import indefinitely). `sync-content` is safe to run
+unconditionally on a live database with real users: it upserts each of
+the 19 tasks by its stable identity (subject + source + variant + task
+number), never by a freshly-generated id, so it never touches
+`attempts`/`mistakes`/bookmarks — see the `sync-content` service's own
+comment in `infra/docker-compose.yml` and
+`packages/db/src/importEge2026Variant1.test.ts`'s "content migration"
+tests for the exact guarantee.
+
+Always pass `--build` on a fresh `up` — `migrate`/`sync-content`/`api`
+share one image tag (`zybrilka-api:latest`); `--build` guarantees that
+tag exists before `migrate`'s container is created. `migrate` and
+`sync-content` each have their own `build:` block (identical to
+`api`'s, cached after the first build) so that a deploy workflow which
+runs an explicit `pull` step before building doesn't try to fetch
+`zybrilka-api:latest` from a registry — it only exists locally, never
+pushed anywhere.
 
 ## Troubleshooting
 
+- **Task content on the live site (e.g. a task's condition or solution)
+  doesn't match what's in `importEge2026Variant1.ts` after a deploy**
+  — before the `sync-content` service existed, this was a standing
+  bug: `docker compose up` only ever ran `migrate` (schema), never the
+  content import, so an already-seeded database kept whatever content
+  it got on its *first* import forever, no matter how many times the
+  import script's literals changed afterwards. If you're running an
+  older `infra/docker-compose.yml` without `sync-content`, either pull
+  the current one or run the same command it does, once, by hand:
+  `docker compose -f infra/docker-compose.yml run --rm sync-content`
+  (safe on a live database — see `sync-content`'s comment in that
+  file). If you're already on a `docker-compose.yml` with
+  `sync-content` and still see stale content, check that service's own
+  logs (`docker compose -f infra/docker-compose.yml logs sync-content`)
+  for an error — it exits non-zero on failure, which would also block
+  `api`/`worker` from starting (they depend on it completing).
 - **`pull access denied for zybrilka-api`** — some sort of `docker
   compose pull` ran before the image was built locally. `postgres` and
   `caddy` are the only services meant to be pulled; `web`/`api`/
