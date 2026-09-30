@@ -26,6 +26,7 @@ import {
   TaskExamIllustration,
   TaskSolutionIllustration,
 } from '../../ui/TaskIllustration/TaskIllustration.js';
+import { CanonicalSolutionView } from '../../ui/CanonicalSolution/CanonicalSolutionView.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './ResultMobile.module.css';
 
@@ -316,6 +317,11 @@ export function ResultMobile({
                   </div>
                 ))}
           </div>
+          {task.canonicalSolution && (
+            <div className={styles.canonicalSolutionWrap}>
+              <CanonicalSolutionView canonicalSolution={task.canonicalSolution} />
+            </div>
+          )}
         </Collapse>
 
         <div className={styles.actions}>

@@ -5,6 +5,8 @@
  * (условие, ответ, шаги решения, вариант задания №15, code #3214).
  * Demo/seed content for the UI only — not the real task database.
  */
+import type { CanonicalSolutionDto } from '@zybrilka/shared';
+
 export interface SolutionStep {
   /** Task-specific step name ("ОДЗ", "Считываем данные с графика", ...) — absent for the single-block fallback. */
   title?: string;
@@ -62,6 +64,16 @@ export interface SampleTask {
   explanation: string;
   hint: string;
   steps: readonly SolutionStep[];
+  /**
+   * A structured, exam-annotated reference solution (Canonical
+   * Solution System) — a separate, additional source of solution
+   * content from `explanation`/`steps` above, which keep working
+   * unchanged for every task. Present only for the small set of tasks
+   * that have one (today: exactly one real math task №13). No screen
+   * renders this yet — this is data plumbing only, ahead of the UI
+   * work that will actually display it.
+   */
+  canonicalSolution?: CanonicalSolutionDto;
   otherVariants: readonly TaskVariant[];
   sessionTasks: readonly SessionTask[];
 }

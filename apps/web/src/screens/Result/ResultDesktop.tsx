@@ -25,6 +25,7 @@ import {
   TaskExamIllustration,
   TaskSolutionIllustration,
 } from '../../ui/TaskIllustration/TaskIllustration.js';
+import { CanonicalSolutionView } from '../../ui/CanonicalSolution/CanonicalSolutionView.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './ResultDesktop.module.css';
 
@@ -353,6 +354,10 @@ export function ResultDesktop({
                   )}
                 </div>
               </>
+            )}
+
+            {task.canonicalSolution && (
+              <CanonicalSolutionView canonicalSolution={task.canonicalSolution} />
             )}
 
             {!correct && task.hint && (
