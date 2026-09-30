@@ -55,11 +55,15 @@
   color: #fff;
 }
 
-/* Two rows max (symbols, functions) — never a half-screen panel. Each
-   row scrolls horizontally on its own rather than wrapping, so the
-   panel's height stays fixed regardless of viewport width and never
-   causes page-level horizontal overflow (the row itself scrolls, the
-   page never does). */
+/* Two groups (symbols, functions) — each its own wrapping grid, never
+   a half-screen panel. A fixed-width `auto-fill` grid (not horizontal
+   scroll) is what actually fixes the mobile cutoff: on a wide desktop
+   panel every key fits on one row exactly as before (there's room),
+   and on a narrow 360-390px panel the same rule wraps the trailing
+   keys onto additional rows instead of clipping them at the edge or
+   hiding them behind an unscrolled overflow — no separate mobile
+   breakpoint needed, and the page itself never scrolls horizontally
+   because nothing here exceeds the panel's own width. */
 .panel {
   display: flex;
   flex-direction: column;
@@ -70,23 +74,16 @@
 }
 
 .keyRow {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2.75rem, 1fr));
   gap: var(--space-2);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.keyRow::-webkit-scrollbar {
-  display: none;
 }
 
 .key {
-  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 2.5rem;
-  height: 2.5rem;
+  height: 2.75rem;
   padding: 0 var(--space-2);
   border: none;
   border-radius: var(--radius-input);
