@@ -22,7 +22,6 @@ import { Collapse, FadeIn } from '../../ui/motion/motion.js';
 import { MathText } from '../../ui/MathText/MathText.js';
 import {
   TaskExamIllustration,
-  TaskSolutionIllustration,
 } from '../../ui/TaskIllustration/TaskIllustration.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './TaskDesktop.module.css';
@@ -246,11 +245,6 @@ export function TaskDesktop({
               <MathText text={task.condition} />
             </div>
             <TaskExamIllustration
-              subjectId={task.subjectId}
-              taskNumber={task.number}
-              className={styles.taskImage}
-            />
-            <TaskSolutionIllustration
               subjectId={task.subjectId}
               taskNumber={task.number}
               className={styles.taskImage}
