@@ -21,7 +21,7 @@ import { ToolsPanelMobile } from '../../ui/Training/ToolsPanelMobile.js';
 import { OtherVariantsSection } from '../../ui/Training/OtherVariantsSection.js';
 import { useCountUp } from '../../lib/useCountUp.js';
 import { Collapse, SlideUp } from '../../ui/motion/motion.js';
-import { InlineMathText } from '../../ui/MathText/MathText.js';
+import { InlineMathText, MathText } from '../../ui/MathText/MathText.js';
 import {
   TaskExamIllustration,
   TaskSolutionIllustration,
@@ -193,6 +193,25 @@ export function ResultMobile({
           correct ? styles.feedbackCorrect : styles.feedbackWrong,
         )}
       >
+        {/* QA v3 Block 2: the task itself — same renderer/order as
+         * TaskMobile and ResultDesktop's "Условие" card — so the user
+         * sees "вот какое было задание" before the result below it,
+         * instead of landing straight on correct/incorrect with no
+         * memory of what they just answered. */}
+        <div className={clsx('text-task', styles.condition)}>
+          <MathText text={task.condition} />
+        </div>
+        <TaskExamIllustration
+          subjectId={task.subjectId}
+          taskNumber={task.number}
+          className={styles.taskImage}
+        />
+        <TaskSolutionIllustration
+          subjectId={task.subjectId}
+          taskNumber={task.number}
+          className={styles.taskImage}
+        />
+
         <span
           className={clsx(styles.feedbackIcon, correct ? styles.iconCorrect : styles.iconWrong)}
         >
@@ -265,26 +284,6 @@ export function ResultMobile({
             )}
           </div>
         )}
-
-        {/* Same illustration components ResultDesktop already renders in
-         * its "Условие" card — TaskExamIllustration for a real source
-         * diagram (tasks 1, 3, 8, 11), TaskSolutionIllustration for our
-         * own solving-aid SVG on a text-only proof (tasks 2, 14, 17).
-         * Mobile had no equivalent spot for either, so a solution-only
-         * graphic like task 14's pyramid had nowhere to appear once the
-         * Task screen stopped showing it while solving (see commit
-         * d9edb97) — only the Result screen should ever show it, and
-         * this is that screen's condition/result card equivalent. */}
-        <TaskExamIllustration
-          subjectId={task.subjectId}
-          taskNumber={task.number}
-          className={styles.taskImage}
-        />
-        <TaskSolutionIllustration
-          subjectId={task.subjectId}
-          taskNumber={task.number}
-          className={styles.taskImage}
-        />
 
         <Button variant="primary" fullWidth onClick={() => setSolutionOpen((v) => !v)}>
           <Icon name="showSolution" size={18} /> Показать решение
