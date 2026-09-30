@@ -103,6 +103,12 @@ describe('ResultMobile — correct state', () => {
     expect(screen.getAllByText(CORRECT_ANSWER).length).toBeGreaterThan(0);
   });
 
+  it('shows the task condition (QA v3 Block 2 — the user should see what task this result is for)', async () => {
+    renderResult(true);
+    await screen.findByText('Правильно!');
+    expect(screen.getByText(/Решите неравенство/)).toBeInTheDocument();
+  });
+
   it('does not show the reference-answer row when correct', async () => {
     renderResult(true);
     await screen.findByText('Правильно!');

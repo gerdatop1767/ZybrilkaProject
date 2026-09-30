@@ -34,22 +34,22 @@
   color: transparent;
 }
 
-/* Tucked into the top-right corner, fully inside .hero's padding box
-   (top:0/right:0 here is the padding edge, not the card's outer edge,
-   since .hero is the nearest positioned ancestor) — every tile's
-   rotated footprint stays within this zone, so nothing is clipped by
-   .hero's own overflow:hidden and nothing reaches as far down as the
-   heading/subtitle text columns, which are separately capped
-   (.heroHeading/.heroSubtitle) for extra safety at any viewport width. */
+/* Tucked into the top-right corner, fully inside .hero's rounded card.
+ * QA v3 Block 5: the previous 4px offset put this cluster right inside
+ * the card's own 20px border-radius arc — .hero's overflow:hidden then
+ * clipped whichever tile's rotated corner reached furthest into that
+ * arc (heroTileAa sat flush at right:0 with no margin of its own,
+ * so it was the one visibly cut off). The fix is geometric, not a
+ * random nudge: offset the whole cluster far enough from the card's
+ * outer edge to clear the radius, and give every individual tile a
+ * real inset from the cluster's own edges too, so no tile's rotated
+ * footprint is ever flush against a boundary. */
 .heroTiles {
   position: absolute;
-  /* A few px of slack beyond 0/0 so a tile's *rotated* bounding box
-     (bigger than its own unrotated box) never pokes past the padding
-     edge into .hero's overflow:hidden clip. */
-  top: 4px;
-  right: 4px;
-  width: 4.25rem;
-  height: 3.25rem;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 4.5rem;
+  height: 3.5rem;
   pointer-events: none;
 }
 
@@ -73,21 +73,21 @@
 }
 
 .heroTilePi {
-  top: 0;
-  right: 1.5rem;
+  top: 0.25rem;
+  right: 1.75rem;
   transform: rotate(-8deg);
 }
 
 .heroTileAa {
-  top: 0.875rem;
-  right: 0;
+  top: 1.25rem;
+  right: 0.25rem;
   transform: rotate(6deg);
 }
 
 .heroTileM {
-  top: 1.25rem;
-  right: 1.75rem;
-  transform: rotate(12deg);
+  top: 1.75rem;
+  right: 2rem;
+  transform: rotate(10deg);
 }
 
 .heroCta {

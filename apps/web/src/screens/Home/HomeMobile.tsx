@@ -142,9 +142,7 @@ export function HomeMobile() {
                 />
               </span>
               <span className={styles.subjectCardText}>
-                <span className="text-body-sm" style={{ fontWeight: 600 }}>
-                  {subject.shortName}
-                </span>
+                <span className="text-card-title">{subject.shortName}</span>
                 <span className={styles.subjectCardCount}>
                   {subject.taskCount.toLocaleString('ru-RU')} заданий
                 </span>

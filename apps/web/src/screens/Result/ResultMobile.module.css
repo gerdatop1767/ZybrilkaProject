@@ -26,6 +26,14 @@
   }
 }
 
+/* The task condition reads like TaskMobile's (left-aligned, full width),
+ * not centered like the feedback icon/text below it — QA v3 Block 2. */
+.condition {
+  width: 100%;
+  color: var(--color-text-primary);
+  text-align: left;
+}
+
 .feedbackCorrect {
   background: color-mix(in srgb, var(--color-success) 14%, var(--color-bg-surface));
 }
