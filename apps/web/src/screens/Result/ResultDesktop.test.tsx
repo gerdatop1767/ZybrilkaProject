@@ -94,6 +94,14 @@ describe('ResultDesktop — correct state', () => {
     expect(screen.queryByRole('button', { name: 'Краткое решение' })).not.toBeInTheDocument();
   });
 
+  it('(J) does not render the canonical solution block for a task without one — existing flow unchanged', async () => {
+    renderResult(true);
+    await screen.findByText(EXPLANATION);
+    expect(screen.queryByText('Эталонное решение')).not.toBeInTheDocument();
+    expect(screen.queryByText('Что важно на ЕГЭ')).not.toBeInTheDocument();
+    expect(screen.queryByText('Как записать на ЕГЭ')).not.toBeInTheDocument();
+  });
+
   it('navigates to the next task in the resolved variant, and stays put with no variant context', async () => {
     const user = userEvent.setup();
     renderResult(true);

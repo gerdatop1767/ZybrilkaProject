@@ -123,6 +123,16 @@ describe('ResultMobile — correct state', () => {
     expect(screen.getByText(EXPLANATION)).toBeInTheDocument();
   });
 
+  it('(J) does not render the canonical solution block for a task without one — existing flow unchanged', async () => {
+    const user = userEvent.setup();
+    renderResult(true);
+    await screen.findByText('Правильно!');
+    await user.click(screen.getByRole('button', { name: /Показать решение/ }));
+    expect(screen.queryByText('Эталонное решение')).not.toBeInTheDocument();
+    expect(screen.queryByText('Что важно на ЕГЭ')).not.toBeInTheDocument();
+    expect(screen.queryByText('Как записать на ЕГЭ')).not.toBeInTheDocument();
+  });
+
   it('has no ordered context without a collection/variant, so "Следующее задание" stays inert', async () => {
     const user = userEvent.setup();
     renderResult(true);
