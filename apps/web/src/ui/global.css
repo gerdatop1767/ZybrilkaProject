@@ -99,6 +99,28 @@ a,
   line-height: var(--line-height-body-sm);
 }
 
+/* A short label that should read as more "brand" than plain body text —
+   subject/product card titles ("Математика", "Обществознание"), not
+   full sentences. Same display font as headings, but at body-sm size
+   so it stays compact and readable in a dense card grid (QA v2 Block
+   6). Reusable wherever a similar short, branded label is needed —
+   never for task/answer/explanation content. */
+.text-card-title {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-body-sm);
+  line-height: var(--line-height-body-sm);
+  font-weight: var(--font-weight-semibold);
+  /* A long single Russian word (e.g. "Обществознание") has no space to
+     wrap at, so it has to break mid-word to stay inside the card. Tried
+     `hyphens: auto` for a nicer linguistic break point, but this
+     environment's Chromium has no Russian hyphenation dictionary, so it
+     silently finds no break opportunity — text then overflows past the
+     card's chevron instead of wrapping (confirmed via getClientRects()
+     overlap checks at 320-390px widths). break-word guarantees
+     containment, which matters more than a nicer-looking break. */
+  overflow-wrap: break-word;
+}
+
 /* The task statement is the single most-read block in the product —
    its own larger, higher-contrast style (Design Spec Section 2). */
 .text-task {

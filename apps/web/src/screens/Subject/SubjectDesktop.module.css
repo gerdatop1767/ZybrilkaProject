@@ -114,9 +114,18 @@
   margin-top: var(--space-4);
 }
 
+/* QA v3 Block 1: this grid used to have a 4th leading track (2.5rem)
+ * for a topic-number badge that no longer renders — .topicBody,
+ * .topicStats and .topicArrow below are the only 3 children now, but
+ * with 4 tracks defined they were shifting one column left: the topic
+ * NAME landed in the narrow 2.5rem track meant for a badge, forcing a
+ * long name (e.g. "Производная и первообразная") to overflow visually
+ * into the stats/progress-bar column next to it. Three tracks for
+ * three children: name gets the flexible one, the count+progress-bar
+ * block gets a fixed, predictable width, the arrow stays small. */
 .topicRow {
   display: grid;
-  grid-template-columns: 2.5rem minmax(0, 1fr) 12rem 1.25rem;
+  grid-template-columns: minmax(0, 1fr) 12rem 1.25rem;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
@@ -412,8 +421,12 @@
     grid-template-columns: 1fr;
   }
 
+  /* Same fix as the base .topicRow rule above, for this narrower
+   * breakpoint: .topicStats is hidden here (progress/count info drops
+   * out to save space), leaving only 2 visible children (name, arrow)
+   * — the grid template must match that, not the 3-child count. */
   .topicRow {
-    grid-template-columns: 2rem minmax(0, 1fr) 1.25rem;
+    grid-template-columns: minmax(0, 1fr) 1.25rem;
   }
 
   .topicStats {
