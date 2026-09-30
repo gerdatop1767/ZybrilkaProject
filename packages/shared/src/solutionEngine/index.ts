@@ -16,6 +16,13 @@ export { registerGenericValidators } from './genericValidators.js';
 export { runValidation } from './runValidation.js';
 export { SolutionTemplateRegistry, defaultSolutionTemplateRegistry } from './templateRegistry.js';
 export { getPrimarySteps } from './canonicalSolution.js';
+export {
+  buildTaskTypeKey,
+  runCanonicalSolutionPipeline,
+  type TaskTypeContext,
+  type SolutionPipelineStatus,
+  type SolutionPipelineResult,
+} from './pipeline.js';
 
 import { registerGenericValidators } from './genericValidators.js';
 
