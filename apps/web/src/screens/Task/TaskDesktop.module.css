@@ -188,37 +188,11 @@
   color: var(--color-text-secondary);
 }
 
-.answerInput {
+/* MathAnswerField owns its own input/keyboard-panel styling
+   (MathAnswerField.module.css) — this just makes it fill the row. */
+.mathField {
   flex: 1;
   min-width: 0;
-  height: 3rem;
-  padding: 0 var(--space-4);
-  border: 1.5px solid var(--color-accent-primary);
-  border-radius: var(--radius-input);
-  background: color-mix(in srgb, var(--color-accent-primary) 8%, var(--color-bg-base));
-  color: var(--color-text-primary);
-  font-size: var(--font-size-body);
-}
-
-.answerInput:focus {
-  outline: none;
-}
-
-.answerInput:disabled {
-  opacity: 0.6;
-}
-
-.keyboardButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 3rem;
-  height: 3rem;
-  flex-shrink: 0;
-  border: none;
-  border-radius: var(--radius-input);
-  background: var(--color-bg-elevated);
-  color: var(--color-text-secondary);
 }
 
 .answerHelp {

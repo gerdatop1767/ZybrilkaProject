@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigation, type Route } from '../../lib/navigation.js';
 import type { TaskPublic } from '@zybrilka/shared';
 import { serializeMultiPartUserAnswer } from '@zybrilka/shared';
@@ -20,6 +20,7 @@ import { SessionTaskListCard } from '../../ui/Training/SessionTaskListCard.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { Collapse, FadeIn } from '../../ui/motion/motion.js';
 import { MathText } from '../../ui/MathText/MathText.js';
+import { MathAnswerField } from '../../ui/MathAnswerField/MathAnswerField.js';
 import { TaskExamIllustration } from '../../ui/TaskIllustration/TaskIllustration.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './TaskDesktop.module.css';
@@ -79,7 +80,6 @@ export function TaskDesktop({
   const [calculatorOpen, setCalculatorOpen] = useState(false);
   const [canvasOpen, setCanvasOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -280,42 +280,26 @@ export function TaskDesktop({
                   {task.answerParts!.map((part) => (
                     <div key={part.id} className={styles.answerRow}>
                       <span className={styles.multiPartLabel}>{part.label})</span>
-                      <input
-                        type="text"
-                        className={styles.answerInput}
-                        placeholder="Ваш ответ..."
+                      <MathAnswerField
                         value={partAnswers[part.id] ?? ''}
-                        onChange={(e) =>
-                          setPartAnswers((prev) => ({ ...prev, [part.id]: e.target.value }))
-                        }
+                        onChange={(v) => setPartAnswers((prev) => ({ ...prev, [part.id]: v }))}
+                        placeholder="Ваш ответ..."
                         disabled={checking}
-                        aria-label={`Ответ ${part.label})`}
+                        ariaLabel={`Ответ ${part.label})`}
+                        className={styles.mathField}
                       />
                     </div>
                   ))}
                 </div>
               ) : (
                 <>
-                  <div className={styles.answerRow}>
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      className={styles.answerInput}
-                      placeholder="Ваш ответ..."
-                      value={answer}
-                      onChange={(e) => setAnswer(e.target.value)}
-                      disabled={checking}
-                      aria-label="Ответ"
-                    />
-                    <button
-                      type="button"
-                      className={styles.keyboardButton}
-                      aria-label="Клавиатура"
-                      onClick={() => inputRef.current?.focus()}
-                    >
-                      <Icon name="keyboard" size={18} />
-                    </button>
-                  </div>
+                  <MathAnswerField
+                    value={answer}
+                    onChange={setAnswer}
+                    placeholder="Ваш ответ..."
+                    disabled={checking}
+                    ariaLabel="Ответ"
+                  />
                   <p className={clsx('text-body-sm', 'text-secondary', styles.answerHelp)}>
                     Можно использовать: ∪ для объединения, ∩ для пересечения, ∞, дроби, скобки.
                     <br />
