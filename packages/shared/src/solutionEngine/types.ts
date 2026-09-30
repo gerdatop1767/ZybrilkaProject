@@ -46,22 +46,47 @@ export interface ExamCriticalPoint {
 }
 
 /**
- * The concrete solution content for one specific task. Exactly one
- * `steps` sequence is the canonical/primary path at this stage.
- * `alternativeSolutions` is a forward-looking architectural placeholder
- * only (approved architecture doc, "K. Минимальный vertical slice") —
- * no code in this foundation reads or validates it, and it must not be
- * populated yet.
+ * One structural part of a task's solution (e.g. "а)"/"б)" on a
+ * two-part EGE task, a single "main" part on a one-part task, a
+ * criterion block on a non-math subject — same generalization
+ * `MultiPartPart` already uses for grading, applied here to solution
+ * *content* instead. `hasCheckableAnswer: false` is for parts with no
+ * single checkable value (a pure derivation/proof) — this
+ * `CanonicalSolution.parts[].answer` is reference content for display,
+ * never fed through `answerChecker`/`gradeMultiPart` (that remains a
+ * separate, untouched runtime system — see architecture doc §J/K).
+ */
+export interface PartSolution {
+  readonly id: string;
+  readonly label: string;
+  readonly steps: readonly SolutionStep[];
+  readonly hasCheckableAnswer: boolean;
+  readonly answer?: string;
+  readonly answerDisplay?: string;
+}
+
+/**
+ * The concrete solution content for one specific task. `parts` is
+ * always at least one entry — a single-part task is `parts: [{ id:
+ * 'main', ... }]`, not a special case. Exactly one set of parts is the
+ * canonical/primary path at this stage. `alternativeSolutions` is a
+ * forward-looking architectural placeholder only (approved
+ * architecture doc, "K"/"G. Validation rules" — FIPI explicitly allows
+ * a different correct method, so this must eventually be real, but not
+ * yet) — no code in this foundation reads or validates it, and it must
+ * not be populated yet.
  */
 export interface CanonicalSolution {
   readonly taskId: string;
   readonly templateId: string;
   readonly templateVersion: string;
-  readonly steps: readonly SolutionStep[];
+  readonly parts: readonly PartSolution[];
   readonly examWriteup?: ExamWriteup;
   readonly criticalPoints?: readonly ExamCriticalPoint[];
+  /** Free-form labels describing the method used (e.g. "substitution", "factoring") — metadata, never a requirement (a template must never mandate a method, see architecture doc facts 6-7). */
+  readonly methodTags?: readonly string[];
   /** Architectural placeholder for future method A/B/C support — not implemented; must stay unpopulated for now. */
-  readonly alternativeSolutions?: readonly (readonly SolutionStep[])[];
+  readonly alternativeSolutions?: readonly (readonly PartSolution[])[];
 }
 
 /**

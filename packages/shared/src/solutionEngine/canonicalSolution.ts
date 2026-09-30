@@ -6,12 +6,13 @@
 import type { CanonicalSolution, SolutionStep } from './types.js';
 
 /**
- * The steps a learner should actually be shown — the one canonical
- * path. `CanonicalSolution.alternativeSolutions` is an architectural
- * placeholder only (see `types.ts`); this function deliberately never
- * reads it, so "only one path is active" is enforced by code, not just
- * documentation, for as long as this foundation stands.
+ * Every step across every part, in part order — the one canonical
+ * path a learner should actually be shown. `CanonicalSolution.
+ * alternativeSolutions` is an architectural placeholder only (see
+ * `types.ts`); this function deliberately never reads it, so "only one
+ * path is active" is enforced by code, not just documentation, for as
+ * long as this foundation stands.
  */
 export function getPrimarySteps(solution: CanonicalSolution): readonly SolutionStep[] {
-  return solution.steps;
+  return solution.parts.flatMap((part) => part.steps);
 }
