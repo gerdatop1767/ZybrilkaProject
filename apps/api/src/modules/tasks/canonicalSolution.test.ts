@@ -71,6 +71,11 @@ describe('canonical solution in the Result flow (task 13, via the real HTTP API)
     expect(cs.validation.status).toBe('validated');
     expect(Array.isArray(cs.validation.results)).toBe(true);
     expect(cs.validation.results.every((r: { passed: boolean }) => r.passed)).toBe(true);
+
+    expect(typeof cs.examWriteup).toBe('string');
+    expect(cs.examWriteup).toContain('а)');
+    expect(cs.examWriteup).toContain('б)');
+    expect(cs.examWriteup).toContain('Ответ:');
   });
 
   it('(C) a task with no canonical template (task 1) has no canonicalSolution field', async () => {

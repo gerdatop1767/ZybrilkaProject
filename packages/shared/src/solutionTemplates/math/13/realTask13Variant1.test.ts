@@ -206,3 +206,35 @@ describe('real task 13 — critical points', () => {
     }
   });
 });
+
+describe('real task 13 — exam writeup', () => {
+  it('(A) has a compact examWriteup', () => {
+    const solution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
+    expect(solution.examWriteup?.content).toBeTruthy();
+  });
+
+  it('(E) contains both part а) and part б)', () => {
+    const solution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
+    const content = solution.examWriteup?.content ?? '';
+    expect(content).toContain('а)');
+    expect(content).toContain('б)');
+  });
+
+  it('(F) ends with the final answer, matching correctAnswerDisplay', () => {
+    const solution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
+    const content = solution.examWriteup?.content ?? '';
+    expect(content).toContain(`Ответ: ${realTask13Fields.correctAnswerDisplay}`);
+  });
+
+  it('is compact — shorter than the detailed steps, and never duplicates the task condition', () => {
+    const solution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
+    const content = solution.examWriteup?.content ?? '';
+    const detailedStepsLength = solution.parts
+      .flatMap((part) => part.steps)
+      .reduce((sum, step) => sum + step.explanation.length, 0);
+    expect(content.length).toBeLessThan(detailedStepsLength);
+    // The condition is never restated (see module doc / task's own
+    // conditionMd) — only the equivalence chain and the answer.
+    expect(content).not.toContain('Решите уравнение');
+  });
+});

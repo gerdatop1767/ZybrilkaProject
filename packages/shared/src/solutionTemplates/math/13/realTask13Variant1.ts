@@ -100,6 +100,23 @@ export function buildCanonicalSolutionForTask13Variant1(
         ],
       },
     ],
+    // Compact, exam-ready write-up — a worked-out chain a student could
+    // actually put on the answer sheet, NOT a copy of the detailed
+    // `steps` explanations above and NOT a restatement of the task
+    // condition (see module doc + CanonicalSolutionView, "Как записать
+    // на ЕГЭ"). Every `⇔` below is a genuine equivalent transformation
+    // under the carried-through `sin x ⩽ 0` condition — the same logic
+    // as part а)'s steps a1-a4, just without the prose explaining why.
+    examWriteup: {
+      content:
+        'а) $\\sqrt{A}=\\sqrt{B}\\Leftrightarrow\\{A=B,\\ B\\geqslant 0\\}$, где $B=\\cos\\left(\\dfrac{\\pi}{2}+x\\right)=-\\sin x$:\n' +
+        '$2\\cos^3x-\\sin^2x-2\\cos x-\\sin x=-\\sin x,\\ \\sin x\\leqslant 0$\n' +
+        '$\\Leftrightarrow 2\\cos^3x+\\cos^2x-2\\cos x-1=0,\\ \\sin x\\leqslant 0$\n' +
+        '$\\Leftrightarrow (\\cos x-1)(2\\cos x+1)(\\cos x+1)=0,\\ \\sin x\\leqslant 0$\n' +
+        '$\\Leftrightarrow x=\\pi n,\\ n\\in\\mathbb{Z};\\ x=-\\dfrac{2\\pi}{3}+2\\pi k,\\ k\\in\\mathbb{Z}$\n\n' +
+        `б) Отбор корней на $\\left[-4\\pi;-\\dfrac{5\\pi}{2}\\right]$: ${fields.correctAnswerDisplay ?? fields.correctAnswer}\n\n` +
+        `Ответ: ${fields.correctAnswerDisplay ?? fields.correctAnswer}`,
+    },
     methodTags: ['substitution', 'factoring', 'quadratic_in_trig_function'],
     criticalPoints: [
       {
