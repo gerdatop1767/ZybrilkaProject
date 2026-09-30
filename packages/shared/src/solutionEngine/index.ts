@@ -23,6 +23,11 @@ export {
   type SolutionPipelineStatus,
   type SolutionPipelineResult,
 } from './pipeline.js';
+export {
+  checkCriticalPoints,
+  type CriticalPointCheck,
+  type CriticalPointCheckStatus,
+} from './criticalPoints.js';
 
 import { registerGenericValidators } from './genericValidators.js';
 

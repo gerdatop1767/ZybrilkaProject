@@ -101,5 +101,47 @@ export function buildCanonicalSolutionForTask13Variant1(
       },
     ],
     methodTags: ['substitution', 'factoring', 'quadratic_in_trig_function'],
+    criticalPoints: [
+      {
+        id: 'part-a-required',
+        text: 'Отсутствие ответа на пункт а) обнуляет оценку за всё задание — верный пункт б) сам по себе не даёт баллов.',
+        category: 'exam_scoring',
+        required: true,
+        partId: 'a',
+        rationale:
+          'FIPI-2026, verified fact 3: "Отсутствие ответа на пункт а приводит к оценке 0 баллов" (методичка для предметных комиссий).',
+        validationRuleId: 'has-both-parts',
+        source: 'fipi_verified',
+      },
+      {
+        id: 'justified-reasoning-required',
+        text: 'Ответ должен сопровождаться полной последовательностью шагов решения, а не только финальным результатом.',
+        category: 'exam_scoring',
+        required: true,
+        rationale:
+          'FIPI-2026, verified facts 4-5: 2 балла — "обоснованно верные ответы", 1 балл — "верная последовательность всех шагов решения" даже при вычислительной ошибке. `has-content` only checks steps are non-empty (a structural proxy) — it cannot verify the reasoning is actually sound; that stays outside automated validation (no AI/CAS this stage).',
+        validationRuleId: 'has-content',
+        source: 'fipi_verified',
+      },
+      {
+        id: 'sqrt-nonnegativity-condition',
+        text: 'Уравнение вида √A=√B равносильно системе {A=B, B⩾0} — условие неотрицательности обязательно для корректности решения именно этой задачи.',
+        category: 'correctness',
+        required: true,
+        partId: 'a',
+        rationale:
+          'Математический факт о структуре ИМЕННО этого уравнения (два корня в обеих частях) — не общее требование ФИПИ к любому №13, а часть корректного решения этой конкретной задачи. No structural validator checks this (would need content-aware parsing of *why* a step is mathematically necessary, not just that some step exists) — intentionally left unlinked, not automated this stage.',
+        source: 'project_quality_rule',
+      },
+      {
+        id: 'free-form-method-and-writeup',
+        text: 'Метод решения и форма записи могут отличаться от этого canonical solution — это лишь один корректный образец, не единственно допустимый.',
+        category: 'presentation',
+        required: false,
+        rationale:
+          'FIPI-2026, verified facts 6-9: метод и форма записи могут быть произвольными; оценивается продвижение выпускника в решении, а не соответствие эталонному решению.',
+        source: 'fipi_verified',
+      },
+    ],
   };
 }

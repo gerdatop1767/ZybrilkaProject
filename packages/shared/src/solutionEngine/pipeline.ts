@@ -34,6 +34,7 @@ import {
   type ValidationRuleRegistry,
 } from './validationRegistry.js';
 import { runValidation } from './runValidation.js';
+import { checkCriticalPoints, type CriticalPointCheck } from './criticalPoints.js';
 
 /** The minimal task shape this layer needs to resolve a template — nothing DB-specific. */
 export interface TaskTypeContext {
@@ -54,6 +55,14 @@ export interface SolutionPipelineResult {
   readonly canonicalSolution: CanonicalSolution | undefined;
   readonly validationResults: readonly ValidationResult[];
   readonly status: SolutionPipelineStatus;
+  /**
+   * A read-only summary of `canonicalSolution.criticalPoints` against
+   * `validationResults` (see `checkCriticalPoints`) — purely
+   * descriptive: it never influences `status`, which stays driven
+   * solely by `validationResults`, so a critical point can never
+   * silently gate anything beyond the structural rule it names.
+   */
+  readonly criticalPointChecks: readonly CriticalPointCheck[];
 }
 
 /**
@@ -79,7 +88,13 @@ export function runCanonicalSolutionPipeline(
   const template = templateRegistry.resolve(buildTaskTypeKey(task), options.subtypeId);
 
   if (!template || !canonicalSolution) {
-    return { template, canonicalSolution: undefined, validationResults: [], status: 'no_template' };
+    return {
+      template,
+      canonicalSolution: undefined,
+      validationResults: [],
+      status: 'no_template',
+      criticalPointChecks: [],
+    };
   }
 
   const context: ValidationContext = {
@@ -90,6 +105,7 @@ export function runCanonicalSolutionPipeline(
   const status: SolutionPipelineStatus = validationResults.every((r) => r.passed)
     ? 'validated'
     : 'validation_failed';
+  const criticalPointChecks = checkCriticalPoints(canonicalSolution, validationResults);
 
-  return { template, canonicalSolution, validationResults, status };
+  return { template, canonicalSolution, validationResults, status, criticalPointChecks };
 }

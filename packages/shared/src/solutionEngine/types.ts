@@ -39,10 +39,53 @@ export interface ExamWriteup {
   readonly content: string;
 }
 
-/** One short "what matters for the exam" point. */
+/**
+ * What kind of claim a critical point makes — kept as three fixed
+ * values (not a free-form string like `SolutionStep.kind`) because the
+ * project owner asked for these three to never be blended into one
+ * undifferentiated "requirements" list:
+ *   - 'correctness': a core solving-logic fact (e.g. "√A=√B needs
+ *     B⩾0") — about mathematical/domain correctness, independent of
+ *     how the exam scores it. Generalizes "mathematical requirement"
+ *     from the architecture note to stay subject-agnostic wording.
+ *   - 'exam_scoring': tied to how the exam actually grades the task —
+ *     only ever populated from a source the project owner has
+ *     verified against the primary FIPI document (see `source`).
+ *   - 'presentation': a recommendation about how to present the
+ *     solution — must never be `required: true` (FIPI explicitly
+ *     allows free method/write-up form).
+ */
+export type CriticalPointCategory = 'correctness' | 'exam_scoring' | 'presentation';
+
+/**
+ * One exam-significant element of a canonical solution — what should
+ * be visible/true for the solution to be complete for THIS task, and
+ * why. `validationRuleId`, when set, must name a `ValidationRule.id`
+ * already present on the same template's `validationRules` — this
+ * point is then only a descriptive cross-reference to that rule's real
+ * structural check (see `checkCriticalPoints`), never a second,
+ * independent execution path. Many points legitimately have no
+ * `validationRuleId` at all — `required: true` describes the point's
+ * domain/exam significance, not whether it happens to be
+ * automatable without AI/CAS.
+ */
 export interface ExamCriticalPoint {
+  readonly id: string;
   readonly text: string;
-  readonly relatesToRule?: string;
+  readonly category: CriticalPointCategory;
+  readonly required: boolean;
+  readonly partId?: string;
+  readonly rationale?: string;
+  readonly validationRuleId?: string;
+  /**
+   * 'fipi_verified' only for a fact the project owner has confirmed
+   * against the primary FIPI document (the architecture doc's
+   * verified-facts list). 'project_quality_rule' for an internal rule
+   * this project chose (real math correctness, or a house style
+   * preference) that FIPI's methodology does not itself state — never
+   * presented as an official requirement.
+   */
+  readonly source: 'fipi_verified' | 'project_quality_rule';
 }
 
 /**

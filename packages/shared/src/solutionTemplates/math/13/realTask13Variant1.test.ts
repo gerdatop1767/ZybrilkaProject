@@ -100,3 +100,101 @@ describe('real task 13 — full pipeline', () => {
     expect(partsResult?.passed).toBe(false);
   });
 });
+
+describe('real task 13 — critical points', () => {
+  const task: TaskTypeContext = { id: REAL_TASK_13_ID, subjectId: 'math', taskNumber: 13 };
+
+  it('(9A) contains the expected critical points, each with a source', () => {
+    const solution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
+    const ids = solution.criticalPoints?.map((p) => p.id).sort();
+
+    expect(ids).toEqual(
+      [
+        'part-a-required',
+        'justified-reasoning-required',
+        'sqrt-nonnegativity-condition',
+        'free-form-method-and-writeup',
+      ].sort(),
+    );
+    expect(
+      solution.criticalPoints?.every(
+        (p) => p.source === 'fipi_verified' || p.source === 'project_quality_rule',
+      ),
+    ).toBe(true);
+  });
+
+  it('(9A) FIPI-sourced points and the one internal project rule are correctly distinguished', () => {
+    const solution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
+    const bySource = (source: 'fipi_verified' | 'project_quality_rule') =>
+      solution.criticalPoints!.filter((p) => p.source === source).map((p) => p.id);
+
+    expect(bySource('fipi_verified').sort()).toEqual(
+      ['part-a-required', 'justified-reasoning-required', 'free-form-method-and-writeup'].sort(),
+    );
+    expect(bySource('project_quality_rule')).toEqual(['sqrt-nonnegativity-condition']);
+  });
+
+  it('(9B) points are correctly linked to part a / part b / the whole solution', () => {
+    const solution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
+    const byId = (id: string) => solution.criticalPoints!.find((p) => p.id === id)!;
+
+    expect(byId('part-a-required').partId).toBe('a');
+    expect(byId('sqrt-nonnegativity-condition').partId).toBe('a');
+    // Applies to the whole solution, not one part — partId intentionally absent.
+    expect(byId('justified-reasoning-required').partId).toBeUndefined();
+    expect(byId('free-form-method-and-writeup').partId).toBeUndefined();
+  });
+
+  it('(9C) a required structural point (part-a-required) is satisfied when part а) is present', () => {
+    const { templateRegistry, validationRegistry } = makeRegistries();
+    const solution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
+
+    const result = runCanonicalSolutionPipeline(task, solution, {
+      templateRegistry,
+      validationRegistry,
+    });
+
+    const check = result.criticalPointChecks.find((c) => c.criticalPointId === 'part-a-required');
+    expect(check?.status).toBe('satisfied');
+  });
+
+  it('(9D) part-a-required becomes not_satisfied, predictably, when part а) is missing', () => {
+    const { templateRegistry, validationRegistry } = makeRegistries();
+    const fullSolution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
+    const missingPartA = { ...fullSolution, parts: fullSolution.parts.filter((p) => p.id !== 'a') };
+
+    const result = runCanonicalSolutionPipeline(task, missingPartA, {
+      templateRegistry,
+      validationRegistry,
+    });
+
+    const check = result.criticalPointChecks.find((c) => c.criticalPointId === 'part-a-required');
+    expect(check?.status).toBe('not_satisfied');
+    // The whole pipeline result reflects it too (via validationResults, not the critical point itself).
+    expect(result.status).toBe('validation_failed');
+  });
+
+  it('(9E) the presentation point never gates validation — stays unlinked even when everything else passes', () => {
+    const { templateRegistry, validationRegistry } = makeRegistries();
+    const solution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
+
+    const result = runCanonicalSolutionPipeline(task, solution, {
+      templateRegistry,
+      validationRegistry,
+    });
+
+    const presentationCheck = result.criticalPointChecks.find(
+      (c) => c.criticalPointId === 'free-form-method-and-writeup',
+    );
+    expect(presentationCheck?.status).toBe('unlinked');
+    expect(result.status).toBe('validated');
+
+    // The one internal (non-FIPI) correctness point has no automated
+    // check either — deliberately left unlinked this stage (see
+    // module doc) — and it likewise never gates validation.
+    const correctnessCheck = result.criticalPointChecks.find(
+      (c) => c.criticalPointId === 'sqrt-nonnegativity-condition',
+    );
+    expect(correctnessCheck?.status).toBe('unlinked');
+  });
+});
