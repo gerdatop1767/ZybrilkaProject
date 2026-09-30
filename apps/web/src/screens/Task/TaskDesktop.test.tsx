@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TaskDesktop } from './TaskDesktop.js';
 import { subjects } from '../../data/subjects.js';
@@ -324,6 +324,24 @@ describe('TaskDesktop', () => {
       expect(getCanvasState(TASK_ID)).toEqual(initialCanvasState());
     });
 
+    it('never shows a solution-only illustration in its own condition card while solving (QA v2 final audit)', async () => {
+      // The canvas dialog opens from both the Task (solving) and Result
+      // screens with no way to tell which — CanvasBoard's own condition
+      // card must therefore never render TaskSolutionIllustration itself,
+      // only TaskExamIllustration (real source diagrams). Regression for
+      // a leak found auditing task 14's pyramid SVG: it was appearing in
+      // "Полотно" mid-solve, before any attempt was submitted.
+      const user = userEvent.setup();
+      vi.mocked(api.getTask).mockResolvedValue({ ...baseTask, taskNumber: 14 });
+      vi.mocked(api.listTasksByNumber).mockResolvedValue([{ ...baseTask, taskNumber: 14 }]);
+      renderTask();
+      await screen.findByText(CONDITION);
+
+      await user.click(screen.getByRole('button', { name: 'Полотно' }));
+      const dialog = screen.getByRole('dialog', { name: 'Полотно' });
+      expect(within(dialog).queryByText('Иллюстрация к решению')).not.toBeInTheDocument();
+    });
+
     it('pinch (two simultaneous pointers moving apart) zooms the canvas in, shown by the zoom reset pill', async () => {
       const user = userEvent.setup();
       renderTask();
@@ -336,11 +354,21 @@ describe('TaskDesktop', () => {
       // (zoom in). Real pinch gestures fire pointerdown/move per finger
       // with distinct pointerIds, which is exactly what CanvasBoard's
       // gesture tracking keys off of.
-      fireEvent.pointerDown(board, { pointerId: 1, clientX: 100, clientY: 100 });
-      fireEvent.pointerDown(board, { pointerId: 2, clientX: 110, clientY: 100 });
-      fireEvent.pointerMove(board, { pointerId: 1, clientX: 60, clientY: 100 });
-      fireEvent.pointerMove(board, { pointerId: 2, clientX: 150, clientY: 100 });
-
+      //
+      // Viewport updates from a pinch are now batched through
+      // requestAnimationFrame (QA v2 Block C — avoids a full canvas
+      // resize+redraw on every raw pointermove). A raw rAF callback
+      // fires outside any React-managed event, so the gesture is
+      // wrapped in one act() scope together with an awaited animation
+      // frame — otherwise the update is applied to the fiber but never
+      // flushed into a render the test can observe.
+      await act(async () => {
+        fireEvent.pointerDown(board, { pointerId: 1, clientX: 100, clientY: 100 });
+        fireEvent.pointerDown(board, { pointerId: 2, clientX: 110, clientY: 100 });
+        fireEvent.pointerMove(board, { pointerId: 1, clientX: 60, clientY: 100 });
+        fireEvent.pointerMove(board, { pointerId: 2, clientX: 150, clientY: 100 });
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      });
       expect(within(dialog).getByText(/%$/)).toBeInTheDocument();
     });
 

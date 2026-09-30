@@ -3,6 +3,7 @@ import type { TaskPublic } from '@zybrilka/shared';
 import { getTask, listFavoriteTaskIds, removeFavorite } from '../../lib/api.js';
 import { invalidateFavoritesCache } from '../../lib/useFavorite.js';
 import { Icon } from '../Icon/Icon.js';
+import { InlineMathText } from '../MathText/MathText.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './FavoritesList.module.css';
 
@@ -105,7 +106,9 @@ export function FavoritesList({ subjectId, onSelect }: FavoritesListProps) {
         <div key={task.id} className={styles.row}>
           <button type="button" className={styles.rowMain} onClick={() => onSelect(task)}>
             <span className={styles.rowNumber}>№{task.taskNumber}</span>
-            <span className={clsx('text-body-sm', styles.rowCondition)}>{task.conditionMd}</span>
+            <span className={clsx('text-body-sm', styles.rowCondition)}>
+              <InlineMathText text={task.conditionMd} />
+            </span>
           </button>
           <button
             type="button"

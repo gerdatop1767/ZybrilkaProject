@@ -1,0 +1,35 @@
+/**
+ * Self-hosted webfonts (QA v2 Block L — UI typography pass).
+ *
+ * `--font-family-base` (Inter) already existed as a token before this
+ * block, but nothing ever actually loaded it — there was no @font-face
+ * anywhere, so every screen was silently falling back to the OS's own
+ * system-ui font the whole time. This file makes that base font real
+ * and adds one new display face (Unbounded) for UI headings/hero
+ * numbers only — see tokens.css's `--font-family-display` and its
+ * comment for exactly which text classes use it.
+ *
+ * Self-hosted via @fontsource (bundled at build time) rather than a
+ * Google Fonts <link>, so there's no extra runtime DNS/TLS round trip
+ * to a third-party CDN — safer in Telegram's embedded WebView, which
+ * doesn't always allow arbitrary third-party font hosts. Only the
+ * Cyrillic + Latin subsets and the specific weights actually used are
+ * imported (not the full family), keeping this deliberately light.
+ */
+
+/* Inter — body/UI text. Matches --font-weight-regular/medium/semibold/bold. */
+@import '@fontsource/inter/latin-400.css';
+@import '@fontsource/inter/latin-500.css';
+@import '@fontsource/inter/latin-600.css';
+@import '@fontsource/inter/latin-700.css';
+@import '@fontsource/inter/cyrillic-400.css';
+@import '@fontsource/inter/cyrillic-500.css';
+@import '@fontsource/inter/cyrillic-600.css';
+@import '@fontsource/inter/cyrillic-700.css';
+
+/* Unbounded — display/heading text only (bold/geometric character,
+   IMG_3984.jpeg reference). Only the two weights headings actually use. */
+@import '@fontsource/unbounded/latin-700.css';
+@import '@fontsource/unbounded/latin-800.css';
+@import '@fontsource/unbounded/cyrillic-700.css';
+@import '@fontsource/unbounded/cyrillic-800.css';

@@ -20,7 +20,6 @@ import { Collapse, SlideUp } from '../../ui/motion/motion.js';
 import { MathText } from '../../ui/MathText/MathText.js';
 import {
   TaskExamIllustration,
-  TaskSolutionIllustration,
 } from '../../ui/TaskIllustration/TaskIllustration.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './TaskMobile.module.css';
@@ -200,11 +199,6 @@ export function TaskMobile({
           <MathText text={task.condition} />
         </div>
         <TaskExamIllustration
-          subjectId={task.subjectId}
-          taskNumber={task.number}
-          className={styles.taskImage}
-        />
-        <TaskSolutionIllustration
           subjectId={task.subjectId}
           taskNumber={task.number}
           className={styles.taskImage}

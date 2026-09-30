@@ -511,3 +511,25 @@ describe('TaskMobile', () => {
     });
   });
 });
+
+describe('TaskMobile — solution-only illustration never leaks into the solving state (QA v2 Block H)', () => {
+  beforeEach(() => {
+    resetFavoritesCacheForTests();
+    resetCanvasStoreForTests();
+  });
+
+  it('renders no "Иллюстрация к решению" label for task 14 (a text-only proof with a solving-aid SVG)', async () => {
+    const task14 = { ...baseTask, id: TASK_ID, taskNumber: 14 };
+    vi.mocked(api.getTask).mockResolvedValue(task14);
+    vi.mocked(api.listTasksByNumber).mockResolvedValue([task14]);
+
+    render(
+      <NavigationProvider>
+        <TaskMobile subjectId={task14.subjectId} taskNumber={task14.taskNumber} taskId={TASK_ID} />
+      </NavigationProvider>,
+    );
+    await screen.findByText(CONDITION);
+
+    expect(screen.queryByText('Иллюстрация к решению')).not.toBeInTheDocument();
+  });
+});

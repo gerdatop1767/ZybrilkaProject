@@ -16,6 +16,26 @@
   background: var(--color-bg-elevated);
 }
 
+/* Groups a cluster of related controls (brush/eraser/ruler,
+ * undo/redo/clear) as one flex row, so `.toolbar`'s own flex-wrap wraps
+ * a whole group onto the next line together rather than the group's
+ * plain <div> falling back to block layout — which stacked each button
+ * vertically instead of laying them out side by side (QA v2 Block A). */
+.toolGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.divider {
+  width: 1px;
+  align-self: stretch;
+  margin: var(--space-1) 0;
+  background: var(--color-border-subtle);
+  flex-shrink: 0;
+}
+
 .toolButton {
   display: flex;
   align-items: center;
@@ -41,13 +61,20 @@
 .swatches {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
   padding: 0 var(--space-1);
 }
 
+/* The global `button { min-height: var(--touch-target-min) }` rule
+ * (every button gets a >=44px tappable height) was silently stretching
+ * these small color dots into ovals — 24px wide but 44px tall. These
+ * are deliberately compact secondary controls in a dense toolbar, not
+ * primary actions, so they opt out of that rule and stay true circles;
+ * the surrounding gap keeps them comfortably distinguishable to tap. */
 .swatch {
   width: 1.5rem;
   height: 1.5rem;
+  min-height: 0;
   border-radius: 50%;
   border: 2px solid transparent;
   flex-shrink: 0;
@@ -60,7 +87,7 @@
 .sizes {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .sizeButton {
@@ -69,6 +96,7 @@
   justify-content: center;
   width: 2rem;
   height: 2rem;
+  min-height: 0;
   border: none;
   border-radius: 50%;
   background: transparent;

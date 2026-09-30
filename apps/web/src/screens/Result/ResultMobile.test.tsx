@@ -335,3 +335,25 @@ describe('ResultMobile — "К списку заданий"', () => {
     );
   });
 });
+
+describe('ResultMobile — solution-only illustration (QA v2 Block H)', () => {
+  it('shows task 14\'s "Иллюстрация к решению" pyramid diagram once the result screen loads', async () => {
+    const task14 = { ...taskWithSolution, taskNumber: 14 };
+    vi.mocked(api.getTask).mockResolvedValue(task14);
+    vi.mocked(api.listTasksByNumber).mockResolvedValue([task14]);
+
+    render(
+      <NavigationProvider>
+        <ResultMobile
+          subjectId={task14.subjectId}
+          taskNumber={task14.taskNumber}
+          taskId={TASK_ID}
+          correct={false}
+          userAnswer="test"
+        />
+      </NavigationProvider>,
+    );
+
+    expect(await screen.findByText('Иллюстрация к решению')).toBeInTheDocument();
+  });
+});

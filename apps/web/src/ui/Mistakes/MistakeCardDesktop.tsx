@@ -3,6 +3,7 @@ import { Button } from '../Button/Button.js';
 import type { Mistake } from '../../data/sampleMistakes.js';
 import { getTopicColor } from '../../data/sampleMistakes.js';
 import { formatDateShort } from '../../lib/formatDate.js';
+import { InlineMathText } from '../MathText/MathText.js';
 import styles from './MistakeCardDesktop.module.css';
 
 export interface MistakeCardDesktopProps {
@@ -47,7 +48,9 @@ export function MistakeCardDesktop({
           {mistake.topic}
         </span>
         <p className={`text-h3 ${styles.title}`}>Задание {mistake.taskNumber}</p>
-        <p className={`text-body-sm ${styles.condition}`}>{mistake.condition}</p>
+        <p className={`text-body-sm ${styles.condition}`}>
+          <InlineMathText text={mistake.condition} />
+        </p>
         <p className={styles.date}>{formatDateShort(mistake.date)}</p>
       </div>
 
