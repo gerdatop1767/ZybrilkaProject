@@ -18,9 +18,7 @@ import { ToolsPanelMobile, AnswerFieldTools } from '../../ui/Training/ToolsPanel
 import { OtherVariantsSection } from '../../ui/Training/OtherVariantsSection.js';
 import { Collapse, SlideUp } from '../../ui/motion/motion.js';
 import { MathText } from '../../ui/MathText/MathText.js';
-import {
-  TaskExamIllustration,
-} from '../../ui/TaskIllustration/TaskIllustration.js';
+import { TaskExamIllustration } from '../../ui/TaskIllustration/TaskIllustration.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './TaskMobile.module.css';
 

@@ -20,9 +20,7 @@ import { SessionTaskListCard } from '../../ui/Training/SessionTaskListCard.js';
 import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { Collapse, FadeIn } from '../../ui/motion/motion.js';
 import { MathText } from '../../ui/MathText/MathText.js';
-import {
-  TaskExamIllustration,
-} from '../../ui/TaskIllustration/TaskIllustration.js';
+import { TaskExamIllustration } from '../../ui/TaskIllustration/TaskIllustration.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './TaskDesktop.module.css';
 
