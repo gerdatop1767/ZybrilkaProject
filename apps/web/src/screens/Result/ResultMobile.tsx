@@ -22,6 +22,7 @@ import { OtherVariantsSection } from '../../ui/Training/OtherVariantsSection.js'
 import { useCountUp } from '../../lib/useCountUp.js';
 import { Collapse, SlideUp } from '../../ui/motion/motion.js';
 import { InlineMathText } from '../../ui/MathText/MathText.js';
+import { TaskExamIllustration, TaskSolutionIllustration } from '../../ui/TaskIllustration/TaskIllustration.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './ResultMobile.module.css';
 
@@ -261,6 +262,26 @@ export function ResultMobile({
             )}
           </div>
         )}
+
+        {/* Same illustration components ResultDesktop already renders in
+         * its "Условие" card — TaskExamIllustration for a real source
+         * diagram (tasks 1, 3, 8, 11), TaskSolutionIllustration for our
+         * own solving-aid SVG on a text-only proof (tasks 2, 14, 17).
+         * Mobile had no equivalent spot for either, so a solution-only
+         * graphic like task 14's pyramid had nowhere to appear once the
+         * Task screen stopped showing it while solving (see commit
+         * d9edb97) — only the Result screen should ever show it, and
+         * this is that screen's condition/result card equivalent. */}
+        <TaskExamIllustration
+          subjectId={task.subjectId}
+          taskNumber={task.number}
+          className={styles.taskImage}
+        />
+        <TaskSolutionIllustration
+          subjectId={task.subjectId}
+          taskNumber={task.number}
+          className={styles.taskImage}
+        />
 
         <Button variant="primary" fullWidth onClick={() => setSolutionOpen((v) => !v)}>
           <Icon name="showSolution" size={18} /> Показать решение
