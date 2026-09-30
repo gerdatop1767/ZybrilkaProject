@@ -78,51 +78,28 @@ export function ToolsPanelMobile({ open, onToggle, hideSummary, onSelect }: Tool
   );
 }
 
-export interface AnswerFieldToolsProps {
-  fxOpen: boolean;
-  onToggleFx: () => void;
+export interface ToolsToggleButtonProps {
   toolsOpen: boolean;
   onToggleTools: () => void;
 }
 
 /**
- * The compact tool buttons directly in the answer field row. The old
- * keyboard shortcut button was removed (the field already has a real
- * text input, so it was dead weight) and the down/up chevron became a
- * pencil — tapping it opens "Дополнительные инструменты" below
- * (`ToolsPanelMobile` with `hideSummary`) instead of a plain expand
- * arrow, since that's what the icon now actually opens.
+ * The pencil button directly in the answer field row that opens
+ * "Дополнительные инструменты" below (`ToolsPanelMobile` with
+ * `hideSummary`). The math-symbol ("fx") toggle that used to live
+ * here moved into `MathAnswerField` itself (it now owns its own
+ * keyboard panel), so this is just the one remaining button.
  */
-export function AnswerFieldTools({
-  fxOpen,
-  onToggleFx,
-  toolsOpen,
-  onToggleTools,
-}: AnswerFieldToolsProps) {
+export function ToolsToggleButton({ toolsOpen, onToggleTools }: ToolsToggleButtonProps) {
   return (
-    <>
-      <button
-        type="button"
-        className={clsx(styles.fieldIconButton, styles.fxButton, fxOpen && styles.fxButtonActive)}
-        aria-pressed={fxOpen}
-        aria-label="Математические символы"
-        onClick={onToggleFx}
-      >
-        <Icon name="fxInput" size={18} />
-      </button>
-      <button
-        type="button"
-        className={clsx(
-          styles.fieldIconButton,
-          styles.fxButton,
-          toolsOpen && styles.fxButtonActive,
-        )}
-        aria-expanded={toolsOpen}
-        aria-label="Дополнительные инструменты"
-        onClick={onToggleTools}
-      >
-        <Icon name="edit" size={18} />
-      </button>
-    </>
+    <button
+      type="button"
+      className={clsx(styles.fieldIconButton, styles.fxButton, toolsOpen && styles.fxButtonActive)}
+      aria-expanded={toolsOpen}
+      aria-label="Дополнительные инструменты"
+      onClick={onToggleTools}
+    >
+      <Icon name="edit" size={18} />
+    </button>
   );
 }

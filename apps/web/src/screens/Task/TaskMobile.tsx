@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigation, type Route } from '../../lib/navigation.js';
 import { serializeMultiPartUserAnswer } from '@zybrilka/shared';
 import { getTask, listTasksByNumber, submitAttempt } from '../../lib/api.js';
@@ -14,7 +14,8 @@ import { Icon } from '../../ui/Icon/Icon.js';
 import { BottomSheet } from '../../ui/BottomSheet/BottomSheet.js';
 import { DifficultyTag } from '../../ui/Training/DifficultyTag.js';
 import { TaskChrome } from '../../ui/Training/TaskChrome.js';
-import { ToolsPanelMobile, AnswerFieldTools } from '../../ui/Training/ToolsPanelMobile.js';
+import { ToolsPanelMobile, ToolsToggleButton } from '../../ui/Training/ToolsPanelMobile.js';
+import { MathAnswerField } from '../../ui/MathAnswerField/MathAnswerField.js';
 import { OtherVariantsSection } from '../../ui/Training/OtherVariantsSection.js';
 import { Collapse, SlideUp } from '../../ui/motion/motion.js';
 import { MathText } from '../../ui/MathText/MathText.js';
@@ -34,8 +35,6 @@ export interface TaskMobileProps {
    * route in navigation.tsx (audit Block 3). */
   returnTo?: Route;
 }
-
-const mathSymbols = ['∞', '∪', '∩', '≤', '≥', '≠'];
 
 /**
  * Mobile Training/Task screen (S1 Block 6, approved design —
@@ -73,12 +72,10 @@ export function TaskMobile({
   const [partAnswers, setPartAnswers] = useState<Record<string, string>>({});
   const [checking, setChecking] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
-  const [fxOpen, setFxOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [otherOpen, setOtherOpen] = useState(false);
   const [calculatorOpen, setCalculatorOpen] = useState(false);
   const [canvasOpen, setCanvasOpen] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -140,11 +137,6 @@ export function TaskMobile({
       taskId: variant.id,
       returnTo: { screen: 'subject', subjectId: task.subjectId },
     });
-  }
-
-  function insertSymbol(symbol: string) {
-    setAnswer((prev) => prev + symbol);
-    inputRef.current?.focus();
   }
 
   if (loadError) {
@@ -229,16 +221,13 @@ export function TaskMobile({
             {task.answerParts!.map((part) => (
               <div key={part.id} className={styles.answerRow}>
                 <span className={styles.multiPartLabel}>{part.label})</span>
-                <input
-                  type="text"
-                  className={styles.answerInput}
-                  placeholder="Ваш ответ..."
+                <MathAnswerField
                   value={partAnswers[part.id] ?? ''}
-                  onChange={(e) =>
-                    setPartAnswers((prev) => ({ ...prev, [part.id]: e.target.value }))
-                  }
+                  onChange={(v) => setPartAnswers((prev) => ({ ...prev, [part.id]: v }))}
+                  placeholder="Ваш ответ..."
                   disabled={checking}
-                  aria-label={`Ответ ${part.label})`}
+                  ariaLabel={`Ответ ${part.label})`}
+                  className={styles.mathField}
                 />
               </div>
             ))}
@@ -246,37 +235,19 @@ export function TaskMobile({
         ) : (
           <>
             <div className={styles.answerRow}>
-              <input
-                ref={inputRef}
-                type="text"
-                className={styles.answerInput}
-                placeholder="Введите ответ..."
+              <MathAnswerField
                 value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
+                onChange={setAnswer}
+                placeholder="Введите ответ..."
                 disabled={checking}
-                aria-label="Ответ"
+                ariaLabel="Ответ"
+                className={styles.mathField}
               />
-              <AnswerFieldTools
-                fxOpen={fxOpen}
-                onToggleFx={() => setFxOpen((v) => !v)}
+              <ToolsToggleButton
                 toolsOpen={toolsOpen}
                 onToggleTools={() => setToolsOpen((v) => !v)}
               />
             </div>
-            <Collapse open={fxOpen}>
-              <div className={styles.symbolRow}>
-                {mathSymbols.map((symbol) => (
-                  <button
-                    key={symbol}
-                    type="button"
-                    className={styles.symbolButton}
-                    onClick={() => insertSymbol(symbol)}
-                  >
-                    {symbol}
-                  </button>
-                ))}
-              </div>
-            </Collapse>
             <p className={clsx('text-body-sm', 'text-secondary', styles.answerHelp)}>
               Ответ можно вводить в виде интервала, объединения интервалов или чисел, например: (−∞;
               −1] ∪ [2; +∞)

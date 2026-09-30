@@ -278,11 +278,36 @@ describe('real task 13 — exam writeup', () => {
   // retyped independently in `parts[0].answerDisplay` and in
   // `examWriteup` with different LaTeX formatting — a drift risk. This
   // locks in that both now come from the same content.
-  it('(3) the general-solution formula in examWriteup matches part а) answerDisplay', () => {
+  // Audit finding (UX pass): the two branches used to be glued onto one
+  // line in examWriteup (one `$...$` span joined by `;\quad`) — now each
+  // renders on its own line, so this checks each branch individually
+  // rather than the old single joined substring.
+  it('(3) each branch of the general-solution formula in examWriteup matches part а) answerDisplay', () => {
     const solution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
     const partA = solution.parts.find((p) => p.id === 'a');
     const formulaTex = partA?.answerDisplay?.slice(1, -1); // strip the $...$ wrapper
     expect(formulaTex).toBeTruthy();
-    expect(solution.examWriteup?.content).toContain(formulaTex!);
+    const [branch1, branch2] = formulaTex!.split(';\\quad ');
+    expect(branch1).toBeTruthy();
+    expect(branch2).toBeTruthy();
+    expect(solution.examWriteup?.content).toContain(branch1!);
+    expect(solution.examWriteup?.content).toContain(branch2!);
+  });
+
+  it('(4) independent equations/steps are on separate lines, not glued into one formula', () => {
+    const solution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
+    const content = solution.examWriteup?.content ?? '';
+    // The old bug: both general-solution branches inside one $...$ span.
+    expect(content).not.toContain(';\\quad x=-\\dfrac{2\\pi}{3}');
+    // The old bug: inequality ⇒ parameter ⇒ root all inside one $...$ span.
+    expect(content).not.toMatch(/\\leqslant[^$]*\\Rightarrow[^$]*\\Rightarrow/);
+  });
+
+  it('(5) no mechanical trailing ":" right before the next line continues', () => {
+    const solution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
+    const content = solution.examWriteup?.content ?? '';
+    for (const line of content.split('\n')) {
+      expect(line.trimEnd().endsWith(':')).toBe(false);
+    }
   });
 });

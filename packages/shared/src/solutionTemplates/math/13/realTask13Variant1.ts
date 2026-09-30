@@ -32,18 +32,25 @@ import type { CanonicalSolution } from '../../../solutionEngine/index.js';
 import { mathTask13EquationTemplate } from './equation.v1.js';
 
 /**
- * Part а)'s general-solution formula, as LaTeX content (no `$...$`
- * wrapper — callers embed it where they need it, sometimes alongside
- * other math on the same line, e.g. `⇔ ${...}` in `examWriteup`).
- * Single source of truth for this value (audit finding: it used to be
- * retyped separately in `parts[0].answerDisplay` and `examWriteup`
- * with slightly different LaTeX formatting — a silent-drift risk if
- * one copy were ever edited without the other). Not present in any DB
- * field today (see module doc) — authored here from the task's real
- * explanationMd/hintMd wording, not invented.
+ * Part а)'s general-solution formula, as two branch LaTeX fragments
+ * (no `$...$` wrapper — callers embed them where they need them,
+ * sometimes each on its own line, e.g. `examWriteup`'s "склеенные"
+ * fix below). Single source of truth for this value (audit finding 2:
+ * it used to be retyped separately in `parts[0].answerDisplay` and
+ * `examWriteup` with slightly different LaTeX formatting — a silent-
+ * drift risk if one copy were ever edited without the other). Kept as
+ * two branches, not one joined string, because `examWriteup` needs to
+ * render them on separate lines (audit finding: a "screenshot" review
+ * found the two branches visually glued onto one line) while
+ * `parts[0].answerDisplay` still wants them as one combined value.
+ * "или" is the real source wording (`explanationMd` Шаг 5: "x=πn,
+ * n∈ℤ, или x=−2π/3+2πk, k∈ℤ"), not invented. Not present in any DB
+ * field as a dedicated value today (see module doc) — authored here
+ * from the task's real explanationMd/hintMd wording.
  */
-const PART_A_GENERAL_SOLUTION_TEX =
-  'x=\\pi n,\\ n\\in\\mathbb{Z};\\quad x=-\\dfrac{2\\pi}{3}+2\\pi k,\\ k\\in\\mathbb{Z}';
+const PART_A_BRANCH_1_TEX = 'x=\\pi n,\\ n\\in\\mathbb{Z}';
+const PART_A_BRANCH_2_TEX = 'x=-\\dfrac{2\\pi}{3}+2\\pi k,\\ k\\in\\mathbb{Z}';
+const PART_A_GENERAL_SOLUTION_TEX = `${PART_A_BRANCH_1_TEX};\\quad ${PART_A_BRANCH_2_TEX}`;
 
 /** The task's own real fields this builder needs — copied verbatim by the caller from its actual DB/import row, never re-typed by hand elsewhere. */
 export interface RealTask13Variant1Fields {
@@ -128,17 +135,27 @@ export function buildCanonicalSolutionForTask13Variant1(
     // claim that the inequality is reversible from the bare root
     // value — the same real inequalities as `explanationMd`'s Шаг 6
     // (`packages/db/src/importEge2026Variant1.ts`, taskNumber 13), just
-    // condensed.
+    // condensed. UX audit fix: each independent equation/step is its
+    // own line (single `\n`) — previously several were glued onto one
+    // line inside a single `$...$` span (e.g. both general-solution
+    // branches, or a whole "inequality ⇒ parameter ⇒ root" chain, all
+    // in one formula). No line ends with a mechanical trailing ":"
+    // before its continuation — only meaningful sentence punctuation.
     examWriteup: {
       content:
-        'а) $\\sqrt{A}=\\sqrt{B}\\Leftrightarrow\\{A=B,\\ B\\geqslant 0\\}$, где $B=\\cos\\left(\\dfrac{\\pi}{2}+x\\right)=-\\sin x$:\n' +
+        'а) $\\sqrt{A}=\\sqrt{B}\\Leftrightarrow\\{A=B,\\ B\\geqslant 0\\}$, где $B=\\cos\\left(\\dfrac{\\pi}{2}+x\\right)=-\\sin x$\n' +
         '$2\\cos^3x-\\sin^2x-2\\cos x-\\sin x=-\\sin x,\\ \\sin x\\leqslant 0$\n' +
         '$\\Leftrightarrow 2\\cos^3x+\\cos^2x-2\\cos x-1=0,\\ \\sin x\\leqslant 0$\n' +
         '$\\Leftrightarrow (\\cos x-1)(2\\cos x+1)(\\cos x+1)=0,\\ \\sin x\\leqslant 0$\n' +
-        `$\\Leftrightarrow ${PART_A_GENERAL_SOLUTION_TEX}$\n\n` +
-        `б) Отбор корней на $\\left[-4\\pi;-\\dfrac{5\\pi}{2}\\right]$:\n` +
-        '$-4\\pi\\leqslant \\pi n\\leqslant -\\dfrac{5\\pi}{2}\\Rightarrow n=-4,\\ -3\\Rightarrow x=-4\\pi,\\ -3\\pi$\n' +
-        '$-4\\pi\\leqslant -\\dfrac{2\\pi}{3}+2\\pi k\\leqslant -\\dfrac{5\\pi}{2}\\Rightarrow k=-1\\Rightarrow x=-\\dfrac{8\\pi}{3}$\n\n' +
+        `$\\Leftrightarrow ${PART_A_BRANCH_1_TEX}$\n` +
+        `или $${PART_A_BRANCH_2_TEX}$\n\n` +
+        `б) Отбор корней на $\\left[-4\\pi;-\\dfrac{5\\pi}{2}\\right]$\n` +
+        '$-4\\pi\\leqslant \\pi n\\leqslant -\\dfrac{5\\pi}{2}$\n' +
+        '$\\Rightarrow n=-4,\\ -3$\n' +
+        '$\\Rightarrow x=-4\\pi,\\ -3\\pi$\n\n' +
+        '$-4\\pi\\leqslant -\\dfrac{2\\pi}{3}+2\\pi k\\leqslant -\\dfrac{5\\pi}{2}$\n' +
+        '$\\Rightarrow k=-1$\n' +
+        '$\\Rightarrow x=-\\dfrac{8\\pi}{3}$\n\n' +
         `Ответ: ${fields.correctAnswerDisplay ?? fields.correctAnswer}`,
     },
     methodTags: ['substitution', 'factoring', 'quadratic_in_trig_function'],
