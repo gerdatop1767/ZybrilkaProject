@@ -31,19 +31,27 @@ import styles from './CanvasBoard.module.css';
 /** Mirrors the design tokens' accent/status colors (tokens.css) —
  * canvas 2D fillStyle/strokeStyle needs literal color strings, not CSS
  * custom properties, so these are the same hex values by hand rather
- * than a new palette. The white swatch is dropped here (block —
- * "canvas mobile fix"): the drawing surface is now white paper, so
- * white ink would be invisible; a near-black replaces it as the
- * default "pen" color. */
+ * than a new palette. The white swatch is dropped here: the drawing
+ * surface is white paper, so white ink would be invisible; a
+ * near-black replaces it as the default "pen" color. */
 const PALETTE = ['#14141f', '#8b14f5', '#0a84ff', '#16a34a', '#e11d48', '#d97706'] as const;
 
 const SIZES = [3, 6, 10] as const;
 
 /** Extra blank drawing room below the task card, in world px — a
- * generous scratch area (more than one screenful) so the "свободная
- * область полотна" always has real room, not just whatever's left
- * over after the task card. */
+ * generous scratch area (more than one screenful) so the free-draw
+ * area always has real room, not just whatever's left over after the
+ * task card. */
 const MIN_FREE_SPACE = 700;
+
+/** Caps the canvas backing-store's largest dimension regardless of
+ * zoom * devicePixelRatio (QA v2 Block C/D: the old `zoom * dpr` scale
+ * was unbounded — at max zoom on a 3x-dpr phone the backing store
+ * could reach tens of millions of pixels, which is the real cause of
+ * the reported zoom-in lag, not just event frequency). Ink softens
+ * slightly past this ceiling instead of the canvas becoming
+ * physically enormous. */
+const MAX_BACKING_STORE_DIMENSION = 4096;
 
 export interface CanvasBoardProps {
   state: CanvasState;
@@ -52,29 +60,71 @@ export interface CanvasBoardProps {
 }
 
 /**
- * The scratchboard's shared drawing core (Task Workspace — "canvas
- * mobile fix" block): a single white, zoomable/pannable "world" that
- * contains BOTH the current task's condition/illustration (top) and
- * the free-draw canvas layered directly over the whole world, so the
- * user can draw over the task or below it as one continuous surface —
- * not a separate static reference panel bolted on top of a small
- * canvas. Identical between the mobile near-fullscreen workspace and
- * the desktop large modal; only their surrounding chrome (header,
- * overlay shape) differs.
+ * The scratchboard's shared drawing core: a single white, zoomable/
+ * pannable "world" containing both the current task's condition/
+ * illustration (top) and the free-draw canvas layered directly over
+ * the whole world, so the user can draw over the task or below it as
+ * one continuous surface.
  *
- * Coordinate model: strokes are stored in WORLD coordinates (the
- * canvasEngine/canvasSessionStore data never knows about zoom/pan).
- * `viewport` (zoom/panX/panY, canvasViewport.ts) converts between
- * screen space and world space; the canvas' own backing-store
- * resolution is resized to `zoom * devicePixelRatio` on every zoom
- * change so strokes stay crisp at any zoom instead of a blurry
- * CSS-stretched bitmap. The task card is real HTML/SVG (MathText +
- * TaskIllustration) inside the same pannable world, scaled with a
- * genuine CSS `transform: scale()` (crisp for text/vector content,
- * unlike a rasterized canvas) — one shared `translate` on the world
- * wrapper handles pan, and each layer handles its own zoom scaling in
- * whichever way keeps it crisp.
+ * Coordinate model: strokes are stored in WORLD coordinates
+ * (canvasEngine/canvasSessionStore never knows about zoom/pan).
+ * `viewport` (canvasViewport.ts) converts between screen space and
+ * world space.
+ *
+ * Rendering model (QA v2 Block C/D — stylus/performance audit): two
+ * stacked canvases, not one:
+ * - `baseCanvas` holds every COMMITTED stroke, redrawn only when
+ *   `state.strokes` changes (commit/undo/redo/clear) or the world/zoom
+ *   settles — never on a bare pointermove.
+ * - `activeCanvas` (transparent, on top) holds only the IN-PROGRESS
+ *   stroke, redrawn from a mutable ref (never React state) on every
+ *   move. Since it only ever draws at most one stroke, this stays
+ *   cheap even on fast stylus input, unlike the old single-canvas
+ *   design that re-painted every committed stroke on every move.
+ * Both pointer-drawing and pinch/pan updates are coalesced to at most
+ * one state update per animation frame via a shared `scheduleFrame`
+ * helper, so a 120Hz+ pointer stream never forces more than 60
+ * React renders/canvas resizes per second.
  */
+function midpoint(a: CanvasPoint, b: CanvasPoint): CanvasPoint {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+/**
+ * Builds a smoothed path through raw pointer samples — a quadratic
+ * curve through each point using the midpoints of its neighbors as
+ * anchors, the standard cheap technique for natural-looking freehand
+ * lines (QA v2 Block D: "не превращать handwriting в чрезмерно
+ * сглаженную кривую" — this only smooths the *joints* between
+ * consecutive samples, so short strokes, dots, digits and math symbols
+ * keep their real shape instead of being resampled into a generic
+ * curve).
+ */
+function pathForPoints(points: readonly CanvasPoint[]): Path2D {
+  const path = new Path2D();
+  if (points.length === 0) return path;
+  const [first] = points;
+  if (points.length === 1) {
+    path.moveTo(first!.x, first!.y);
+    path.lineTo(first!.x + 0.01, first!.y + 0.01);
+    return path;
+  }
+  if (points.length === 2) {
+    path.moveTo(first!.x, first!.y);
+    path.lineTo(points[1]!.x, points[1]!.y);
+    return path;
+  }
+  path.moveTo(first!.x, first!.y);
+  path.lineTo(midpoint(points[0]!, points[1]!).x, midpoint(points[0]!, points[1]!).y);
+  for (let i = 1; i < points.length - 1; i++) {
+    const mid = midpoint(points[i]!, points[i + 1]!);
+    path.quadraticCurveTo(points[i]!.x, points[i]!.y, mid.x, mid.y);
+  }
+  const last = points[points.length - 1]!;
+  path.lineTo(last.x, last.y);
+  return path;
+}
+
 function paintStroke(ctx: CanvasRenderingContext2D, stroke: CanvasStroke) {
   if (stroke.points.length === 0) return;
   ctx.save();
@@ -88,52 +138,112 @@ function paintStroke(ctx: CanvasRenderingContext2D, stroke: CanvasStroke) {
     ctx.globalCompositeOperation = 'source-over';
     ctx.strokeStyle = stroke.color;
   }
-  ctx.beginPath();
-  const [first, ...rest] = stroke.points;
-  ctx.moveTo(first!.x, first!.y);
-  if (rest.length === 0) {
-    // A tap with no movement still shows as a dot, not nothing.
-    ctx.lineTo(first!.x + 0.01, first!.y + 0.01);
-  }
-  for (const point of rest) ctx.lineTo(point.x, point.y);
-  ctx.stroke();
+  ctx.stroke(pathForPoints(stroke.points));
   ctx.restore();
+}
+
+/** Sizes a canvas's backing store to `effectiveScale` (already capped
+ * — see MAX_BACKING_STORE_DIMENSION) and its own CSS box to the
+ * on-screen size, then re-applies the transform every caller needs to
+ * draw in WORLD coordinates directly. Shared by both stacked canvases
+ * so they always stay pixel-identical. */
+function resizeCanvas(
+  canvas: HTMLCanvasElement,
+  worldWidth: number,
+  worldHeight: number,
+  cssZoom: number,
+  effectiveScale: number,
+) {
+  canvas.width = Math.max(1, Math.round(worldWidth * effectiveScale));
+  canvas.height = Math.max(1, Math.round(worldHeight * effectiveScale));
+  canvas.style.width = `${worldWidth * cssZoom}px`;
+  canvas.style.height = `${worldHeight * cssZoom}px`;
+  const ctx = canvas.getContext('2d');
+  if (ctx) ctx.setTransform(effectiveScale, 0, 0, effectiveScale, 0, 0);
 }
 
 export function CanvasBoard({ state, onChangeState, task }: CanvasBoardProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const taskCardRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const baseCanvasRef = useRef<HTMLCanvasElement>(null);
+  const activeCanvasRef = useRef<HTMLCanvasElement>(null);
   const [tool, setTool] = useState<CanvasTool>('brush');
   const [color, setColor] = useState<string>(PALETTE[0]);
   const [size, setSize] = useState<number>(SIZES[1]);
   const [rulerMode, setRulerMode] = useState(false);
-  const [activePoints, setActivePoints] = useState<CanvasPoint[] | null>(null);
   const [viewport, setViewport] = useState<CanvasViewport>(initialViewport);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [taskCardHeight, setTaskCardHeight] = useState(0);
 
-  // Active pointers currently down on the canvas, keyed by pointerId —
-  // 1 pointer draws, 2 pan/zoom (a real pinch), 3+ are ignored. Refs,
-  // not state: every pointermove needs the latest set synchronously,
-  // and none of this should trigger its own re-render.
+  // Everything below is a ref, not state — none of it should ever
+  // trigger a React render on its own. High-frequency pointer input
+  // (stylus especially) mutates these directly; React only finds out
+  // about the *result* (a committed stroke, or a batched viewport
+  // update) once per animation frame at most.
   const activePointers = useRef(new Map<number, CanvasPoint>());
   const drawingPointerId = useRef<number | null>(null);
   const gestureRef = useRef<{ distance: number; midpoint: CanvasPoint } | null>(null);
+  const activeStrokeRef = useRef<{
+    points: CanvasPoint[];
+    tool: CanvasTool;
+    color: string;
+    size: number;
+  } | null>(null);
+  const viewportLiveRef = useRef(viewport);
+  const viewportDirtyRef = useRef(false);
+  const frameRef = useRef<number | null>(null);
 
   const worldWidth = viewportSize.width;
   const worldHeight = taskCardHeight + Math.max(MIN_FREE_SPACE, viewportSize.height);
 
-  const draw = useCallback(() => {
-    const canvas = canvasRef.current;
+  useEffect(() => {
+    viewportLiveRef.current = viewport;
+  }, [viewport]);
+
+  const drawBase = useCallback(() => {
+    const canvas = baseCanvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx || worldWidth === 0) return;
     ctx.clearRect(0, 0, worldWidth, worldHeight);
     for (const stroke of state.strokes) paintStroke(ctx, stroke);
-    if (activePoints && activePoints.length > 0) {
-      paintStroke(ctx, { points: activePoints, tool, color, size });
+  }, [state.strokes, worldWidth, worldHeight]);
+
+  const drawActive = useCallback(() => {
+    const canvas = activeCanvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx || worldWidth === 0) return;
+    ctx.clearRect(0, 0, worldWidth, worldHeight);
+    const active = activeStrokeRef.current;
+    if (active && active.points.length > 0) {
+      paintStroke(ctx, active);
     }
-  }, [state.strokes, activePoints, tool, color, size, worldWidth, worldHeight]);
+  }, [worldWidth, worldHeight]);
+
+  // A single per-frame flush, scheduled by every high-frequency source
+  // (drawing a stroke, pinch-zoom, wheel pan/zoom) via `scheduleFrame`
+  // below. Earlier this coalesced by keeping only the FIRST caller's
+  // closure per frame — which silently dropped every other caller's
+  // work whenever two different kinds of updates (e.g. a stroke
+  // starting to draw, then a 2nd finger landing to pinch) raced for the
+  // same frame slot. Routing everything through one flush that always
+  // applies a pending viewport commit *and* redraws the active stroke
+  // means no caller's update is ever lost, no matter which one
+  // scheduled the frame.
+  const flushFrame = useCallback(() => {
+    if (viewportDirtyRef.current) {
+      viewportDirtyRef.current = false;
+      setViewport(viewportLiveRef.current);
+    }
+    drawActive();
+  }, [drawActive]);
+
+  const scheduleFrame = useCallback(() => {
+    if (frameRef.current !== null) return;
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null;
+      flushFrame();
+    });
+  }, [flushFrame]);
 
   // Tracks the viewport's own box size (independent of zoom — a CSS
   // transform never changes an ancestor's layout size) so `worldWidth`
@@ -151,8 +261,7 @@ export function CanvasBoard({ state, onChangeState, task }: CanvasBoardProps) {
 
   // Tracks the task card's natural (zoom-1) height — KaTeX/illustration
   // content can change size after their own async layout — so the
-  // free-draw area below always starts right after the real card, not
-  // a guessed height.
+  // free-draw area below always starts right after the real card.
   useEffect(() => {
     const el = taskCardRef.current;
     if (!el) return;
@@ -162,37 +271,59 @@ export function CanvasBoard({ state, onChangeState, task }: CanvasBoardProps) {
     return () => observer.disconnect();
   }, [task.id]);
 
-  // Resizes the canvas backing store to `zoom * devicePixelRatio`
-  // whenever the world size or zoom changes, then repaints — this is
-  // what keeps ink crisp at any zoom level instead of a blurry
-  // CSS-scaled bitmap (the whole point of storing strokes in world
-  // coordinates rather than screen pixels).
+  // Resizes both canvases together and repaints the base layer
+  // whenever the world size or the *committed* zoom changes (this
+  // effect fires at most once per animation frame even during a fast
+  // pinch, thanks to scheduleFrame above).
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || worldWidth === 0) return;
+    const base = baseCanvasRef.current;
+    const active = activeCanvasRef.current;
+    if (!base || !active || worldWidth === 0) return;
     const dpr = window.devicePixelRatio || 1;
-    const scale = viewport.zoom * dpr;
-    canvas.width = Math.max(1, Math.round(worldWidth * scale));
-    canvas.height = Math.max(1, Math.round(worldHeight * scale));
-    const ctx = canvas.getContext('2d');
-    if (ctx) ctx.setTransform(scale, 0, 0, scale, 0, 0);
-    draw();
-  }, [worldWidth, worldHeight, viewport.zoom, draw]);
+    const rawScale = viewport.zoom * dpr;
+    const largestDimension = Math.max(worldWidth, worldHeight, 1);
+    const scale = Math.min(rawScale, MAX_BACKING_STORE_DIMENSION / largestDimension);
+    resizeCanvas(base, worldWidth, worldHeight, viewport.zoom, scale);
+    resizeCanvas(active, worldWidth, worldHeight, viewport.zoom, scale);
+    drawBase();
+    drawActive();
+  }, [worldWidth, worldHeight, viewport.zoom, drawBase, drawActive]);
 
   useEffect(() => {
-    draw();
-  }, [draw]);
+    drawBase();
+  }, [drawBase]);
 
   function getViewportPoint(event: { clientX: number; clientY: number }): CanvasPoint {
     const rect = viewportRef.current!.getBoundingClientRect();
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   }
 
-  function endStroke() {
-    if (activePoints && activePoints.length > 0) {
-      onChangeState(commitStroke(state, { points: activePoints, tool, color, size }));
+  function beginStroke(worldPoint: CanvasPoint) {
+    activeStrokeRef.current = { points: [worldPoint], tool, color, size };
+    scheduleFrame();
+  }
+
+  function extendStroke(worldPoints: readonly CanvasPoint[]) {
+    const active = activeStrokeRef.current;
+    if (!active) return;
+    if (rulerMode) {
+      // A real scratchboard "ruler" without simulating a physical
+      // ruler graphic: a straight-line snap from the stroke's start to
+      // the current pointer position.
+      active.points = [active.points[0]!, worldPoints[worldPoints.length - 1]!];
+    } else {
+      active.points.push(...worldPoints);
     }
-    setActivePoints(null);
+    scheduleFrame();
+  }
+
+  function endStroke() {
+    const active = activeStrokeRef.current;
+    activeStrokeRef.current = null;
+    if (active && active.points.length > 0) {
+      onChangeState(commitStroke(state, active));
+    }
+    scheduleFrame();
   }
 
   function handlePointerDown(event: React.PointerEvent<HTMLCanvasElement>) {
@@ -206,7 +337,8 @@ export function CanvasBoard({ state, onChangeState, task }: CanvasBoardProps) {
       // committing a stray line from the instant before the pinch
       // started.
       drawingPointerId.current = null;
-      setActivePoints(null);
+      activeStrokeRef.current = null;
+      scheduleFrame();
       const points = [...activePointers.current.values()];
       gestureRef.current = {
         distance: distanceBetween(points[0]!, points[1]!),
@@ -214,48 +346,51 @@ export function CanvasBoard({ state, onChangeState, task }: CanvasBoardProps) {
       };
     } else if (activePointers.current.size === 1) {
       drawingPointerId.current = event.pointerId;
-      setActivePoints([screenToWorld(viewport, screenPoint)]);
+      beginStroke(screenToWorld(viewportLiveRef.current, screenPoint));
     }
   }
 
   function handlePointerMove(event: React.PointerEvent<HTMLCanvasElement>) {
     if (!activePointers.current.has(event.pointerId)) return;
-    const screenPoint = getViewportPoint(event);
-    activePointers.current.set(event.pointerId, screenPoint);
 
     if (activePointers.current.size >= 2) {
+      const screenPoint = getViewportPoint(event);
+      activePointers.current.set(event.pointerId, screenPoint);
       const points = [...activePointers.current.values()].slice(0, 2);
       const newDistance = distanceBetween(points[0]!, points[1]!);
       const newMidpoint = midpointBetween(points[0]!, points[1]!);
       const gesture = gestureRef.current;
       if (gesture && gesture.distance > 0) {
         const factor = newDistance / gesture.distance;
-        setViewport((current) => {
-          const zoomed = zoomAtPoint(current, gesture.midpoint, factor);
-          return panBy(
-            zoomed,
-            newMidpoint.x - gesture.midpoint.x,
-            newMidpoint.y - gesture.midpoint.y,
-          );
-        });
+        const zoomed = zoomAtPoint(viewportLiveRef.current, gesture.midpoint, factor);
+        viewportLiveRef.current = panBy(
+          zoomed,
+          newMidpoint.x - gesture.midpoint.x,
+          newMidpoint.y - gesture.midpoint.y,
+        );
+        viewportDirtyRef.current = true;
+        scheduleFrame();
       }
       gestureRef.current = { distance: newDistance, midpoint: newMidpoint };
       return;
     }
 
     if (drawingPointerId.current === event.pointerId) {
-      const worldPoint = screenToWorld(viewport, screenPoint);
-      setActivePoints((prev) => {
-        if (!prev || prev.length === 0) return [worldPoint];
-        // Ruler mode draws a straight line from the stroke's start to
-        // the current pointer position — a real scratchboard "ruler"
-        // without simulating a physical ruler graphic (CLAUDE.md
-        // Section 13: "not need handwriting recognition... a
-        // comfortable digital draft board" — a straight-line snap is
-        // the minimal honest reading of "ruler" for that bar).
-        if (rulerMode) return [prev[0]!, worldPoint];
-        return [...prev, worldPoint];
-      });
+      // Coalesced events recover the finer-grained samples the OS
+      // actually captured between the last two dispatched pointermove
+      // events (real on iOS/Android for touch and pen) — without this,
+      // a fast stylus stroke visibly loses points, showing up as a
+      // slightly polygonal or "chased" line (QA v2 Block D).
+      const nativeEvent = event.nativeEvent;
+      const coalesced =
+        typeof nativeEvent.getCoalescedEvents === 'function'
+          ? nativeEvent.getCoalescedEvents()
+          : [nativeEvent];
+      const samples = coalesced.length > 0 ? coalesced : [nativeEvent];
+      const worldPoints = samples.map((sample) =>
+        screenToWorld(viewportLiveRef.current, getViewportPoint(sample)),
+      );
+      extendStroke(worldPoints);
     }
   }
 
@@ -268,61 +403,82 @@ export function CanvasBoard({ state, onChangeState, task }: CanvasBoardProps) {
     }
   }
 
-  // React attaches onWheel as a passive listener by default, which
-  // can't call preventDefault() (desktop mouse/trackpad zoom+pan needs
-  // to stop the browser's own page-zoom/scroll) — a native listener
-  // with `{ passive: false }` is the only way to actually claim the
-  // gesture.
+  // React attaches onWheel/onTouchMove as passive listeners by
+  // default, which can't call preventDefault(). Desktop ctrl+wheel
+  // zoom needs to stop the browser's own page-zoom, and — QA v2 Block
+  // B — a scoped, non-passive touchmove listener on just this element
+  // is the reliable cross-WebView way to guarantee a vertical drawing
+  // gesture never turns into a page swipe/scroll, on top of
+  // `touch-action: none` (which some embedded WebViews honor
+  // inconsistently). Neither listener touches anything outside this
+  // canvas, so normal page scroll everywhere else is untouched.
   useEffect(() => {
-    const canvas = canvasRef.current;
+    const canvas = activeCanvasRef.current;
     if (!canvas) return;
+
     function handleWheel(event: WheelEvent) {
       event.preventDefault();
       const rect = viewportRef.current!.getBoundingClientRect();
       const screenPoint = { x: event.clientX - rect.left, y: event.clientY - rect.top };
       if (event.ctrlKey || event.metaKey) {
         const factor = Math.exp(-event.deltaY * 0.01);
-        setViewport((current) => zoomAtPoint(current, screenPoint, factor));
+        viewportLiveRef.current = zoomAtPoint(viewportLiveRef.current, screenPoint, factor);
       } else {
-        setViewport((current) => panBy(current, -event.deltaX, -event.deltaY));
+        viewportLiveRef.current = panBy(viewportLiveRef.current, -event.deltaX, -event.deltaY);
       }
+      viewportDirtyRef.current = true;
+      scheduleFrame();
     }
+    function preventTouchScroll(event: TouchEvent) {
+      event.preventDefault();
+    }
+
     canvas.addEventListener('wheel', handleWheel, { passive: false });
-    return () => canvas.removeEventListener('wheel', handleWheel);
-  }, []);
+    canvas.addEventListener('touchmove', preventTouchScroll, { passive: false });
+    canvas.addEventListener('touchstart', preventTouchScroll, { passive: false });
+    return () => {
+      canvas.removeEventListener('wheel', handleWheel);
+      canvas.removeEventListener('touchmove', preventTouchScroll);
+      canvas.removeEventListener('touchstart', preventTouchScroll);
+    };
+  }, [scheduleFrame]);
 
   const zoomPercent = Math.round(viewport.zoom * 100);
 
   return (
     <div className={styles.board}>
       <div className={styles.toolbar}>
-        <button
-          type="button"
-          className={clsx(styles.toolButton, tool === 'brush' && styles.toolButtonActive)}
-          aria-label="Кисть"
-          aria-pressed={tool === 'brush'}
-          onClick={() => setTool('brush')}
-        >
-          <Icon name="brush" size={18} />
-        </button>
-        <button
-          type="button"
-          className={clsx(styles.toolButton, tool === 'eraser' && styles.toolButtonActive)}
-          aria-label="Ластик"
-          aria-pressed={tool === 'eraser'}
-          onClick={() => setTool('eraser')}
-        >
-          <Icon name="eraser" size={18} />
-        </button>
-        <button
-          type="button"
-          className={clsx(styles.toolButton, rulerMode && styles.toolButtonActive)}
-          aria-label="Линейка"
-          aria-pressed={rulerMode}
-          onClick={() => setRulerMode((v) => !v)}
-        >
-          <Icon name="ruler" size={18} />
-        </button>
+        <div className={styles.toolGroup}>
+          <button
+            type="button"
+            className={clsx(styles.toolButton, tool === 'brush' && styles.toolButtonActive)}
+            aria-label="Кисть"
+            aria-pressed={tool === 'brush'}
+            onClick={() => setTool('brush')}
+          >
+            <Icon name="brush" size={18} />
+          </button>
+          <button
+            type="button"
+            className={clsx(styles.toolButton, tool === 'eraser' && styles.toolButtonActive)}
+            aria-label="Ластик"
+            aria-pressed={tool === 'eraser'}
+            onClick={() => setTool('eraser')}
+          >
+            <Icon name="eraser" size={18} />
+          </button>
+          <button
+            type="button"
+            className={clsx(styles.toolButton, rulerMode && styles.toolButtonActive)}
+            aria-label="Линейка"
+            aria-pressed={rulerMode}
+            onClick={() => setRulerMode((v) => !v)}
+          >
+            <Icon name="ruler" size={18} />
+          </button>
+        </div>
+
+        <div className={styles.divider} aria-hidden="true" />
 
         <div className={styles.swatches}>
           {PALETTE.map((swatch) => (
@@ -338,6 +494,8 @@ export function CanvasBoard({ state, onChangeState, task }: CanvasBoardProps) {
           ))}
         </div>
 
+        <div className={styles.divider} aria-hidden="true" />
+
         <div className={styles.sizes}>
           {SIZES.map((s) => (
             <button
@@ -348,48 +506,52 @@ export function CanvasBoard({ state, onChangeState, task }: CanvasBoardProps) {
               aria-pressed={size === s}
               onClick={() => setSize(s)}
             >
-              <span className={styles.sizeDot} style={{ width: s, height: s }} />
+              <span className={styles.sizeDot} style={{ width: s + 4, height: s + 4 }} />
             </button>
           ))}
         </div>
 
-        <button
-          type="button"
-          className={styles.toolButton}
-          aria-label="Отменить"
-          disabled={state.strokes.length === 0}
-          onClick={() => onChangeState(undoStroke(state))}
-        >
-          <Icon name="undo" size={18} />
-        </button>
-        <button
-          type="button"
-          className={styles.toolButton}
-          aria-label="Повторить"
-          disabled={state.redoStack.length === 0}
-          onClick={() => onChangeState(redoStroke(state))}
-        >
-          <Icon name="redo" size={18} />
-        </button>
-        <button
-          type="button"
-          className={styles.toolButton}
-          aria-label="Очистить полотно"
-          disabled={state.strokes.length === 0}
-          onClick={() => onChangeState(clearCanvas())}
-        >
-          <Icon name="clear" size={18} />
-        </button>
-
-        {viewport.zoom !== 1 && (
+        <div className={styles.toolGroup} style={{ marginLeft: 'auto' }}>
+          {viewport.zoom !== 1 && (
+            <button
+              type="button"
+              className={styles.zoomReset}
+              onClick={() => {
+                viewportLiveRef.current = initialViewport();
+                setViewport(viewportLiveRef.current);
+              }}
+            >
+              {zoomPercent}%
+            </button>
+          )}
           <button
             type="button"
-            className={styles.zoomReset}
-            onClick={() => setViewport(initialViewport())}
+            className={styles.toolButton}
+            aria-label="Отменить"
+            disabled={state.strokes.length === 0}
+            onClick={() => onChangeState(undoStroke(state))}
           >
-            {zoomPercent}%
+            <Icon name="undo" size={18} />
           </button>
-        )}
+          <button
+            type="button"
+            className={styles.toolButton}
+            aria-label="Повторить"
+            disabled={state.redoStack.length === 0}
+            onClick={() => onChangeState(redoStroke(state))}
+          >
+            <Icon name="redo" size={18} />
+          </button>
+          <button
+            type="button"
+            className={styles.toolButton}
+            aria-label="Очистить полотно"
+            disabled={state.strokes.length === 0}
+            onClick={() => onChangeState(clearCanvas())}
+          >
+            <Icon name="clear" size={18} />
+          </button>
+        </div>
       </div>
 
       <div className={styles.viewport} ref={viewportRef}>
@@ -424,10 +586,10 @@ export function CanvasBoard({ state, onChangeState, task }: CanvasBoardProps) {
             </div>
           </div>
 
+          <canvas ref={baseCanvasRef} className={styles.canvas} style={{ pointerEvents: 'none' }} />
           <canvas
-            ref={canvasRef}
+            ref={activeCanvasRef}
             className={styles.canvas}
-            style={{ width: worldWidth * viewport.zoom, height: worldHeight * viewport.zoom }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={releasePointer}

@@ -3,6 +3,7 @@ import { DifficultyTag } from '../Training/DifficultyTag.js';
 import type { Mistake } from '../../data/sampleMistakes.js';
 import { getTopicColor } from '../../data/sampleMistakes.js';
 import { formatDateLong } from '../../lib/formatDate.js';
+import { InlineMathText } from '../MathText/MathText.js';
 import styles from './MistakeCardMobile.module.css';
 
 export interface MistakeCardMobileProps {
@@ -52,7 +53,7 @@ export function MistakeCardMobile({
       </div>
 
       <button type="button" className={styles.condition} onClick={onOpen}>
-        {mistake.condition}
+        <InlineMathText text={mistake.condition} />
       </button>
 
       <div className={styles.bottomRow}>

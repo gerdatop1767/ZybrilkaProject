@@ -9,7 +9,14 @@ export interface ScreenPoint {
   y: number;
 }
 
-export const MIN_ZOOM = 1;
+// QA v2 Block C: the old range (MIN 1, initial zoom 1) meant the canvas
+// opened already at its own zoom-out floor — the user had no room to
+// zoom out further at all. MIN_ZOOM is now below the starting zoom so
+// there's real headroom in both directions; MAX_ZOOM stays modest
+// (there's no legitimate reason to zoom in past 4x on a handwriting
+// surface, and a huge ceiling only invites the backing-store-resize
+// cost that caused the reported lag).
+export const MIN_ZOOM = 0.5;
 export const MAX_ZOOM = 4;
 
 export function initialViewport(): CanvasViewport {
