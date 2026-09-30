@@ -31,6 +31,20 @@
 import type { CanonicalSolution } from '../../../solutionEngine/index.js';
 import { mathTask13EquationTemplate } from './equation.v1.js';
 
+/**
+ * Part а)'s general-solution formula, as LaTeX content (no `$...$`
+ * wrapper — callers embed it where they need it, sometimes alongside
+ * other math on the same line, e.g. `⇔ ${...}` in `examWriteup`).
+ * Single source of truth for this value (audit finding: it used to be
+ * retyped separately in `parts[0].answerDisplay` and `examWriteup`
+ * with slightly different LaTeX formatting — a silent-drift risk if
+ * one copy were ever edited without the other). Not present in any DB
+ * field today (see module doc) — authored here from the task's real
+ * explanationMd/hintMd wording, not invented.
+ */
+const PART_A_GENERAL_SOLUTION_TEX =
+  'x=\\pi n,\\ n\\in\\mathbb{Z};\\quad x=-\\dfrac{2\\pi}{3}+2\\pi k,\\ k\\in\\mathbb{Z}';
+
 /** The task's own real fields this builder needs — copied verbatim by the caller from its actual DB/import row, never re-typed by hand elsewhere. */
 export interface RealTask13Variant1Fields {
   readonly taskId: string;
@@ -55,8 +69,7 @@ export function buildCanonicalSolutionForTask13Variant1(
         // authored here from the task's real explanationMd/hintMd
         // wording, not invented.
         answer: 'x=πn, n∈ℤ; x=-2π/3+2πk, k∈ℤ',
-        answerDisplay:
-          '$x=\\pi n,\\ n\\in\\mathbb{Z};\\quad x=-\\dfrac{2\\pi}{3}+2\\pi k,\\ k\\in\\mathbb{Z}$',
+        answerDisplay: `$${PART_A_GENERAL_SOLUTION_TEX}$`,
         steps: [
           {
             id: 'a1',
@@ -104,17 +117,28 @@ export function buildCanonicalSolutionForTask13Variant1(
     // actually put on the answer sheet, NOT a copy of the detailed
     // `steps` explanations above and NOT a restatement of the task
     // condition (see module doc + CanonicalSolutionView, "Как записать
-    // на ЕГЭ"). Every `⇔` below is a genuine equivalent transformation
-    // under the carried-through `sin x ⩽ 0` condition — the same logic
-    // as part а)'s steps a1-a4, just without the prose explaining why.
+    // на ЕГЭ"). Every `⇔` in part а) is a genuine equivalent
+    // transformation under the carried-through `sin x ⩽ 0` condition —
+    // the same logic as part а)'s steps a1-a4, just without the prose
+    // explaining why. Part б)'s root selection (audit finding: this
+    // used to show only the final roots, with no shown work — in
+    // tension with `justified-reasoning-required` below) uses `⇒`
+    // rather than `⇔`: it's a forward derivation (solve each interval
+    // inequality for the integer parameter, then substitute), not a
+    // claim that the inequality is reversible from the bare root
+    // value — the same real inequalities as `explanationMd`'s Шаг 6
+    // (`packages/db/src/importEge2026Variant1.ts`, taskNumber 13), just
+    // condensed.
     examWriteup: {
       content:
         'а) $\\sqrt{A}=\\sqrt{B}\\Leftrightarrow\\{A=B,\\ B\\geqslant 0\\}$, где $B=\\cos\\left(\\dfrac{\\pi}{2}+x\\right)=-\\sin x$:\n' +
         '$2\\cos^3x-\\sin^2x-2\\cos x-\\sin x=-\\sin x,\\ \\sin x\\leqslant 0$\n' +
         '$\\Leftrightarrow 2\\cos^3x+\\cos^2x-2\\cos x-1=0,\\ \\sin x\\leqslant 0$\n' +
         '$\\Leftrightarrow (\\cos x-1)(2\\cos x+1)(\\cos x+1)=0,\\ \\sin x\\leqslant 0$\n' +
-        '$\\Leftrightarrow x=\\pi n,\\ n\\in\\mathbb{Z};\\ x=-\\dfrac{2\\pi}{3}+2\\pi k,\\ k\\in\\mathbb{Z}$\n\n' +
-        `б) Отбор корней на $\\left[-4\\pi;-\\dfrac{5\\pi}{2}\\right]$: ${fields.correctAnswerDisplay ?? fields.correctAnswer}\n\n` +
+        `$\\Leftrightarrow ${PART_A_GENERAL_SOLUTION_TEX}$\n\n` +
+        `б) Отбор корней на $\\left[-4\\pi;-\\dfrac{5\\pi}{2}\\right]$:\n` +
+        '$-4\\pi\\leqslant \\pi n\\leqslant -\\dfrac{5\\pi}{2}\\Rightarrow n=-4,\\ -3\\Rightarrow x=-4\\pi,\\ -3\\pi$\n' +
+        '$-4\\pi\\leqslant -\\dfrac{2\\pi}{3}+2\\pi k\\leqslant -\\dfrac{5\\pi}{2}\\Rightarrow k=-1\\Rightarrow x=-\\dfrac{8\\pi}{3}$\n\n' +
         `Ответ: ${fields.correctAnswerDisplay ?? fields.correctAnswer}`,
     },
     methodTags: ['substitution', 'factoring', 'quadratic_in_trig_function'],

@@ -237,4 +237,52 @@ describe('real task 13 — exam writeup', () => {
     // conditionMd) — only the equivalence chain and the answer.
     expect(content).not.toContain('Решите уравнение');
   });
+
+  // Audit finding 1: part б) used to show only the final roots, with no
+  // derivation — in tension with the `justified-reasoning-required`
+  // critical point ("не только финальным результатом"). These lock in
+  // that the derivation (not just the answer) is actually present.
+  it('(1) part б) shows more than just the final roots — the selection is derived, not asserted', () => {
+    const solution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
+    const content = solution.examWriteup?.content ?? '';
+    const partBSection = content.slice(content.indexOf('б)'));
+    // The bare final-roots line alone (old content) is not the whole
+    // of part б) anymore — there's real derivation text before the answer.
+    expect(partBSection.length).toBeGreaterThan(
+      `б) ${realTask13Fields.correctAnswerDisplay}`.length + 20,
+    );
+  });
+
+  it('(2) part б) derives the admissible n (from the πn series)', () => {
+    const solution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
+    const content = solution.examWriteup?.content ?? '';
+    expect(content).toContain('n=-4');
+    expect(content).toContain('-3');
+    expect(content).toContain('x=-4\\pi');
+  });
+
+  it('(2) part б) derives the admissible k (from the -2π/3+2πk series)', () => {
+    const solution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
+    const content = solution.examWriteup?.content ?? '';
+    expect(content).toContain('k=-1');
+    expect(content).toContain('-\\dfrac{8\\pi}{3}');
+  });
+
+  it('(2) still ends with the final roots as the answer', () => {
+    const solution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
+    const content = solution.examWriteup?.content ?? '';
+    expect(content.trim().endsWith(`Ответ: ${realTask13Fields.correctAnswerDisplay}`)).toBe(true);
+  });
+
+  // Audit finding 2: part а)'s general-solution formula used to be
+  // retyped independently in `parts[0].answerDisplay` and in
+  // `examWriteup` with different LaTeX formatting — a drift risk. This
+  // locks in that both now come from the same content.
+  it('(3) the general-solution formula in examWriteup matches part а) answerDisplay', () => {
+    const solution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
+    const partA = solution.parts.find((p) => p.id === 'a');
+    const formulaTex = partA?.answerDisplay?.slice(1, -1); // strip the $...$ wrapper
+    expect(formulaTex).toBeTruthy();
+    expect(solution.examWriteup?.content).toContain(formulaTex!);
+  });
 });
