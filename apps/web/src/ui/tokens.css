@@ -65,8 +65,17 @@
   --chart-6: #4bb2f9;
   --chart-7: #545d8b;
 
-  /* ---- Typography ---- */
+  /* ---- Typography ----
+     Two font layers, deliberately kept separate (QA v2 Block L):
+     `--font-family-base` is the UI body font — everything else in the
+     app (buttons, inputs, nav, cards, EGE task/math content) stays on
+     it, unchanged. `--font-family-display` is only for the heading/
+     hero utility classes below (.text-h1/h2/h3/.text-hero/.text-stat)
+     — a bolder, more expressive face for UI chrome, never applied to
+     task condition, answers or KaTeX. See fonts.css for what actually
+     loads these. */
   --font-family-base: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-family-display: 'Unbounded', var(--font-family-base);
 
   --font-size-h1: 1.75rem; /* 28px */
   --line-height-h1: 2.125rem; /* 34px */
