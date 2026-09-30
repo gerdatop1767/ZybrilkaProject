@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { canonicalSolutionDtoSchema } from './canonicalSolutionDto.js';
 
 /**
  * `interval` and `multi_part` reuse the existing single
@@ -73,6 +74,18 @@ export const taskWithSolutionSchema = taskPublicSchema.extend({
    * step-by-step UI. Null falls back to rendering `explanationMd` as
    * one block — never a fabricated generic step split. */
   solutionSteps: z.array(solutionStepSchema).nullable(),
+  /**
+   * A structured, exam-annotated reference solution (Canonical
+   * Solution System) — an ADDITIONAL, separate source of solution
+   * content, never a replacement for `explanationMd`/`solutionSteps`
+   * above (both keep working exactly as before, for every task).
+   * Present only for the small set of tasks that have both a
+   * registered solution template AND authored canonical-solution
+   * content — today that's exactly one real task (math №13, variant
+   * 1). Absent (not `null`) for every other task; the client must
+   * never assume this field exists.
+   */
+  canonicalSolution: canonicalSolutionDtoSchema.optional(),
 });
 export type TaskWithSolution = z.infer<typeof taskWithSolutionSchema>;
 

@@ -14,6 +14,7 @@ import {
   type TaskWithSolution,
 } from '@zybrilka/shared';
 import * as repo from './repo.js';
+import { getCanonicalSolutionForTask } from './canonicalSolution.js';
 
 /** Thrown when the request's `answer` shape doesn't match the task's answerType — the route maps this to a 400, never a 500. */
 export class InvalidAnswerShapeError extends Error {
@@ -58,6 +59,10 @@ function toTaskWithSolution(row: repo.TaskWithTopic): TaskWithSolution {
     correctAnswerDisplay: row.task.correctAnswerDisplay,
     explanationMd: row.task.explanationMd,
     solutionSteps: row.task.solutionSteps ? [...row.task.solutionSteps] : null,
+    // Additional, separate source of solution content — never touches
+    // explanationMd/solutionSteps above. undefined for every task
+    // except the one real task this has authored content for.
+    canonicalSolution: getCanonicalSolutionForTask(row.task),
   };
 }
 

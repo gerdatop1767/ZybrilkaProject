@@ -56,6 +56,7 @@ export function toSampleTask(
           { text: task.explanationMd },
         ])
       : [],
+    canonicalSolution: hasSolution ? task.canonicalSolution : undefined,
     otherVariants: others.slice(0, 3).map((t) => ({
       id: t.id,
       code: shortCode(t.id),
