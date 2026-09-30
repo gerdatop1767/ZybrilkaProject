@@ -324,6 +324,24 @@ describe('TaskDesktop', () => {
       expect(getCanvasState(TASK_ID)).toEqual(initialCanvasState());
     });
 
+    it('never shows a solution-only illustration in its own condition card while solving (QA v2 final audit)', async () => {
+      // The canvas dialog opens from both the Task (solving) and Result
+      // screens with no way to tell which — CanvasBoard's own condition
+      // card must therefore never render TaskSolutionIllustration itself,
+      // only TaskExamIllustration (real source diagrams). Regression for
+      // a leak found auditing task 14's pyramid SVG: it was appearing in
+      // "Полотно" mid-solve, before any attempt was submitted.
+      const user = userEvent.setup();
+      vi.mocked(api.getTask).mockResolvedValue({ ...baseTask, taskNumber: 14 });
+      vi.mocked(api.listTasksByNumber).mockResolvedValue([{ ...baseTask, taskNumber: 14 }]);
+      renderTask();
+      await screen.findByText(CONDITION);
+
+      await user.click(screen.getByRole('button', { name: 'Полотно' }));
+      const dialog = screen.getByRole('dialog', { name: 'Полотно' });
+      expect(within(dialog).queryByText('Иллюстрация к решению')).not.toBeInTheDocument();
+    });
+
     it('pinch (two simultaneous pointers moving apart) zooms the canvas in, shown by the zoom reset pill', async () => {
       const user = userEvent.setup();
       renderTask();

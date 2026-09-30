@@ -21,10 +21,7 @@ import {
 import type { SampleTask } from '../../data/sampleTask.js';
 import { Icon } from '../Icon/Icon.js';
 import { MathText } from '../MathText/MathText.js';
-import {
-  TaskExamIllustration,
-  TaskSolutionIllustration,
-} from '../TaskIllustration/TaskIllustration.js';
+import { TaskExamIllustration } from '../TaskIllustration/TaskIllustration.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './CanvasBoard.module.css';
 
@@ -327,7 +324,21 @@ export function CanvasBoard({ state, onChangeState, task }: CanvasBoardProps) {
   }
 
   function handlePointerDown(event: React.PointerEvent<HTMLCanvasElement>) {
-    event.currentTarget.setPointerCapture(event.pointerId);
+    // setPointerCapture can throw (InvalidPointerId) if the browser no
+    // longer considers this pointer active by the time this handler
+    // runs — a real, if rare, cross-browser edge case (notably Safari/
+    // iOS with a very fast tap or stylus hover-lift), not just a test
+    // artifact. Uncaught, it would abort the rest of this handler and
+    // silently break drawing/pinch tracking for that gesture with no
+    // user-visible error. Capture is a nice-to-have (keeps receiving
+    // events if the pointer strays outside the canvas mid-stroke); the
+    // pointer tracking below is what actually matters and must still run.
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Pointer already gone — the pointerup/pointercancel that follows
+      // will clean it up via releasePointer.
+    }
     const screenPoint = getViewportPoint(event);
     activePointers.current.set(event.pointerId, screenPoint);
 
@@ -573,12 +584,15 @@ export function CanvasBoard({ state, onChangeState, task }: CanvasBoardProps) {
               <div className={clsx('text-body-sm', styles.taskCondition)}>
                 <MathText text={task.condition} />
               </div>
+              {/* TaskSolutionIllustration is deliberately never rendered
+               * here (QA v2 Block H/final audit): the canvas dialog opens
+               * from both the Task (solving) and Result screens with no
+               * way for CanvasBoard to tell which, and a solution-only
+               * SVG like task 14's pyramid must never appear while still
+               * solving. Real source diagrams (TaskExamIllustration) are
+               * fine either way, matching the Task screen's own condition
+               * card. */}
               <TaskExamIllustration
-                subjectId={task.subjectId}
-                taskNumber={task.number}
-                className={styles.taskImage}
-              />
-              <TaskSolutionIllustration
                 subjectId={task.subjectId}
                 taskNumber={task.number}
                 className={styles.taskImage}
