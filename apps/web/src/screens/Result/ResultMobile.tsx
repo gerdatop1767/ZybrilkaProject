@@ -22,7 +22,10 @@ import { OtherVariantsSection } from '../../ui/Training/OtherVariantsSection.js'
 import { useCountUp } from '../../lib/useCountUp.js';
 import { Collapse, SlideUp } from '../../ui/motion/motion.js';
 import { InlineMathText } from '../../ui/MathText/MathText.js';
-import { TaskExamIllustration, TaskSolutionIllustration } from '../../ui/TaskIllustration/TaskIllustration.js';
+import {
+  TaskExamIllustration,
+  TaskSolutionIllustration,
+} from '../../ui/TaskIllustration/TaskIllustration.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './ResultMobile.module.css';
 
