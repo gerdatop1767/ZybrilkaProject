@@ -197,4 +197,12 @@ describe('real task 13 — critical points', () => {
     );
     expect(correctnessCheck?.status).toBe('unlinked');
   });
+
+  it('(9F) critical point text is natural Russian — never leaks the raw English phrase "canonical solution"', () => {
+    const solution = buildCanonicalSolutionForTask13Variant1(realTask13Fields);
+
+    for (const point of solution.criticalPoints ?? []) {
+      expect(point.text.toLowerCase()).not.toContain('canonical solution');
+    }
+  });
 });

@@ -135,7 +135,7 @@ export function buildCanonicalSolutionForTask13Variant1(
       },
       {
         id: 'free-form-method-and-writeup',
-        text: 'Метод решения и форма записи могут отличаться от этого canonical solution — это лишь один корректный образец, не единственно допустимый.',
+        text: 'Метод решения и форма записи могут отличаться от этого эталонного решения — это лишь один корректный образец, не единственно допустимый.',
         category: 'presentation',
         required: false,
         rationale:
