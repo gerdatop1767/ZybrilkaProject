@@ -7,7 +7,10 @@ import {
 } from '@zybrilka/shared';
 import * as repo from './repo.js';
 
-function toSimilarityInput(meta: repo.TaskSimilarityMetadata): TaskSimilarityInput {
+/** Exported for reuse by Phase 7's recommendation engine (`similarityBonus`),
+ * which needs the same metadata-to-similarity-input mapping for both
+ * candidate tasks and the user's open-mistake tasks. */
+export function toSimilarityInput(meta: repo.TaskSimilarityMetadata): TaskSimilarityInput {
   const { value } = getComparableDifficulty({
     authoredDifficulty: meta.authoredDifficulty,
     observedDifficulty: meta.observedDifficulty,
