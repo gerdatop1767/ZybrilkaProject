@@ -14,6 +14,8 @@ export * from './learning/taskDifficulty.js';
 export * from './learning/taskStatistics.js';
 export * from './learning/errorSignatures.js';
 export * from './learning/userErrorStatistics.js';
+export * from './learning/taskSimilarity.js';
+export * from './learning/similarTasks.js';
 // Namespaced (not flattened) — see solutionEngine/index.ts for why.
 export * as solutionEngine from './solutionEngine/index.js';
 export * as solutionTemplates from './solutionTemplates/index.js';
