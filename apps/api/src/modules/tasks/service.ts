@@ -16,6 +16,7 @@ import {
 import * as repo from './repo.js';
 import { getCanonicalSolutionForTask } from './canonicalSolution.js';
 import { updateSkillStatisticsForTaskAttempt } from '../learning/service.js';
+import { updateTaskStatistics } from '../learning/taskStatistics/service.js';
 
 /** Thrown when the request's `answer` shape doesn't match the task's answerType — the route maps this to a 400, never a 500. */
 export class InvalidAnswerShapeError extends Error {
@@ -140,6 +141,7 @@ export async function submitAttempt(
       wrongParts: null,
     });
     await updateSkillStatisticsForTaskAttempt(tx, userId, taskId);
+    await updateTaskStatistics(tx, taskId);
     return { attempt, mistakeId };
   });
 
@@ -184,6 +186,7 @@ async function submitMultiPartAttempt(
       wrongParts: wrongParts.length > 0 ? wrongParts : null,
     });
     await updateSkillStatisticsForTaskAttempt(tx, userId, row.task.id);
+    await updateTaskStatistics(tx, row.task.id);
     return { attempt, mistakeId };
   });
 

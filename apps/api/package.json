@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "skills:sync": "tsx --conditions=@zybrilka/source --env-file-if-exists=../../.env src/scripts/syncSkills.ts",
-    "skills:rebuild-stats": "tsx --conditions=@zybrilka/source --env-file-if-exists=../../.env src/scripts/rebuildAllSkillStatistics.ts"
+    "skills:rebuild-stats": "tsx --conditions=@zybrilka/source --env-file-if-exists=../../.env src/scripts/rebuildAllSkillStatistics.ts",
+    "tasks:rebuild-stats": "tsx --conditions=@zybrilka/source --env-file-if-exists=../../.env src/scripts/rebuildTaskStatistics.ts"
   },
   "dependencies": {
     "@zybrilka/db": "workspace:*",

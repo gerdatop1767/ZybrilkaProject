@@ -14,7 +14,9 @@ try {
     const { skillsUpdated } = await rebuildUserSkillStatistics(db, row.userId);
     totalSkillsUpdated += skillsUpdated;
   }
-  console.log(`Rebuilt skill statistics for ${rows.length} user(s), ${totalSkillsUpdated} skill row(s) total.`);
+  console.log(
+    `Rebuilt skill statistics for ${rows.length} user(s), ${totalSkillsUpdated} skill row(s) total.`,
+  );
 } finally {
   await close();
 }

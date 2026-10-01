@@ -10,6 +10,8 @@ export * from './favorites.js';
 export * from './learningProfile.js';
 export * from './learning/skill.js';
 export * from './learning/mastery.js';
+export * from './learning/taskDifficulty.js';
+export * from './learning/taskStatistics.js';
 // Namespaced (not flattened) — see solutionEngine/index.ts for why.
 export * as solutionEngine from './solutionEngine/index.js';
 export * as solutionTemplates from './solutionTemplates/index.js';

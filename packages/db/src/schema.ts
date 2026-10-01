@@ -411,6 +411,44 @@ export const userSkillStatistics = pgTable(
 );
 
 /**
+ * ZUBRILKA LEARNING INTELLIGENCE, Phase 4 — one row per task, the
+ * task's *observed* statistical difficulty from real `attempts`
+ * (never user-specific — contrast with `user_skill_statistics` above).
+ * Deliberately separate from `tasks.difficulty` (the author's 1..3
+ * editorial rating, set at import time, e.g.
+ * `importEge2026Variant1.ts`'s `difficultyForTaskNumber`) — this table
+ * never overwrites or reads that column; the two can agree or disagree
+ * and both stay visible. `accuracy`/`difficulty` are null with 0
+ * `attempts` (cold start — no observed difficulty yet, never a
+ * fabricated 50), `confidence` is always 0..100. See
+ * `calculateTaskDifficulty` for the exact formula.
+ */
+export const taskStatistics = pgTable(
+  'task_statistics',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id),
+    attempts: integer('attempts').notNull().default(0),
+    correctAttempts: integer('correct_attempts').notNull().default(0),
+    incorrectAttempts: integer('incorrect_attempts').notNull().default(0),
+    /** 0..100, null until the first attempt (cold start). */
+    accuracy: integer('accuracy'),
+    /** 0..100, null until the first attempt (cold start). Confidence-adjusted — see `calculateTaskDifficulty`. */
+    difficulty: integer('difficulty'),
+    /** 0..100 — how much evidence backs `difficulty`/`accuracy`, not how hard the task is. Always set, even at 0 attempts (confidence 0). */
+    confidence: integer('confidence').notNull().default(0),
+    /** Informational only — never a factor in `difficulty` itself (see formula doc). Null when no attempt recorded a time. */
+    averageTimeMs: integer('average_time_ms'),
+    lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('task_statistics_task_idx').on(table.taskId)],
+);
+
+/**
  * Self-reported level, NOT a real measured result (ZUBRILKA LEARNING
  * INTELLIGENCE audit, Phase 1 vertical slice) — what the user says about
  * themselves during onboarding, distinct from any future estimated/observed
