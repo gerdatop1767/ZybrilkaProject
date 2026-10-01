@@ -324,6 +324,55 @@ export const favorites = pgTable(
 );
 
 /**
+ * ZUBRILKA LEARNING INTELLIGENCE, Phase 2 — the foundational TASK ↔
+ * SKILL taxonomy. No ML/AI anywhere in this system: skills are seeded
+ * deterministically from each task's own authored `methodTags` (see
+ * `packages/shared/src/solutionTemplates/**`'s `CanonicalSolution.methodTags`
+ * and `apps/api/src/modules/skills/sync.ts`), never inferred or
+ * generated. A skill always belongs to one subject — reuses the
+ * existing `subjects` table, never a per-subject skills table.
+ */
+export const skills = pgTable(
+  'skills',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    subjectId: text('subject_id')
+      .notNull()
+      .references(() => subjects.id),
+    slug: text('slug').notNull(),
+    name: text('name').notNull(),
+    description: text('description'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('skills_subject_slug_idx').on(table.subjectId, table.slug)],
+);
+
+/**
+ * 'canonical' = derived from a task's own authored canonical-solution
+ * `methodTags` (the only source populated so far). 'admin'/'import' are
+ * reserved for a future manual-tagging or bulk-import path — not used
+ * yet, never a stand-in for an AI/ML classifier.
+ */
+export const taskSkillSources = ['canonical', 'admin', 'import'] as const;
+
+export const taskSkills = pgTable(
+  'task_skills',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id),
+    skillId: uuid('skill_id')
+      .notNull()
+      .references(() => skills.id),
+    source: text('source', { enum: taskSkillSources }).notNull().default('canonical'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('task_skills_task_skill_idx').on(table.taskId, table.skillId)],
+);
+
+/**
  * Self-reported level, NOT a real measured result (ZUBRILKA LEARNING
  * INTELLIGENCE audit, Phase 1 vertical slice) — what the user says about
  * themselves during onboarding, distinct from any future estimated/observed

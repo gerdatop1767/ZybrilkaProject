@@ -4,7 +4,7 @@ import { createImportedTestDb } from '@zybrilka/db/testing';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../../app.js';
-import { getCanonicalSolutionForTask } from './canonicalSolution.js';
+import { getCanonicalMethodTagsForTask, getCanonicalSolutionForTask } from './canonicalSolution.js';
 
 describe('canonical solution in the Result flow (task 13, via the real HTTP API)', () => {
   let testDb: Awaited<ReturnType<typeof createImportedTestDb>>;
@@ -977,5 +977,44 @@ describe('getCanonicalSolutionForTask (unit)', () => {
       correctAnswerDisplay: null,
     });
     expect(result).toBeUndefined();
+  });
+});
+
+describe('getCanonicalMethodTagsForTask (unit — ZUBRILKA LEARNING INTELLIGENCE Phase 2)', () => {
+  it("returns task 13's real authored methodTags, the same ones the skills sync reads", () => {
+    const tags = getCanonicalMethodTagsForTask({
+      id: 'id-13',
+      subjectId: 'math',
+      taskNumber: 13,
+      contentHash: '5c674d67f90cd1a4b2bfc9bd6cdd47ec823d5463f73e0f6f58cd88921b9a5cab',
+      correctAnswer: '-4π; -3π; -8π/3',
+      correctAnswerDisplay: null,
+    });
+    expect(tags).toEqual(['substitution', 'factoring', 'quadratic_in_trig_function']);
+  });
+
+  it('returns undefined for a task with no authored canonical solution', () => {
+    const tags = getCanonicalMethodTagsForTask({
+      id: 'id-unknown',
+      subjectId: 'math',
+      taskNumber: 1,
+      contentHash: 'not-a-real-hash',
+      correctAnswer: '42',
+      correctAnswerDisplay: null,
+    });
+    expect(tags).toBeUndefined();
+  });
+
+  it('returns undefined for a null contentHash (never crashes on missing data)', () => {
+    expect(() =>
+      getCanonicalMethodTagsForTask({
+        id: 'id-null-hash',
+        subjectId: 'math',
+        taskNumber: 1,
+        contentHash: null,
+        correctAnswer: '42',
+        correctAnswerDisplay: null,
+      }),
+    ).not.toThrow();
   });
 });

@@ -201,3 +201,27 @@ export function getCanonicalSolutionForTask(
 
   return toCanonicalSolutionDto(result);
 }
+
+/**
+ * The same `methodTags` a task's authored canonical solution already
+ * carries (see each `realTaskNVariant1.ts`'s `methodTags` field) — read
+ * via the same `contentHash` → builder lookup `getCanonicalSolutionForTask`
+ * uses, never a second independent tagging system. Used only by the
+ * Learning Intelligence skill sync (`modules/skills/sync.ts`) to seed
+ * `task_skills`; returns `undefined` for a task with no authored
+ * canonical solution, exactly like `getCanonicalSolutionForTask`.
+ */
+export function getCanonicalMethodTagsForTask(
+  task: CanonicalSolutionTaskInput,
+): readonly string[] | undefined {
+  const buildContent = task.contentHash ? CONTENT_BUILDERS.get(task.contentHash) : undefined;
+  if (!buildContent) return undefined;
+
+  const canonicalSolution = buildContent({
+    taskId: task.id,
+    correctAnswer: task.correctAnswer,
+    correctAnswerDisplay: task.correctAnswerDisplay,
+  });
+
+  return canonicalSolution.methodTags;
+}

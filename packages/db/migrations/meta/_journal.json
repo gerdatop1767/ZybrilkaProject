@@ -64,6 +64,13 @@
       "when": 1790861361393,
       "tag": "0008_user_subject_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790863478494,
+      "tag": "0009_skills",
+      "breakpoints": true
     }
   ]
 }
