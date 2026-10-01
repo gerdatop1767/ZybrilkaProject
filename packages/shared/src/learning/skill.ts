@@ -22,3 +22,18 @@ export interface TaskSkill {
   readonly skillId: string;
   readonly source: 'canonical' | 'admin' | 'import';
 }
+
+/** `GET /me/learning/mastery` row — one per skill the user has ever
+ * attempted. mastery/confidence are 0..100 (see `calculateSkillMastery`). */
+export interface SkillMasteryEntry {
+  readonly subjectId: string;
+  readonly skillId: string;
+  readonly skillSlug: string;
+  readonly skillName: string;
+  readonly mastery: number;
+  readonly confidence: number;
+  readonly attempts: number;
+  readonly correctAttempts: number;
+  readonly incorrectAttempts: number;
+  readonly lastAttemptAt: string | null;
+}

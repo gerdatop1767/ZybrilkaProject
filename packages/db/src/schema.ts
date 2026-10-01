@@ -373,6 +373,44 @@ export const taskSkills = pgTable(
 );
 
 /**
+ * ZUBRILKA LEARNING INTELLIGENCE, Phase 3 — one row per (user, skill),
+ * fully recomputed from that user's real `attempts` on every linked
+ * task every time it's written (never an incremental counter) — see
+ * `apps/api/src/modules/learning/{mastery,repo,service}.ts`. No AI/ML:
+ * `mastery`/`confidence` are a deterministic formula over
+ * attempts/correctAttempts and a recency window, documented and unit
+ * tested in `packages/shared/src/learning/mastery.ts`. Both are stored
+ * 0..100 (never mixed with a 0..1 scale) so every consumer reads the
+ * same range.
+ */
+export const userSkillStatistics = pgTable(
+  'user_skill_statistics',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    skillId: uuid('skill_id')
+      .notNull()
+      .references(() => skills.id),
+    attempts: integer('attempts').notNull().default(0),
+    correctAttempts: integer('correct_attempts').notNull().default(0),
+    incorrectAttempts: integer('incorrect_attempts').notNull().default(0),
+    /** 0..100. See `calculateSkillMastery` for the exact formula. */
+    mastery: integer('mastery').notNull().default(0),
+    /** 0..100 — how much data backs `mastery`, not how good the user is. */
+    confidence: integer('confidence').notNull().default(0),
+    lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('user_skill_statistics_user_skill_idx').on(table.userId, table.skillId),
+    index('user_skill_statistics_skill_idx').on(table.skillId),
+  ],
+);
+
+/**
  * Self-reported level, NOT a real measured result (ZUBRILKA LEARNING
  * INTELLIGENCE audit, Phase 1 vertical slice) — what the user says about
  * themselves during onboarding, distinct from any future estimated/observed

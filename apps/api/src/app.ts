@@ -4,6 +4,7 @@ import { healthRoutes } from './routes/health.js';
 import { registerAnonUser } from './plugins/anonUser.js';
 import { collectionsRoutes } from './modules/collections/routes.js';
 import { favoritesRoutes } from './modules/favorites/routes.js';
+import { learningRoutes } from './modules/learning/routes.js';
 import { learningProfileRoutes } from './modules/learningProfile/routes.js';
 import { mistakesRoutes } from './modules/mistakes/routes.js';
 import { progressRoutes } from './modules/progress/routes.js';
@@ -32,6 +33,7 @@ export function buildApp({ logger = false, version, checkDb, db }: AppOptions) {
     app.register(progressRoutes, { db, prefix: '/api/v1' });
     app.register(favoritesRoutes, { db, prefix: '/api/v1' });
     app.register(learningProfileRoutes, { db, prefix: '/api/v1' });
+    app.register(learningRoutes, { db, prefix: '/api/v1' });
   }
 
   return app;

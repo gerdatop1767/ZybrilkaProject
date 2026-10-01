@@ -71,6 +71,13 @@
       "when": 1790863478494,
       "tag": "0009_skills",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790873628875,
+      "tag": "0010_user_skill_statistics",
+      "breakpoints": true
     }
   ]
 }

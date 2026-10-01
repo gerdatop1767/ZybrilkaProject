@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "skills:sync": "tsx --conditions=@zybrilka/source --env-file-if-exists=../../.env src/scripts/syncSkills.ts"
+    "skills:sync": "tsx --conditions=@zybrilka/source --env-file-if-exists=../../.env src/scripts/syncSkills.ts",
+    "skills:rebuild-stats": "tsx --conditions=@zybrilka/source --env-file-if-exists=../../.env src/scripts/rebuildAllSkillStatistics.ts"
   },
   "dependencies": {
     "@zybrilka/db": "workspace:*",

@@ -15,6 +15,7 @@ import {
 } from '@zybrilka/shared';
 import * as repo from './repo.js';
 import { getCanonicalSolutionForTask } from './canonicalSolution.js';
+import { updateSkillStatisticsForTaskAttempt } from '../learning/service.js';
 
 /** Thrown when the request's `answer` shape doesn't match the task's answerType — the route maps this to a 400, never a 500. */
 export class InvalidAnswerShapeError extends Error {
@@ -113,25 +114,33 @@ export async function submitAttempt(
     return submitMultiPartAttempt(db, row, userId, input.answer, input.timeSpentMs);
   }
   if (typeof input.answer !== 'string') throw new InvalidAnswerShapeError();
+  const answerRaw = input.answer;
 
   const correct =
     row.task.answerType === 'interval'
-      ? checkIntervalAnswer(input.answer, row.task.correctAnswer)
-      : checkAnswer(input.answer, row.task.correctAnswer);
+      ? checkIntervalAnswer(answerRaw, row.task.correctAnswer)
+      : checkAnswer(answerRaw, row.task.correctAnswer);
 
-  const attempt = await repo.createAttempt(db, {
-    userId,
-    taskId,
-    answerRaw: input.answer,
-    isCorrect: correct,
-    timeSpentMs: input.timeSpentMs,
-  });
-  const mistakeId = await repo.applyAttemptToMistakes(db, {
-    userId,
-    taskId,
-    attemptId: attempt.id,
-    isCorrect: correct,
-    wrongParts: null,
+  // One transaction: the attempt, its mistakes update, and the skill
+  // statistics it feeds (ZUBRILKA LEARNING INTELLIGENCE Phase 3) must
+  // never diverge — either all three are written, or none are.
+  const { attempt, mistakeId } = await db.transaction(async (tx) => {
+    const attempt = await repo.createAttempt(tx, {
+      userId,
+      taskId,
+      answerRaw,
+      isCorrect: correct,
+      timeSpentMs: input.timeSpentMs,
+    });
+    const mistakeId = await repo.applyAttemptToMistakes(tx, {
+      userId,
+      taskId,
+      attemptId: attempt.id,
+      isCorrect: correct,
+      wrongParts: null,
+    });
+    await updateSkillStatisticsForTaskAttempt(tx, userId, taskId);
+    return { attempt, mistakeId };
   });
 
   return {
@@ -158,20 +167,24 @@ async function submitMultiPartAttempt(
     ? gradeMultiPart(spec, answer)
     : { parts: [], correctParts: 0, totalParts: 0, status: 'all_incorrect' as const };
 
-  const attempt = await repo.createAttempt(db, {
-    userId,
-    taskId: row.task.id,
-    answerRaw: serializeMultiPartUserAnswer(answer),
-    isCorrect: grading.status === 'all_correct',
-    timeSpentMs,
-  });
   const wrongParts = grading.parts.filter((p) => !p.correct).map((p) => p.id);
-  const mistakeId = await repo.applyAttemptToMistakes(db, {
-    userId,
-    taskId: row.task.id,
-    attemptId: attempt.id,
-    isCorrect: grading.status === 'all_correct',
-    wrongParts: wrongParts.length > 0 ? wrongParts : null,
+  const { attempt, mistakeId } = await db.transaction(async (tx) => {
+    const attempt = await repo.createAttempt(tx, {
+      userId,
+      taskId: row.task.id,
+      answerRaw: serializeMultiPartUserAnswer(answer),
+      isCorrect: grading.status === 'all_correct',
+      timeSpentMs,
+    });
+    const mistakeId = await repo.applyAttemptToMistakes(tx, {
+      userId,
+      taskId: row.task.id,
+      attemptId: attempt.id,
+      isCorrect: grading.status === 'all_correct',
+      wrongParts: wrongParts.length > 0 ? wrongParts : null,
+    });
+    await updateSkillStatisticsForTaskAttempt(tx, userId, row.task.id);
+    return { attempt, mistakeId };
   });
 
   return {
