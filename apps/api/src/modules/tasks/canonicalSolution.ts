@@ -11,10 +11,13 @@
  * `contentHash` — a real, already-existing, unique DB column (dedup
  * fingerprint, `packages/db/src/importEge2026Variant1.ts`'s
  * `contentHashFor`), NOT by `taskNumber`. A `taskNumber`-based check
- * would silently misattribute this one task's canonical steps to any
- * *other* task that happens to share number 13 the moment a second one
- * is imported; content-hash matching can't do that — it only ever
- * matches the exact task this content was authored for.
+ * would silently misattribute one task's canonical steps to any
+ * *other* task that happens to share the same number the moment a
+ * second one is imported; content-hash matching can't do that — it
+ * only ever matches the exact task each entry's content was authored
+ * for. `CONTENT_BUILDERS` below is a lookup by that hash, not a
+ * `taskNumber`/`if` chain — adding a task is adding one entry, never a
+ * branch in this function's own logic.
  */
 import {
   solutionEngine,
@@ -23,9 +26,20 @@ import {
   type CanonicalSolutionDto,
 } from '@zybrilka/shared';
 
+type CanonicalSolution = ReturnType<
+  typeof solutionTemplates.buildCanonicalSolutionForTask13Variant1
+>;
+
 // Explicit opt-in registration, once, at module load — solutionTemplates
 // never auto-registers on import (see equation.v1.ts's own doc comment).
 solutionTemplates.registerMathTask13Templates();
+solutionTemplates.registerMathTask14Templates();
+
+interface ContentFields {
+  readonly taskId: string;
+  readonly correctAnswer: string;
+  readonly correctAnswerDisplay: string | null;
+}
 
 /**
  * sha256('math|13|' + normalized rawStatement), computed offline from
@@ -43,6 +57,32 @@ solutionTemplates.registerMathTask13Templates();
  */
 const REAL_TASK_13_VARIANT_1_CONTENT_HASH =
   '5c674d67f90cd1a4b2bfc9bd6cdd47ec823d5463f73e0f6f58cd88921b9a5cab';
+
+/**
+ * sha256('math|14|' + normalized rawStatement), same derivation as
+ * above, for the real task's text (taskNumber: 14, "В пирамиде SABCD
+ * с высотой SA основанием является квадрат ABCD, точка K — середина
+ * ребра SB. ... а) Докажите, что прямая a ... делит диагональ
+ * основания AC в отношении 1:2. б) Найдите угол между прямыми DK и
+ * SC, если AB=2√3, SA=6.") — verified independently against the
+ * DB row's own `content_hash` before this constant was written.
+ */
+const REAL_TASK_14_VARIANT_1_CONTENT_HASH =
+  'd7a4d76a3d9833dbe914bc8cdd9b12615911a4de80f999725f801837be7b366c';
+
+/** contentHash → content-layer builder. One entry per authored task; never a `taskNumber` branch. */
+const CONTENT_BUILDERS: ReadonlyMap<string, (fields: ContentFields) => CanonicalSolution> = new Map(
+  [
+    [
+      REAL_TASK_13_VARIANT_1_CONTENT_HASH,
+      solutionTemplates.buildCanonicalSolutionForTask13Variant1,
+    ],
+    [
+      REAL_TASK_14_VARIANT_1_CONTENT_HASH,
+      solutionTemplates.buildCanonicalSolutionForTask14Variant1,
+    ],
+  ],
+);
 
 export interface CanonicalSolutionTaskInput {
   readonly id: string;
@@ -62,9 +102,10 @@ export interface CanonicalSolutionTaskInput {
 export function getCanonicalSolutionForTask(
   task: CanonicalSolutionTaskInput,
 ): CanonicalSolutionDto | undefined {
-  if (task.contentHash !== REAL_TASK_13_VARIANT_1_CONTENT_HASH) return undefined;
+  const buildContent = task.contentHash ? CONTENT_BUILDERS.get(task.contentHash) : undefined;
+  if (!buildContent) return undefined;
 
-  const canonicalSolution = solutionTemplates.buildCanonicalSolutionForTask13Variant1({
+  const canonicalSolution = buildContent({
     taskId: task.id,
     correctAnswer: task.correctAnswer,
     correctAnswerDisplay: task.correctAnswerDisplay,

@@ -78,14 +78,21 @@ export interface ExamCriticalPoint {
   readonly rationale?: string;
   readonly validationRuleId?: string;
   /**
-   * 'fipi_verified' only for a fact the project owner has confirmed
-   * against the primary FIPI document (the architecture doc's
-   * verified-facts list). 'project_quality_rule' for an internal rule
-   * this project chose (real math correctness, or a house style
-   * preference) that FIPI's methodology does not itself state — never
-   * presented as an official requirement.
+   * 'fipi_verified' only for a fact directly confirmed against the
+   * primary FIPI document itself (doc.fipi.ru — e.g. the project
+   * owner's earlier relay of the grading methodology for №13).
+   * 'secondary_source_verified' for a fact confirmed against a
+   * reputable secondary aggregator of FIPI's criteria (e.g. an
+   * established exam-prep reference site) when the primary document
+   * wasn't directly reachable — real, checkable, but one step removed
+   * from the primary source, and must never be presented to the
+   * learner as identical in standing to 'fipi_verified'.
+   * 'project_quality_rule' for an internal rule this project chose
+   * (real math correctness, or a house style preference) that FIPI's
+   * methodology does not itself state — never presented as an
+   * official requirement.
    */
-  readonly source: 'fipi_verified' | 'project_quality_rule';
+  readonly source: 'fipi_verified' | 'secondary_source_verified' | 'project_quality_rule';
 }
 
 /**

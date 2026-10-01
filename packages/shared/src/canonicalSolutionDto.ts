@@ -47,8 +47,8 @@ export const canonicalSolutionCriticalPointDtoSchema = z.object({
   required: z.boolean(),
   partId: z.string().optional(),
   rationale: z.string().optional(),
-  /** Never presented to the client as an unqualified "требование ФИПИ" without this — see the architecture note. */
-  source: z.enum(['fipi_verified', 'project_quality_rule']),
+  /** Never presented to the client as an unqualified "требование ФИПИ" without this — see the architecture note. 'secondary_source_verified' is one step removed from the primary FIPI document (a reputable aggregator, not doc.fipi.ru itself) — never collapsed into 'fipi_verified'. */
+  source: z.enum(['fipi_verified', 'secondary_source_verified', 'project_quality_rule']),
   /** Resolved server-side from `checkCriticalPoints` — the client never re-derives this from validation results itself. */
   status: canonicalSolutionCriticalPointStatusSchema,
 });
