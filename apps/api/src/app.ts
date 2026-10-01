@@ -11,6 +11,7 @@ import { errorSignaturesRoutes } from './modules/learning/errorSignatures/routes
 import { taskSimilarityRoutes } from './modules/learning/taskSimilarity/routes.js';
 import { recommendationRoutes } from './modules/learning/recommendation/routes.js';
 import { learningPathRoutes } from './modules/learning/learningPath/routes.js';
+import { learningSessionRoutes } from './modules/learning/learningSession/routes.js';
 import { mistakesRoutes } from './modules/mistakes/routes.js';
 import { progressRoutes } from './modules/progress/routes.js';
 import { tasksRoutes } from './modules/tasks/routes.js';
@@ -44,6 +45,7 @@ export function buildApp({ logger = false, version, checkDb, db }: AppOptions) {
     app.register(taskSimilarityRoutes, { db, prefix: '/api/v1' });
     app.register(recommendationRoutes, { db, prefix: '/api/v1' });
     app.register(learningPathRoutes, { db, prefix: '/api/v1' });
+    app.register(learningSessionRoutes, { db, prefix: '/api/v1' });
   }
 
   return app;

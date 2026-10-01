@@ -20,6 +20,7 @@ export * from './learning/recommendation.js';
 export * from './learning/nextTaskRecommendation.js';
 export * from './learning/learningPath.js';
 export * from './learning/learningPathDto.js';
+export * from './learning/learningSession.js';
 // Namespaced (not flattened) — see solutionEngine/index.ts for why.
 export * as solutionEngine from './solutionEngine/index.js';
 export * as solutionTemplates from './solutionTemplates/index.js';

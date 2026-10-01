@@ -547,3 +547,48 @@ export const userSubjectProfiles = pgTable(
     uniqueIndex('user_subject_profiles_user_subject_idx').on(table.userId, table.subjectId),
   ],
 );
+
+export const learningSessionStatuses = ['active', 'completed'] as const;
+
+/**
+ * ZUBRILKA LEARNING INTELLIGENCE, Phase 9 — session BOOKKEEPING only:
+ * which tasks a learning session has already served, in what order,
+ * and whether it's finished. This is deliberately NOT a second source
+ * of truth for learning state: it never writes to `attempts`,
+ * `mistakes`, `user_skill_statistics`, `task_statistics`, or
+ * `user_error_statistics` — those remain exactly as the existing
+ * attempt-submission transaction updates them. `consumedTaskIds` exists
+ * purely so a session can hard-exclude tasks it already showed (see
+ * `modules/learning/learningPath/service.ts`'s `excludeTaskIds`); the
+ * actual next-task scoring always re-reads fresh mastery/error/
+ * difficulty data from those authoritative tables, never a cached
+ * value here. A small table was chosen over a signed stateless token
+ * because the project has no existing token-signing infrastructure
+ * and inventing one was explicitly out of scope — see Phase 9's
+ * architecture notes.
+ */
+export const learningSessions = pgTable(
+  'learning_sessions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    subjectId: text('subject_id')
+      .notNull()
+      .references(() => subjects.id),
+    /** Requested session length (1..10), validated at creation — fixed for the life of the session. */
+    total: integer('total').notNull(),
+    /** Every task this session has served, in serve order — never
+     * contains a task twice. Its length IS the session's current
+     * position; no separate position column to keep in sync. */
+    consumedTaskIds: jsonb('consumed_task_ids').$type<readonly string[]>().notNull().default([]),
+    status: text('status', { enum: learningSessionStatuses }).notNull().default('active'),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    /** Set once, the moment `status` flips to 'completed'. */
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('learning_sessions_user_idx').on(table.userId)],
+);

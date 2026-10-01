@@ -34,6 +34,13 @@ export interface GetLearningPathContext {
   readonly subjectId?: string;
   /** Already validated at the route layer (1..10). */
   readonly limit: number;
+  /** Additive, optional (Phase 9 reuse): task ids to hard-exclude from
+   * the servable pool before scoring, on top of the existing
+   * already-correctly-attempted exclusion. Used by the learning-session
+   * engine so a session never re-serves a task it already showed, even
+   * in the "everything else is solved" fallback case. Omitted (or
+   * empty) leaves Phase 8's own behavior completely unchanged. */
+  readonly excludeTaskIds?: readonly string[];
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -137,7 +144,16 @@ export async function getLearningPath(
   const unsolved = allCandidates.filter((c) => !correctlyAttempted.has(c.taskId));
   // Same fallback as Phase 7: never return nothing just because every
   // task in the subject has already been solved once.
-  const candidates = unsolved.length > 0 ? unsolved : allCandidates;
+  const fallbackPool = unsolved.length > 0 ? unsolved : allCandidates;
+
+  // Hard exclusion applied AFTER the correctly-attempted fallback — a
+  // Phase 9 session's already-consumed tasks must never reappear, even
+  // when everything else in the subject is also already solved.
+  const excludeTaskIdSet = new Set(context.excludeTaskIds ?? []);
+  const candidates =
+    excludeTaskIdSet.size > 0
+      ? fallbackPool.filter((c) => !excludeTaskIdSet.has(c.taskId))
+      : fallbackPool;
 
   const [masteryRows, errorStats, subjectProfile, openMistakeTaskIds, recentlySolvedTaskIds] =
     await Promise.all([
