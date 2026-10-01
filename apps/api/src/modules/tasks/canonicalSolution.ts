@@ -38,6 +38,7 @@ solutionTemplates.registerMathTask15Templates();
 solutionTemplates.registerMathTask16Templates();
 solutionTemplates.registerMathTask17Templates();
 solutionTemplates.registerMathTask18Templates();
+solutionTemplates.registerMathTask19Templates();
 
 interface ContentFields {
   readonly taskId: string;
@@ -119,6 +120,19 @@ const REAL_TASK_17_VARIANT_1_CONTENT_HASH =
 const REAL_TASK_18_VARIANT_1_CONTENT_HASH =
   'e8a591e91a5072fdd4c8b685c9e4de467a463134597fe065de5edd882af41b79';
 
+/**
+ * sha256('math|19|' + normalized rawStatement), same derivation as
+ * above, for the real task's text (taskNumber: 19, a number-theory
+ * problem about coin-binder counts: "У Ивана Ильича есть коллекция
+ * монет. Если все его монеты разложить в одинаковые большие
+ * кляссеры... а) Может ли k быть равно 3? б) Какое наименьшее
+ * количество монет... в) Какое наибольшее количество монет...") —
+ * verified independently against the DB row's own `content_hash`
+ * before this constant was written.
+ */
+const REAL_TASK_19_VARIANT_1_CONTENT_HASH =
+  'b70712cd8cfaf75fbe50a2979e1812be2eeed743d9589c595b06858b113310e8';
+
 /** contentHash → content-layer builder. One entry per authored task; never a `taskNumber` branch. */
 const CONTENT_BUILDERS: ReadonlyMap<string, (fields: ContentFields) => CanonicalSolution> = new Map(
   [
@@ -145,6 +159,10 @@ const CONTENT_BUILDERS: ReadonlyMap<string, (fields: ContentFields) => Canonical
     [
       REAL_TASK_18_VARIANT_1_CONTENT_HASH,
       solutionTemplates.buildCanonicalSolutionForTask18Variant1,
+    ],
+    [
+      REAL_TASK_19_VARIANT_1_CONTENT_HASH,
+      solutionTemplates.buildCanonicalSolutionForTask19Variant1,
     ],
   ],
 );
