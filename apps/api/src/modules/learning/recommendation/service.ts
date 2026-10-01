@@ -213,8 +213,11 @@ export async function getNextTaskRecommendation(
  * one with the largest target/self-reported gap — deliberately
  * deterministic: subjects with an unknown gap sort last, ties break
  * alphabetically by subjectId. `null` only when the user has no
- * onboarded subject with any published tasks at all. */
-async function resolveSubjectId(
+ * onboarded subject with any published tasks at all.
+ *
+ * Exported for reuse by Phase 8's learning-path engine, which resolves
+ * a subject the exact same way before building a multi-step sequence. */
+export async function resolveSubjectId(
   db: Database,
   userId: string,
   context: GetNextTaskRecommendationContext,
