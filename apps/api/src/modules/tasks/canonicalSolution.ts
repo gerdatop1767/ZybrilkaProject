@@ -37,6 +37,7 @@ solutionTemplates.registerMathTask14Templates();
 solutionTemplates.registerMathTask15Templates();
 solutionTemplates.registerMathTask16Templates();
 solutionTemplates.registerMathTask17Templates();
+solutionTemplates.registerMathTask18Templates();
 
 interface ContentFields {
   readonly taskId: string;
@@ -107,6 +108,17 @@ const REAL_TASK_16_VARIANT_1_CONTENT_HASH =
 const REAL_TASK_17_VARIANT_1_CONTENT_HASH =
   '9ed550cad8943d4f6266941399c25f78618c594d859ed0a763041205027a3c6b';
 
+/**
+ * sha256('math|18|' + normalized rawStatement), same derivation as
+ * above, for the real task's text (taskNumber: 18, a parameter
+ * problem: "Найдите все значения a, при каждом из которых система
+ * уравнений {(|x|−a²)²+(y−4a)(y+4a)=9a²−2y−1, y+1=6√a} имеет ровно два
+ * различных решения.") — verified independently against the DB row's
+ * own `content_hash` before this constant was written.
+ */
+const REAL_TASK_18_VARIANT_1_CONTENT_HASH =
+  'e8a591e91a5072fdd4c8b685c9e4de467a463134597fe065de5edd882af41b79';
+
 /** contentHash → content-layer builder. One entry per authored task; never a `taskNumber` branch. */
 const CONTENT_BUILDERS: ReadonlyMap<string, (fields: ContentFields) => CanonicalSolution> = new Map(
   [
@@ -129,6 +141,10 @@ const CONTENT_BUILDERS: ReadonlyMap<string, (fields: ContentFields) => Canonical
     [
       REAL_TASK_17_VARIANT_1_CONTENT_HASH,
       solutionTemplates.buildCanonicalSolutionForTask17Variant1,
+    ],
+    [
+      REAL_TASK_18_VARIANT_1_CONTENT_HASH,
+      solutionTemplates.buildCanonicalSolutionForTask18Variant1,
     ],
   ],
 );
