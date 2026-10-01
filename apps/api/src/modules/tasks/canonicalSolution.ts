@@ -34,6 +34,7 @@ type CanonicalSolution = ReturnType<
 // never auto-registers on import (see equation.v1.ts's own doc comment).
 solutionTemplates.registerMathTask13Templates();
 solutionTemplates.registerMathTask14Templates();
+solutionTemplates.registerMathTask15Templates();
 
 interface ContentFields {
   readonly taskId: string;
@@ -70,6 +71,16 @@ const REAL_TASK_13_VARIANT_1_CONTENT_HASH =
 const REAL_TASK_14_VARIANT_1_CONTENT_HASH =
   'd7a4d76a3d9833dbe914bc8cdd9b12615911a4de80f999725f801837be7b366c';
 
+/**
+ * sha256('math|15|' + normalized rawStatement), same derivation as
+ * above, for the real task's text (taskNumber: 15, "Решите неравенство
+ * (9^x − 3^(x+2) + 8) / (log_(1/6)²(5^x−2) + log_(1/6)(5^x−2)² + 1) ≤
+ * 0.") — verified independently against the DB row's own
+ * `content_hash` before this constant was written.
+ */
+const REAL_TASK_15_VARIANT_1_CONTENT_HASH =
+  '97c7af5d295d3a0516d5e517b32f671f45b0e3055d03b2fb39de0d8d9d3017d2';
+
 /** contentHash → content-layer builder. One entry per authored task; never a `taskNumber` branch. */
 const CONTENT_BUILDERS: ReadonlyMap<string, (fields: ContentFields) => CanonicalSolution> = new Map(
   [
@@ -80,6 +91,10 @@ const CONTENT_BUILDERS: ReadonlyMap<string, (fields: ContentFields) => Canonical
     [
       REAL_TASK_14_VARIANT_1_CONTENT_HASH,
       solutionTemplates.buildCanonicalSolutionForTask14Variant1,
+    ],
+    [
+      REAL_TASK_15_VARIANT_1_CONTENT_HASH,
+      solutionTemplates.buildCanonicalSolutionForTask15Variant1,
     ],
   ],
 );
