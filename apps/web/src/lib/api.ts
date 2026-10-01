@@ -3,11 +3,13 @@ import type {
   AttemptResult,
   CollectionListItem,
   FavoritesListResponse,
+  LearningProfileResponse,
   Mistake,
   ProgressByTaskNumberResponse,
   ProgressByTopicResponse,
   ProgressDailyResponse,
   ProgressSummary,
+  SaveLearningProfileRequest,
   TaskPublic,
   TaskWithSolution,
   VariantDetail,
@@ -210,4 +212,16 @@ export function addFavorite(taskId: string): Promise<void> {
 
 export function removeFavorite(taskId: string): Promise<void> {
   return apiFetch(`/favorites/${taskId}`, { method: 'DELETE' });
+}
+
+/** DB is the source of truth for whether onboarding is done — see
+ * apps/api's learningProfile module. Never inferred from localStorage. */
+export function getLearningProfile(): Promise<LearningProfileResponse> {
+  return apiFetch('/me/learning-profile');
+}
+
+export function saveLearningProfile(
+  request: SaveLearningProfileRequest,
+): Promise<LearningProfileResponse> {
+  return apiFetch('/me/learning-profile', { method: 'PUT', body: JSON.stringify(request) });
 }

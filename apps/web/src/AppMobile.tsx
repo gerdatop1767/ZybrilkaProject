@@ -17,6 +17,8 @@ import { FriendsMobile } from './screens/Friends/FriendsMobile.js';
 import { FriendProfileMobile } from './screens/Friends/FriendProfileMobile.js';
 import { SubjectCatalogMobile } from './screens/SubjectCatalog/SubjectCatalogMobile.js';
 import { SubjectMobile } from './screens/Subject/SubjectMobile.js';
+import { Onboarding } from './screens/Onboarding/Onboarding.js';
+import { Profile } from './screens/Profile/Profile.js';
 import { startRealTask } from './lib/startTraining.js';
 
 /**
@@ -120,9 +122,7 @@ export function AppMobile() {
             note="Утверждённый референс для этого экрана ещё не получен."
           />
         )}
-        {contentOverlay.screen === 'onboarding' && (
-          <WipPlaceholder title="Онбординг" note="Экран в разработке — следующий блок." />
-        )}
+        {contentOverlay.screen === 'onboarding' && <Onboarding />}
         {contentOverlay.screen === 'favorites' && (
           <WipPlaceholder title="Избранное" note="Экран в разработке — следующий блок." />
         )}
@@ -140,9 +140,7 @@ export function AppMobile() {
           <WipPlaceholder title="Настройки" note="Экран в разработке — следующий блок." />
         )}
         {contentOverlay.screen === 'help' && <HelpMobile />}
-        {contentOverlay.screen === 'profile' && (
-          <WipPlaceholder title="Профиль" note="Экран в разработке — следующий блок." />
-        )}
+        {contentOverlay.screen === 'profile' && <Profile />}
         {menu}
       </MobileShell>
     );

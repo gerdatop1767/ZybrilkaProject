@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react';
-import { getProgressSummary } from '../../lib/api.js';
-import type { ProgressSummary } from '@zybrilka/shared';
+import { getLearningProfile, getProgressSummary } from '../../lib/api.js';
+import type { LearningProfileResponse, ProgressSummary } from '@zybrilka/shared';
+import { selfReportedScoreLabel, targetScoreLabel } from '../../lib/learningProfileLabels.js';
+import { subjects as staticSubjects } from '../../data/subjects.js';
 import { Card } from '../../ui/Card/Card.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { SectionHeader } from '../../ui/SectionHeader/SectionHeader.js';
 import { useNavigation } from '../../lib/navigation.js';
 import { SlideUp } from '../../ui/motion/motion.js';
 import styles from './Profile.module.css';
+
+function subjectShortName(subjectId: string): string {
+  return staticSubjects.find((s) => s.id === subjectId)?.shortName ?? subjectId;
+}
 
 /**
  * Profile — identity (no auth/user-profile backend exists yet, so no
@@ -18,6 +24,7 @@ import styles from './Profile.module.css';
 export function Profile() {
   const { navigate } = useNavigation();
   const [progress, setProgress] = useState<ProgressSummary | null>(null);
+  const [learningProfile, setLearningProfile] = useState<LearningProfileResponse | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -28,6 +35,13 @@ export function Profile() {
       .catch(() => {
         // No backend data yet (or the request failed) — stats stay at
         // their neutral zero state below.
+      });
+    void getLearningProfile()
+      .then((data) => {
+        if (!cancelled) setLearningProfile(data);
+      })
+      .catch(() => {
+        // No profile yet (or offline) — the section below falls back to a prompt.
       });
     return () => {
       cancelled = true;
@@ -52,6 +66,41 @@ export function Profile() {
           </div>
         </div>
       </Card>
+
+      <div>
+        <SectionHeader title="Предметы ЕГЭ" />
+        <Card>
+          {learningProfile && learningProfile.subjects.length > 0 ? (
+            <div className={styles.subjectsList}>
+              {learningProfile.subjects.map((s) => (
+                <div key={s.subjectId} className={styles.subjectRow}>
+                  <span className="text-body">{subjectShortName(s.subjectId)}</span>
+                  <span className="text-body-sm text-secondary">
+                    Сейчас: {selfReportedScoreLabel(s.selfReportedScore)} · Цель:{' '}
+                    {targetScoreLabel(s.targetScore)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-body-sm text-secondary">Предметы и цели ещё не выбраны.</p>
+          )}
+          <button
+            type="button"
+            className={styles.settingsRow}
+            onClick={() => navigate({ screen: 'onboarding' })}
+          >
+            <span className={styles.settingsIcon}>
+              <Icon name="topic" size={18} />
+            </span>
+            <span className={styles.settingsLabel}>
+              {learningProfile && learningProfile.subjects.length > 0
+                ? 'Изменить предметы и цели'
+                : 'Выбрать предметы'}
+            </span>
+          </button>
+        </Card>
+      </div>
 
       <div>
         <SectionHeader title="Достижения" />

@@ -18,6 +18,24 @@ import * as schema from './schema.js';
  */
 const DEMO_SOURCE = 'Zybrilka demo (не ФИПИ)';
 
+/**
+ * Matches apps/web's data/subjects.ts ids/names exactly — the Learning
+ * Profile onboarding lets a user pick any of these, so every one needs a
+ * real `subjects` row for the FK (previously only 'math' was seeded here,
+ * the rest only existed as frontend-only demo data).
+ */
+const allSubjects: readonly { id: string; name: string }[] = [
+  { id: 'math', name: 'Математика' },
+  { id: 'russian', name: 'Русский язык' },
+  { id: 'english', name: 'Английский язык' },
+  { id: 'social', name: 'Обществознание' },
+  { id: 'informatics', name: 'Информатика' },
+  { id: 'physics', name: 'Физика' },
+  { id: 'chemistry', name: 'Химия' },
+  { id: 'biology', name: 'Биология' },
+  { id: 'history', name: 'История' },
+];
+
 interface SeedTask {
   taskNumber: number;
   topicSlug: string;
@@ -134,10 +152,12 @@ const seedTasks: readonly SeedTask[] = [
 ];
 
 export async function seed(db: Database) {
-  await db
-    .insert(schema.subjects)
-    .values({ id: 'math', name: 'Математика' })
-    .onConflictDoUpdate({ target: schema.subjects.id, set: { name: 'Математика' } });
+  for (const subject of allSubjects) {
+    await db
+      .insert(schema.subjects)
+      .values(subject)
+      .onConflictDoUpdate({ target: schema.subjects.id, set: { name: subject.name } });
+  }
 
   const topicIdBySlug = new Map<string, string>();
   for (const slug of new Set(seedTasks.map((t) => t.topicSlug))) {

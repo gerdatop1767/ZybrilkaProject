@@ -17,9 +17,10 @@ import { HelpDesktop } from './screens/Help/HelpDesktop.js';
 import { FriendsDesktop } from './screens/Friends/FriendsDesktop.js';
 import { FriendProfileDesktop } from './screens/Friends/FriendProfileDesktop.js';
 import { Training } from './screens/Training/Training.js';
+import { Onboarding } from './screens/Onboarding/Onboarding.js';
 
 /** Screens whose approved desktop composition has no left sidebar. */
-const noSidebarScreens = new Set(['home', 'task', 'result']);
+const noSidebarScreens = new Set(['home', 'task', 'result', 'onboarding']);
 
 /**
  * Desktop app tree (S1 Block 6, approved design) — its own composition,
@@ -82,9 +83,7 @@ export function AppDesktop() {
         {overlay.screen === 'rating' && <RatingDesktop />}
         {overlay.screen === 'about' && <AboutDesktop />}
         {overlay.screen === 'learningCenter' && <LearningCenterDesktop />}
-        {overlay.screen === 'onboarding' && (
-          <WipPlaceholder title="Онбординг" note="Экран в разработке — следующий блок." />
-        )}
+        {overlay.screen === 'onboarding' && <Onboarding />}
         {overlay.screen === 'favorites' && (
           <WipPlaceholder title="Избранное" note="Экран в разработке — следующий блок." />
         )}

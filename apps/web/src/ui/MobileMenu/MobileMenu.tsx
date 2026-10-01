@@ -176,7 +176,7 @@ export function MobileMenu({ open, onClose, activeTab }: MobileMenuProps) {
           <button
             type="button"
             className={styles.profileRow}
-            onClick={() => go({ screen: 'settings' })}
+            onClick={() => go({ screen: 'profile' })}
           >
             <Avatar username="?" color="var(--color-accent-primary)" size={48} />
             <div className={styles.profileBody}>

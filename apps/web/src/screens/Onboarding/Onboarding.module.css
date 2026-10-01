@@ -104,13 +104,12 @@
 
 .skillRow {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-2) 0;
 }
 
 .skillName {
-  flex: 1;
   min-width: 0;
 }
 

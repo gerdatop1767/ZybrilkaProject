@@ -322,3 +322,65 @@ export const favorites = pgTable(
   },
   (table) => [uniqueIndex('favorites_user_task_idx').on(table.userId, table.taskId)],
 );
+
+/**
+ * Self-reported level, NOT a real measured result (ZUBRILKA LEARNING
+ * INTELLIGENCE audit, Phase 1 vertical slice) — what the user says about
+ * themselves during onboarding, distinct from any future estimated/observed
+ * score. 'unknown' is a valid, non-error answer (diagnostic-triggering UX
+ * is a later phase).
+ */
+export const selfReportedScoreLevels = [
+  'unknown',
+  'under_40',
+  '40_plus',
+  '50_plus',
+  '60_plus',
+  '70_plus',
+  '80_plus',
+  '90_plus',
+] as const;
+
+/** What score the user wants to reach for this subject — kept separate from `selfReportedScore`. */
+export const targetScoreLevels = [
+  'unknown',
+  '60_plus',
+  '70_plus',
+  '80_plus',
+  '90_plus',
+  '95_plus',
+  '100',
+] as const;
+
+/**
+ * One row per (user, subject) the user picked during onboarding — the
+ * first real Learning Intelligence table (Phase 1 vertical slice only;
+ * see docs' Learning Intelligence audit for what's intentionally NOT here
+ * yet: estimated/observed score, mastery, confidence, diagnostics,
+ * cohort, errors). `onboardingCompletedAt` is set only after every
+ * selected subject for that user has been saved in the same request —
+ * never left in a state where the UI thinks onboarding finished but a
+ * row is missing (see modules/learningProfile/service.ts).
+ */
+export const userSubjectProfiles = pgTable(
+  'user_subject_profiles',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    subjectId: text('subject_id')
+      .notNull()
+      .references(() => subjects.id),
+    targetScore: text('target_score', { enum: targetScoreLevels }).notNull().default('unknown'),
+    selfReportedScore: text('self_reported_score', { enum: selfReportedScoreLevels })
+      .notNull()
+      .default('unknown'),
+    onboardingCompletedAt: timestamp('onboarding_completed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('user_subject_profiles_user_subject_idx').on(table.userId, table.subjectId),
+  ],
+);

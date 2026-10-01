@@ -1,8 +1,15 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ProfileDesktop } from './ProfileDesktop.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
+import * as api from '../../lib/api.js';
+import type * as ApiModule from '../../lib/api.js';
+
+vi.mock('../../lib/api.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof ApiModule>()),
+  getLearningProfile: vi.fn(),
+}));
 
 function OverlayMarker() {
   const { overlay } = useNavigation();
@@ -19,6 +26,17 @@ function renderProfile(from?: Parameters<typeof ProfileDesktop>[0]['from']) {
 }
 
 describe('ProfileDesktop', () => {
+  beforeEach(() => {
+    vi.mocked(api.getLearningProfile).mockResolvedValue({
+      onboardingCompleted: false,
+      subjects: [],
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('renders the personal/settings sections, not stats or achievements', () => {
     renderProfile();
     expect(screen.getByText('Мой профиль')).toBeInTheDocument();
@@ -45,11 +63,31 @@ describe('ProfileDesktop', () => {
     expect(screen.getByRole('button', { name: /Выйти из аккаунта/ })).toBeInTheDocument();
   });
 
-  it('opens the subject catalog from "Предметы ЕГЭ"', async () => {
+  it('opens onboarding from "Предметы ЕГЭ" to edit the real learning profile', async () => {
     const user = userEvent.setup();
     renderProfile();
     await user.click(screen.getByRole('button', { name: /Предметы ЕГЭ/ }));
-    expect(screen.getByTestId('overlay')).toHaveTextContent('subjectCatalog');
+    expect(screen.getByTestId('overlay')).toHaveTextContent('onboarding');
+  });
+
+  it('shows a neutral prompt (not fabricated data) when no learning profile is saved yet', () => {
+    renderProfile();
+    expect(screen.getByText('Выбери предметы для подготовки')).toBeInTheDocument();
+    expect(screen.getByText('Укажи текущий уровень')).toBeInTheDocument();
+  });
+
+  it('shows real saved subjects/levels/targets from /me/learning-profile', async () => {
+    vi.mocked(api.getLearningProfile).mockResolvedValue({
+      onboardingCompleted: true,
+      subjects: [
+        { subjectId: 'math', selfReportedScore: '70_plus', targetScore: '90_plus' },
+        { subjectId: 'russian', selfReportedScore: 'unknown', targetScore: '100' },
+      ],
+    });
+    renderProfile();
+    await waitFor(() => expect(screen.getByText(/Математика, Русский язык/)).toBeInTheDocument());
+    expect(screen.getByText(/Математика: 70\+, Русский язык: Не знаю/)).toBeInTheDocument();
+    expect(screen.getByText(/Математика: 90\+, Русский язык: 100/)).toBeInTheDocument();
   });
 
   it('BackRow with no `from` falls back to closing the overlay (default tab)', async () => {

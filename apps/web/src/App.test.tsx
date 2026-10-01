@@ -10,6 +10,7 @@ import type * as ApiModule from './lib/api.js';
 vi.mock('./lib/api.js', async (importOriginal) => ({
   ...(await importOriginal<typeof ApiModule>()),
   getRandomTask: vi.fn(),
+  getLearningProfile: vi.fn(),
 }));
 
 const RANDOM_TASK = {
@@ -31,6 +32,13 @@ const RANDOM_TASK = {
   tags: [],
   status: 'published' as const,
 };
+
+beforeEach(() => {
+  // Default to an already-completed profile so the first-login gate
+  // doesn't redirect these tests to onboarding — tests that care about
+  // the gate itself override this per-test.
+  vi.mocked(api.getLearningProfile).mockResolvedValue({ onboardingCompleted: true, subjects: [] });
+});
 
 function renderApp() {
   return render(
@@ -216,6 +224,50 @@ describe('App — desktop', () => {
       await user.click(screen.getByRole('button', { name: 'Достижения' }));
     }
     restore();
+  });
+});
+
+describe('App — first-login gate (Learning Profile, Phase 1)', () => {
+  beforeEach(() => {
+    window.history.replaceState(null, '', '/');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('redirects a brand-new user (onboardingCompleted: false) to onboarding on load', async () => {
+    vi.mocked(api.getLearningProfile).mockResolvedValue({
+      onboardingCompleted: false,
+      subjects: [],
+    });
+    renderApp();
+    await waitFor(() => {
+      expect(screen.getByText('Добро пожаловать в Zybrilka!')).toBeInTheDocument();
+    });
+    expect(window.location.pathname).toBe('/onboarding');
+  });
+
+  it('does not redirect a returning user (onboardingCompleted: true)', async () => {
+    vi.mocked(api.getLearningProfile).mockResolvedValue({
+      onboardingCompleted: true,
+      subjects: [],
+    });
+    renderApp();
+    await waitFor(() => expect(api.getLearningProfile).toHaveBeenCalled());
+    expect(screen.getByText(/Готов к новой/)).toBeInTheDocument();
+  });
+
+  it('does not redirect when landing directly on a deep link (overlay already open)', async () => {
+    vi.mocked(api.getLearningProfile).mockResolvedValue({
+      onboardingCompleted: false,
+      subjects: [],
+    });
+    window.history.replaceState(null, '', '/help');
+    renderApp();
+    await waitFor(() => expect(screen.getByText('Нужна')).toBeInTheDocument());
+    expect(window.location.pathname).toBe('/help');
   });
 });
 

@@ -8,6 +8,7 @@ import * as api from '../../lib/api.js';
 
 vi.mock('../../lib/api.js', () => ({
   getProgressSummary: vi.fn(),
+  getLearningProfile: vi.fn(),
 }));
 
 function OverlayMarker() {
@@ -36,6 +37,7 @@ beforeEach(() => {
     byTaskNumber: [],
     byTopic: [],
   });
+  vi.mocked(api.getLearningProfile).mockResolvedValue({ onboardingCompleted: false, subjects: [] });
 });
 
 describe('Profile', () => {
@@ -70,6 +72,33 @@ describe('Profile', () => {
     const user = userEvent.setup();
     renderProfile();
     await user.click(screen.getByRole('button', { name: /Пройти диагностику заново/ }));
+    expect(screen.getByTestId('overlay')).toHaveTextContent('onboarding');
+  });
+
+  it('shows a prompt (not fabricated data) when no learning profile is saved yet', () => {
+    renderProfile();
+    expect(screen.getByText('Предметы и цели ещё не выбраны.')).toBeInTheDocument();
+  });
+
+  it('shows real saved subjects/levels/targets from /me/learning-profile', async () => {
+    vi.mocked(api.getLearningProfile).mockResolvedValue({
+      onboardingCompleted: true,
+      subjects: [{ subjectId: 'math', selfReportedScore: '70_plus', targetScore: '90_plus' }],
+    });
+    renderProfile();
+    await waitFor(() => expect(screen.getByText('Математика')).toBeInTheDocument());
+    expect(screen.getByText(/Сейчас: 70\+ · Цель: 90\+/)).toBeInTheDocument();
+  });
+
+  it('opens onboarding from "Изменить предметы и цели" once a profile exists', async () => {
+    vi.mocked(api.getLearningProfile).mockResolvedValue({
+      onboardingCompleted: true,
+      subjects: [{ subjectId: 'math', selfReportedScore: '70_plus', targetScore: '90_plus' }],
+    });
+    const user = userEvent.setup();
+    renderProfile();
+    await screen.findByText('Изменить предметы и цели');
+    await user.click(screen.getByRole('button', { name: /Изменить предметы и цели/ }));
     expect(screen.getByTestId('overlay')).toHaveTextContent('onboarding');
   });
 });
