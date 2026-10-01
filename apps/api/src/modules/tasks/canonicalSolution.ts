@@ -36,6 +36,7 @@ solutionTemplates.registerMathTask13Templates();
 solutionTemplates.registerMathTask14Templates();
 solutionTemplates.registerMathTask15Templates();
 solutionTemplates.registerMathTask16Templates();
+solutionTemplates.registerMathTask17Templates();
 
 interface ContentFields {
   readonly taskId: string;
@@ -94,6 +95,18 @@ const REAL_TASK_15_VARIANT_1_CONTENT_HASH =
 const REAL_TASK_16_VARIANT_1_CONTENT_HASH =
   '6014f377f0fa2bc80dca6d3710e8341fec930508a3e5f86652f303ff44aa97aa';
 
+/**
+ * sha256('math|17|' + normalized rawStatement), same derivation as
+ * above, for the real task's text (taskNumber: 17, a right-trapezoid
+ * incircle problem: "В прямоугольную трапецию ABCD с большим
+ * основанием CD и прямыми углами A и D вписана окружность... а)
+ * Докажите, что BN=(√2−1)R. б) Найдите радиус окружности, вписанной в
+ * четырёхугольник BNOG, если R=6.") — verified independently against
+ * the DB row's own `content_hash` before this constant was written.
+ */
+const REAL_TASK_17_VARIANT_1_CONTENT_HASH =
+  '9ed550cad8943d4f6266941399c25f78618c594d859ed0a763041205027a3c6b';
+
 /** contentHash → content-layer builder. One entry per authored task; never a `taskNumber` branch. */
 const CONTENT_BUILDERS: ReadonlyMap<string, (fields: ContentFields) => CanonicalSolution> = new Map(
   [
@@ -112,6 +125,10 @@ const CONTENT_BUILDERS: ReadonlyMap<string, (fields: ContentFields) => Canonical
     [
       REAL_TASK_16_VARIANT_1_CONTENT_HASH,
       solutionTemplates.buildCanonicalSolutionForTask16Variant1,
+    ],
+    [
+      REAL_TASK_17_VARIANT_1_CONTENT_HASH,
+      solutionTemplates.buildCanonicalSolutionForTask17Variant1,
     ],
   ],
 );

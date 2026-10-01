@@ -14,3 +14,5 @@ export * from './math/15/inequality.v1.js';
 export * from './math/15/realTask15Variant1.js';
 export * from './math/16/economics.v1.js';
 export * from './math/16/realTask16Variant1.js';
+export * from './math/17/planimetry.v1.js';
+export * from './math/17/realTask17Variant1.js';
