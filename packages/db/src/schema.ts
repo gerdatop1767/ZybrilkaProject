@@ -449,6 +449,44 @@ export const taskStatistics = pgTable(
 );
 
 /**
+ * ZUBRILKA LEARNING INTELLIGENCE, Phase 5 — per-user error-signature
+ * counts. No AI/ML: `errorSignature` is one of the fixed, deterministic
+ * codes `detectErrorSignatures` produces (see
+ * `packages/shared/src/learning/errorSignatures.ts`) — a plain text
+ * enum value, not a foreign key into a separate catalog table, since
+ * the set of possible codes is small and hardcoded, exactly like
+ * `taskSkillSources` above (no second dictionary table for a fixed
+ * enum). A `multi_part` per-part signature is encoded as
+ * `"<type>:<partId>"` (e.g. `"part_incorrect:b"`) directly in this
+ * column, rather than adding a separate nullable `partId` column.
+ *
+ * Unlike `user_skill_statistics`/`task_statistics` (Phase 3/4, which
+ * recompute a nonlinear formula from the FULL attempt history on every
+ * write), this table is a plain running count: `count` is incremented
+ * by exactly 1 per detected occurrence, which is mathematically
+ * identical to recomputing a fresh count from scratch — so a per-attempt
+ * increment and `rebuildUserErrorStatistics`'s full replay of history
+ * always converge to the same totals.
+ */
+export const userErrorStatistics = pgTable(
+  'user_error_statistics',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    errorSignature: text('error_signature').notNull(),
+    count: integer('count').notNull().default(0),
+    lastOccurredAt: timestamp('last_occurred_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('user_error_statistics_user_signature_idx').on(table.userId, table.errorSignature),
+  ],
+);
+
+/**
  * Self-reported level, NOT a real measured result (ZUBRILKA LEARNING
  * INTELLIGENCE audit, Phase 1 vertical slice) — what the user says about
  * themselves during onboarding, distinct from any future estimated/observed

@@ -17,6 +17,7 @@ import * as repo from './repo.js';
 import { getCanonicalSolutionForTask } from './canonicalSolution.js';
 import { updateSkillStatisticsForTaskAttempt } from '../learning/service.js';
 import { updateTaskStatistics } from '../learning/taskStatistics/service.js';
+import { recordErrorSignaturesForAttempt } from '../learning/errorSignatures/service.js';
 
 /** Thrown when the request's `answer` shape doesn't match the task's answerType — the route maps this to a 400, never a 500. */
 export class InvalidAnswerShapeError extends Error {
@@ -142,6 +143,17 @@ export async function submitAttempt(
     });
     await updateSkillStatisticsForTaskAttempt(tx, userId, taskId);
     await updateTaskStatistics(tx, taskId);
+    await recordErrorSignaturesForAttempt(
+      tx,
+      userId,
+      {
+        answerType: row.task.answerType,
+        isCorrect: correct,
+        answerRaw,
+        correctAnswer: row.task.correctAnswer,
+      },
+      attempt.createdAt,
+    );
     return { attempt, mistakeId };
   });
 
@@ -187,6 +199,18 @@ async function submitMultiPartAttempt(
     });
     await updateSkillStatisticsForTaskAttempt(tx, userId, row.task.id);
     await updateTaskStatistics(tx, row.task.id);
+    await recordErrorSignaturesForAttempt(
+      tx,
+      userId,
+      {
+        answerType: 'multi_part',
+        isCorrect: grading.status === 'all_correct',
+        answerRaw: attempt.answerRaw,
+        correctAnswer: row.task.correctAnswer,
+        multiPart: { grading, userAnswers: answer },
+      },
+      attempt.createdAt,
+    );
     return { attempt, mistakeId };
   });
 
