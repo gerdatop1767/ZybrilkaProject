@@ -18,3 +18,5 @@ export * from './math/17/planimetry.v1.js';
 export * from './math/17/realTask17Variant1.js';
 export * from './math/18/parameters.v1.js';
 export * from './math/18/realTask18Variant1.js';
+export * from './math/19/numberTheory.v1.js';
+export * from './math/19/realTask19Variant1.js';
