@@ -35,6 +35,7 @@ type CanonicalSolution = ReturnType<
 solutionTemplates.registerMathTask13Templates();
 solutionTemplates.registerMathTask14Templates();
 solutionTemplates.registerMathTask15Templates();
+solutionTemplates.registerMathTask16Templates();
 
 interface ContentFields {
   readonly taskId: string;
@@ -81,6 +82,18 @@ const REAL_TASK_14_VARIANT_1_CONTENT_HASH =
 const REAL_TASK_15_VARIANT_1_CONTENT_HASH =
   '97c7af5d295d3a0516d5e517b32f671f45b0e3055d03b2fb39de0d8d9d3017d2';
 
+/**
+ * sha256('math|16|' + normalized rawStatement), same derivation as
+ * above, for the real task's text (taskNumber: 16, a credit problem:
+ * "В июне 2028 года Пётр Иванович планирует взять кредит в банке на 5
+ * лет в размере целого числа миллионов рублей... Найдите наибольший
+ * размер кредита, при котором общая сумма выплат по кредиту не
+ * превысит 10 млн рублей.") — verified independently against the DB
+ * row's own `content_hash` before this constant was written.
+ */
+const REAL_TASK_16_VARIANT_1_CONTENT_HASH =
+  '6014f377f0fa2bc80dca6d3710e8341fec930508a3e5f86652f303ff44aa97aa';
+
 /** contentHash → content-layer builder. One entry per authored task; never a `taskNumber` branch. */
 const CONTENT_BUILDERS: ReadonlyMap<string, (fields: ContentFields) => CanonicalSolution> = new Map(
   [
@@ -95,6 +108,10 @@ const CONTENT_BUILDERS: ReadonlyMap<string, (fields: ContentFields) => Canonical
     [
       REAL_TASK_15_VARIANT_1_CONTENT_HASH,
       solutionTemplates.buildCanonicalSolutionForTask15Variant1,
+    ],
+    [
+      REAL_TASK_16_VARIANT_1_CONTENT_HASH,
+      solutionTemplates.buildCanonicalSolutionForTask16Variant1,
     ],
   ],
 );

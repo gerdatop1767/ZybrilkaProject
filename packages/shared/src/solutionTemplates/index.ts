@@ -12,3 +12,5 @@ export * from './math/14/stereometry.v1.js';
 export * from './math/14/realTask14Variant1.js';
 export * from './math/15/inequality.v1.js';
 export * from './math/15/realTask15Variant1.js';
+export * from './math/16/economics.v1.js';
+export * from './math/16/realTask16Variant1.js';
