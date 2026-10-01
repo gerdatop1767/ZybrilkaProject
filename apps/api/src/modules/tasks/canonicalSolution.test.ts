@@ -585,6 +585,110 @@ describe('canonical solution in the Result flow (task 17, via the real HTTP API)
   });
 });
 
+describe('canonical solution in the Result flow (task 18, via the real HTTP API)', () => {
+  let testDb: Awaited<ReturnType<typeof createImportedTestDb>>;
+  let app: ReturnType<typeof buildApp>;
+
+  beforeAll(async () => {
+    testDb = await createImportedTestDb();
+    app = buildApp({ version: 'test', db: testDb.db });
+  });
+
+  afterAll(async () => {
+    await app.close();
+    await testDb.close();
+  });
+
+  async function getTask18WithSolution() {
+    const [task18] = await testDb.db
+      .select()
+      .from(schema.tasks)
+      .where(and(eq(schema.tasks.subjectId, 'math'), eq(schema.tasks.taskNumber, 18)));
+    expect(task18).toBeDefined();
+    const anonId = randomUUID();
+    await app.inject({
+      method: 'POST',
+      url: `/api/v1/tasks/${task18!.id}/attempt`,
+      headers: { 'x-anon-id': anonId },
+      payload: { answer: 'что угодно' },
+    });
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/tasks/${task18!.id}`,
+      headers: { 'x-anon-id': anonId },
+    });
+    return { task18: task18!, body: res.json() };
+  }
+
+  it('(A) GET /tasks/:id returns canonicalSolution for the real task 18, after an attempt', async () => {
+    const { body } = await getTask18WithSolution();
+    expect(body.canonicalSolution).toBeDefined();
+  });
+
+  it('(B) canonicalSolution contains template metadata, a single checkable "main" part, criticalPoints, and validation status/results', async () => {
+    const { body } = await getTask18WithSolution();
+    const cs = body.canonicalSolution;
+
+    expect(cs.templateId).toBe('math.18.parameters');
+    expect(cs.templateVersion).toBe('1.0.0');
+
+    expect(cs.parts.map((p: { id: string }) => p.id)).toEqual(['main']);
+    const mainPart = cs.parts[0];
+    expect(mainPart.hasCheckableAnswer).toBe(true);
+    expect(mainPart.steps.length).toBeGreaterThan(0);
+
+    expect(Array.isArray(cs.criticalPoints)).toBe(true);
+    expect(cs.criticalPoints.length).toBeGreaterThan(0);
+    expect(cs.criticalPoints.map((p: { id: string }) => p.id)).toContain(
+      'domain-a-nonnegative-must-be-stated',
+    );
+    // Never presented to the client as fipi_verified — see realTask18Variant1.ts's own sourcing note.
+    expect(cs.criticalPoints.some((p: { source: string }) => p.source === 'fipi_verified')).toBe(
+      false,
+    );
+
+    expect(cs.validation.status).toBe('validated');
+    expect(cs.validation.results.every((r: { passed: boolean }) => r.passed)).toBe(true);
+
+    expect(typeof cs.examWriteup).toBe('string');
+    expect(cs.examWriteup).toContain('a\\geqslant0');
+    expect(cs.examWriteup).toContain('Ответ:');
+  });
+
+  it('(C) explanationMd/solutionSteps keep working unchanged for task 18, alongside canonicalSolution', async () => {
+    const { body } = await getTask18WithSolution();
+    expect(typeof body.explanationMd).toBe('string');
+    expect(body.explanationMd.length).toBeGreaterThan(0);
+    expect(Array.isArray(body.solutionSteps)).toBe(true);
+    expect(body.solutionSteps.length).toBeGreaterThan(0);
+  });
+
+  it('(D) existing answer checking still grades task 18 attempts server-side, untouched', async () => {
+    const [task18] = await testDb.db
+      .select()
+      .from(schema.tasks)
+      .where(and(eq(schema.tasks.subjectId, 'math'), eq(schema.tasks.taskNumber, 18)));
+    const anonId = randomUUID();
+
+    const wrong = await app.inject({
+      method: 'POST',
+      url: `/api/v1/tasks/${task18!.id}/attempt`,
+      headers: { 'x-anon-id': anonId },
+      payload: { answer: 'обязательно неверно' },
+    });
+    expect(wrong.json().correct).toBe(false);
+
+    const right = await app.inject({
+      method: 'POST',
+      url: `/api/v1/tasks/${task18!.id}/attempt`,
+      headers: { 'x-anon-id': anonId },
+      payload: { answer: task18!.correctAnswer },
+    });
+    expect(right.json().correct).toBe(true);
+    expect(right.json()).not.toHaveProperty('canonicalSolution');
+  });
+});
+
 describe('getCanonicalSolutionForTask (unit)', () => {
   it('returns undefined for any contentHash other than a known real task', () => {
     const result = getCanonicalSolutionForTask({
@@ -611,7 +715,7 @@ describe('getCanonicalSolutionForTask (unit)', () => {
     ).not.toThrow();
   });
 
-  it('task 13, task 14, task 15, task 16, and task 17 content never cross-match — each contentHash resolves to its own template/content, never another', () => {
+  it('task 13, task 14, task 15, task 16, task 17, and task 18 content never cross-match — each contentHash resolves to its own template/content, never another', () => {
     const solution13 = getCanonicalSolutionForTask({
       id: 'id-13',
       subjectId: 'math',
@@ -652,20 +756,30 @@ describe('getCanonicalSolutionForTask (unit)', () => {
       correctAnswer: '6-3√2',
       correctAnswerDisplay: '$6-3\\sqrt2$',
     });
+    const solution18 = getCanonicalSolutionForTask({
+      id: 'id-18',
+      subjectId: 'math',
+      taskNumber: 18,
+      contentHash: 'e8a591e91a5072fdd4c8b685c9e4de467a463134597fe065de5edd882af41b79',
+      correctAnswer: '36/25; (√13-2;4)',
+      correctAnswerDisplay: '$\\dfrac{36}{25};\\ (\\sqrt{13}-2;\\ 4)$',
+    });
 
     expect(solution13?.templateId).toBe('math.13.equation');
     expect(solution14?.templateId).toBe('math.14.stereometry');
     expect(solution15?.templateId).toBe('math.15.inequality');
     expect(solution16?.templateId).toBe('math.16.economics');
     expect(solution17?.templateId).toBe('math.17.planimetry');
+    expect(solution18?.templateId).toBe('math.18.parameters');
     const templateIds = [
       solution13?.templateId,
       solution14?.templateId,
       solution15?.templateId,
       solution16?.templateId,
       solution17?.templateId,
+      solution18?.templateId,
     ];
-    expect(new Set(templateIds).size).toBe(5);
+    expect(new Set(templateIds).size).toBe(6);
   });
 
   it('a task 14 row whose taskNumber is 14 but whose contentHash does not match the real task 14 gets no canonical solution — taskNumber alone never triggers a match', () => {
@@ -710,6 +824,18 @@ describe('getCanonicalSolutionForTask (unit)', () => {
       subjectId: 'math',
       taskNumber: 17,
       contentHash: 'some-other-task-17-that-shares-the-number-but-not-the-content',
+      correctAnswer: 'irrelevant',
+      correctAnswerDisplay: null,
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it('a task 18 row whose taskNumber is 18 but whose contentHash does not match the real task 18 gets no canonical solution — taskNumber alone never triggers a match', () => {
+    const result = getCanonicalSolutionForTask({
+      id: 'a-different-task-18-in-the-future',
+      subjectId: 'math',
+      taskNumber: 18,
+      contentHash: 'some-other-task-18-that-shares-the-number-but-not-the-content',
       correctAnswer: 'irrelevant',
       correctAnswerDisplay: null,
     });

@@ -16,3 +16,5 @@ export * from './math/16/economics.v1.js';
 export * from './math/16/realTask16Variant1.js';
 export * from './math/17/planimetry.v1.js';
 export * from './math/17/realTask17Variant1.js';
+export * from './math/18/parameters.v1.js';
+export * from './math/18/realTask18Variant1.js';
