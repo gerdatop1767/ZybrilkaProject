@@ -10,6 +10,7 @@ import { Icon } from '../../ui/Icon/Icon.js';
 import { SubjectHeaderMobile } from '../../ui/SubjectHeader/SubjectHeaderMobile.js';
 import { StatTile } from '../../ui/Statistics/StatTile.js';
 import { MistakeCardMobile } from '../../ui/Mistakes/MistakeCardMobile.js';
+import { MistakeNumberGroup } from '../../ui/Mistakes/MistakeNumberGroup.js';
 import { FeedbackState } from '../../ui/FeedbackState/FeedbackState.js';
 import { SlideUp } from '../../ui/motion/motion.js';
 import styles from './MistakesMobile.module.css';
@@ -153,27 +154,39 @@ export function MistakesMobile() {
           />
         ) : (
           <div className={styles.list}>
-            {groups.map((group) => (
-              <div key={group.label ?? 'all'}>
-                {group.label && (
-                  <p className={`text-body-sm text-secondary ${styles.groupLabel}`}>
-                    {group.label}
-                  </p>
-                )}
-                <div className={styles.list}>
-                  {group.items.map((m) => (
-                    <MistakeCardMobile
-                      key={m.id}
-                      mistake={m}
-                      selected={selected.has(m.id)}
-                      onToggleSelect={() => toggleSelect(m.id)}
-                      onRetry={() => openMistake(m)}
-                      onOpen={() => openMistake(m)}
-                    />
-                  ))}
+            {groups.map((group) => {
+              const cards = group.items.map((m) => (
+                <MistakeCardMobile
+                  key={m.id}
+                  mistake={m}
+                  selected={selected.has(m.id)}
+                  onToggleSelect={() => toggleSelect(m.id)}
+                  onRetry={() => openMistake(m)}
+                  onOpen={() => openMistake(m)}
+                />
+              ));
+              if (group.taskNumber !== null) {
+                return (
+                  <MistakeNumberGroup
+                    key={group.taskNumber}
+                    taskNumber={group.taskNumber}
+                    count={group.items.length}
+                  >
+                    {cards}
+                  </MistakeNumberGroup>
+                );
+              }
+              return (
+                <div key={group.label ?? 'all'}>
+                  {group.label && (
+                    <p className={`text-body-sm text-secondary ${styles.groupLabel}`}>
+                      {group.label}
+                    </p>
+                  )}
+                  <div className={styles.list}>{cards}</div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -193,19 +206,21 @@ export function MistakesMobile() {
 
 interface MistakeGroup {
   label: string | null;
+  taskNumber: number | null;
   items: readonly Mistake[];
 }
 
-function buildGroups(items: readonly Mistake[], view: string): readonly MistakeGroup[] {
-  if (view === 'byTask') {
-    const byTask = new Map<number, Mistake[]>();
-    for (const m of items) {
-      (byTask.get(m.taskNumber) ?? byTask.set(m.taskNumber, []).get(m.taskNumber)!).push(m);
-    }
-    return [...byTask.entries()]
-      .sort((a, b) => a[0] - b[0])
-      .map(([number, group]) => ({ label: `Задание №${number}`, items: group }));
+function byTaskNumberGroups(items: readonly Mistake[]): readonly MistakeGroup[] {
+  const byTask = new Map<number, Mistake[]>();
+  for (const m of items) {
+    (byTask.get(m.taskNumber) ?? byTask.set(m.taskNumber, []).get(m.taskNumber)!).push(m);
   }
+  return [...byTask.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([number, group]) => ({ label: null, taskNumber: number, items: group }));
+}
+
+function buildGroups(items: readonly Mistake[], view: string): readonly MistakeGroup[] {
   if (view === 'byTopic') {
     const byTopic = new Map<string, Mistake[]>();
     for (const m of items) {
@@ -213,7 +228,11 @@ function buildGroups(items: readonly Mistake[], view: string): readonly MistakeG
     }
     return [...byTopic.entries()]
       .sort((a, b) => b[1].length - a[1].length)
-      .map(([topic, group]) => ({ label: topic, items: group }));
+      .map(([topic, group]) => ({ label: topic, taskNumber: null, items: group }));
   }
-  return items.length ? [{ label: null, items }] : [];
+  // "Все ошибки" and "По заданиям" both group the real list by task
+  // number — a long flat feed is no longer the default, the number is
+  // the primary visual element (MistakeNumberGroup), expandable/
+  // collapsible per group.
+  return byTaskNumberGroups(items);
 }

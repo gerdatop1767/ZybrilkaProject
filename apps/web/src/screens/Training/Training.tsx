@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
-import { getSubjectContent } from '../../data/subjectContent.js';
 import {
   ApiError,
   getRandomTask,
@@ -26,25 +25,40 @@ import { clsx } from '../../lib/clsx.js';
 import { SlideUp } from '../../ui/motion/motion.js';
 import styles from './Training.module.css';
 
-/** Independent per-number choice in "По номерам" — a user can mix both
- * across their selected numbers in one training run. 'random' mirrors
- * the pre-existing "Рандом" behavior (whole published pool, ignoring
- * any selected Сборник); 'unseen' uses the real backend `unseen` filter
- * (GET /tasks/random?unseen=true), scoped to the selected Сборник like
- * before. */
-type ByNumberMode = 'random' | 'unseen';
-
-/** Fisher-Yates — only ever reorders which already-selected numbers the
- * user solves first; never affects which task is picked for a number
- * (that stays exactly `getRandomTask`/the real `unseen` filter). */
-function shuffled<T>(items: readonly T[]): T[] {
-  const result = [...items];
-  for (let i = result.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j]!, result[i]!];
-  }
-  return result;
+interface QuickScenario {
+  id: 'random' | 'unseen' | 'byNumber';
+  icon: IconName;
+  label: string;
+  description: string;
+  accent: string;
 }
+
+/** The three obvious entry points the task-selection UX needs (not
+ * buried in the generic mode grid below): an immediate random task, an
+ * immediate unseen-only task, and the dedicated multi-number screen. */
+const quickScenarios: readonly QuickScenario[] = [
+  {
+    id: 'random',
+    icon: 'dice',
+    label: 'Случайные задания',
+    description: 'Любое задание по предмету',
+    accent: 'var(--color-accent-primary)',
+  },
+  {
+    id: 'unseen',
+    icon: 'retry',
+    label: 'Только нерешённые',
+    description: 'Задания, которые ты ещё не встречал',
+    accent: 'var(--color-success)',
+  },
+  {
+    id: 'byNumber',
+    icon: 'checklist',
+    label: 'По номерам',
+    description: 'Выбери конкретные номера и режим для каждого',
+    accent: 'var(--chart-6)',
+  },
+];
 
 interface TrainingMode {
   id: string;
@@ -76,13 +90,6 @@ const trainingModes: readonly TrainingMode[] = [
     label: 'Повторение',
     description: 'Закрепи то, что уже решал',
     accent: 'var(--color-warning)',
-  },
-  {
-    id: 'byNumber',
-    icon: 'checklist',
-    label: 'По номерам',
-    description: 'Выбери номер задания и как его подобрать',
-    accent: 'var(--chart-6)',
   },
   {
     id: 'smart',
@@ -137,36 +144,8 @@ export function Training() {
   const [collectionSlug, setCollectionSlug] = useState<string | null>(null);
   const [variantId, setVariantId] = useState<string | null>(null);
   const [taskNumberInput, setTaskNumberInput] = useState('');
-  const [byNumberSelection, setByNumberSelection] = useState<Record<number, ByNumberMode>>({});
-  const [shuffleOrder, setShuffleOrder] = useState(false);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
-
-  // A number not valid for the newly selected subject (e.g. №19 after
-  // switching to a subject with fewer numbers) must not stay silently
-  // selected — the chip grid below it won't even render that number.
-  function selectSubject(id: string) {
-    setSubjectId(id);
-    const max = getSubjectContent(id).taskNumberCount;
-    setByNumberSelection((prev) =>
-      Object.fromEntries(Object.entries(prev).filter(([n]) => Number(n) <= max)),
-    );
-  }
-
-  function toggleByNumber(number: number) {
-    setByNumberSelection((prev) => {
-      if (number in prev) {
-        const next = { ...prev };
-        delete next[number];
-        return next;
-      }
-      return { ...prev, [number]: 'random' };
-    });
-  }
-
-  function setByNumberMode(number: number, mode: ByNumberMode) {
-    setByNumberSelection((prev) => (number in prev ? { ...prev, [number]: mode } : prev));
-  }
 
   useEffect(() => {
     let cancelled = false;
@@ -190,6 +169,38 @@ export function Training() {
     setVariantId(null);
   }
 
+  async function startQuickScenario(id: 'random' | 'unseen') {
+    setStartError(null);
+    setStarting(true);
+    try {
+      const task = await getRandomTask({
+        subject: subjectId ?? undefined,
+        collection: collectionSlug ?? undefined,
+        unseen: id === 'unseen' || undefined,
+      });
+      navigate({
+        screen: 'task',
+        subjectId: task.subjectId,
+        taskNumber: task.taskNumber,
+        taskId: task.id,
+        collectionSlug: collectionSlug ?? undefined,
+        returnTo: { screen: 'training' },
+      });
+    } catch (error) {
+      if (
+        id === 'unseen' &&
+        error instanceof ApiError &&
+        (error.body as { error?: string })?.error === 'no_unseen_tasks'
+      ) {
+        setStartError('Нерешённых заданий по этому предмету больше нет — попробуй «Случайные».');
+      } else {
+        setStartError('Не нашлось подходящих заданий — попробуй другие фильтры.');
+      }
+    } finally {
+      setStarting(false);
+    }
+  }
+
   async function handleStart() {
     setStartError(null);
     if (modeId === 'mistakes') {
@@ -208,61 +219,6 @@ export function Training() {
         if (outcome === 'none') {
           setStartError('Не нашлось подходящих заданий для умной тренировки.');
         }
-        return;
-      }
-
-      if (modeId === 'byNumber') {
-        const numbers = Object.keys(byNumberSelection).map(Number);
-        if (numbers.length === 0) {
-          setStartError('Выбери хотя бы один номер задания.');
-          return;
-        }
-        const orderedNumbers = shuffleOrder
-          ? shuffled(numbers)
-          : numbers.slice().sort((a, b) => a - b);
-
-        // Resolved one at a time (not Promise.all) so a `no_unseen_tasks`
-        // on one number stops immediately with an honest, specific
-        // message — never silently swapping in a random task for it, and
-        // never discarding tasks already fetched for earlier numbers.
-        const tasks: Awaited<ReturnType<typeof getRandomTask>>[] = [];
-        for (const number of orderedNumbers) {
-          const mode = byNumberSelection[number]!;
-          try {
-            const task = await getRandomTask({
-              subject: subjectId ?? undefined,
-              taskNumber: number,
-              // 'random' explicitly draws from the whole published pool
-              // for this number, not just the currently selected
-              // "Сборник" — 'unseen' keeps today's scoped behavior.
-              collection: mode === 'random' ? undefined : (collectionSlug ?? undefined),
-              unseen: mode === 'unseen' || undefined,
-            });
-            tasks.push(task);
-          } catch (error) {
-            if (
-              error instanceof ApiError &&
-              (error.body as { error?: string })?.error === 'no_unseen_tasks'
-            ) {
-              setStartError(
-                `Для №${number} больше нет нерешённых заданий. Можно сменить режим на «Случайное» для этого номера.`,
-              );
-            } else {
-              setStartError('Не нашлось подходящих заданий — попробуй другие номера или режимы.');
-            }
-            return;
-          }
-        }
-
-        const first = tasks[0]!;
-        navigate({
-          screen: 'task',
-          subjectId: first.subjectId,
-          taskNumber: first.taskNumber,
-          taskId: first.id,
-          customOrderedTasks: tasks.map((t) => ({ taskId: t.id, taskNumber: t.taskNumber })),
-          returnTo: { screen: 'training' },
-        });
         return;
       }
 
@@ -322,8 +278,39 @@ export function Training() {
         label="Предмет"
         options={subjectSelectOptions}
         value={subjectId}
-        onChange={selectSubject}
+        onChange={setSubjectId}
       />
+
+      <div>
+        <SectionHeader title="Быстрый старт" />
+        <div className={styles.modeGrid}>
+          {quickScenarios.map((scenario) => (
+            <button
+              key={scenario.id}
+              type="button"
+              className={styles.modeCard}
+              onClick={() => {
+                if (scenario.id === 'byNumber') {
+                  navigate({ screen: 'trainingByNumber' });
+                } else {
+                  void startQuickScenario(scenario.id);
+                }
+              }}
+            >
+              <span
+                className={styles.modeIcon}
+                style={{ ['--mode-accent' as string]: scenario.accent }}
+              >
+                <Icon name={scenario.icon} size={20} />
+              </span>
+              <span className={styles.modeText}>
+                <span className="text-body">{scenario.label}</span>
+                <span className="text-body-sm text-secondary">{scenario.description}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div>
         <SectionHeader title="Режим тренировки" />
@@ -387,7 +374,7 @@ export function Training() {
         </div>
       )}
 
-      {modeId !== 'variant' && modeId !== 'mistakes' && modeId !== 'byNumber' && (
+      {modeId !== 'variant' && modeId !== 'mistakes' && (
         <Input
           label="Номер задания"
           placeholder="Например, 5 — необязательно"
@@ -395,77 +382,6 @@ export function Training() {
           value={taskNumberInput}
           onChange={(e) => setTaskNumberInput(e.target.value.replace(/\D/g, ''))}
         />
-      )}
-
-      {modeId === 'byNumber' && (
-        <>
-          <div>
-            <SectionHeader title="Номера заданий" />
-            <p className="text-body-sm text-secondary" style={{ marginTop: '-4px' }}>
-              Выбери один или несколько номеров — для каждого можно задать свой режим подбора.
-            </p>
-            <div className={styles.chipRow}>
-              {Array.from(
-                { length: getSubjectContent(subjectId ?? 'math').taskNumberCount },
-                (_, i) => i + 1,
-              ).map((number) => (
-                <Chip
-                  key={number}
-                  selected={number in byNumberSelection}
-                  onClick={() => toggleByNumber(number)}
-                >
-                  №{number}
-                </Chip>
-              ))}
-            </div>
-          </div>
-
-          {Object.keys(byNumberSelection).length > 0 && (
-            <div>
-              <SectionHeader title="Режим для каждого номера" />
-              <div className={styles.byNumberModeList}>
-                {Object.keys(byNumberSelection)
-                  .map(Number)
-                  .sort((a, b) => a - b)
-                  .map((number) => {
-                    const mode = byNumberSelection[number]!;
-                    return (
-                      <div key={number} className={styles.byNumberModeRow}>
-                        <span className="text-body-sm" style={{ fontWeight: 700 }}>
-                          №{number}
-                        </span>
-                        <div className={styles.chipRow}>
-                          <Chip
-                            icon="dice"
-                            selected={mode === 'random'}
-                            onClick={() => setByNumberMode(number, 'random')}
-                          >
-                            Случайное
-                          </Chip>
-                          <Chip
-                            icon="retry"
-                            selected={mode === 'unseen'}
-                            onClick={() => setByNumberMode(number, 'unseen')}
-                          >
-                            Только нерешённые
-                          </Chip>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-
-              <Chip
-                icon="shuffle"
-                selected={shuffleOrder}
-                onClick={() => setShuffleOrder((v) => !v)}
-                className={styles.shuffleChip}
-              >
-                Перемешать порядок
-              </Chip>
-            </div>
-          )}
-        </>
       )}
 
       <div>

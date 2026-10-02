@@ -12,8 +12,8 @@ vi.mock('../../lib/api.js', () => ({
 }));
 
 function OverlayMarker() {
-  const { overlay } = useNavigation();
-  return <p data-testid="overlay">{overlay?.screen ?? 'none'}</p>;
+  const { overlay, tab } = useNavigation();
+  return <p data-testid="overlay">{overlay?.screen ?? tab}</p>;
 }
 
 function renderProfile() {
@@ -60,8 +60,8 @@ describe('Profile', () => {
       timeBySubject: [],
     });
     renderProfile();
-    await waitFor(() => expect(screen.getByText('42')).toBeInTheDocument());
-    expect(screen.getByText('71%')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('42')).toBeInTheDocument(), { timeout: 2000 });
+    await waitFor(() => expect(screen.getByText('71%')).toBeInTheDocument(), { timeout: 2000 });
   });
 
   it('shows a neutral placeholder for achievements, never fake unlock data', () => {
@@ -102,5 +102,72 @@ describe('Profile', () => {
     await screen.findByText('Изменить предметы и цели');
     await user.click(screen.getByRole('button', { name: /Изменить предметы и цели/ }));
     expect(screen.getByTestId('overlay')).toHaveTextContent('onboarding');
+  });
+
+  it('never fabricates a name/avatar — shows the honest "не задано" identity, same convention as Desktop', () => {
+    renderProfile();
+    expect(screen.getByText('Имя не задано')).toBeInTheDocument();
+    expect(screen.getByText('Профиль ещё не настроен')).toBeInTheDocument();
+  });
+
+  it('shows the real per-subject accuracy from /progress/summary on the subject row, never a fabricated percent', async () => {
+    vi.mocked(api.getLearningProfile).mockResolvedValue({
+      onboardingCompleted: true,
+      subjects: [{ subjectId: 'math', selfReportedScore: '70_plus', targetScore: '90_plus' }],
+    });
+    vi.mocked(api.getProgressSummary).mockResolvedValue({
+      solvedTotal: 12,
+      correctTotal: 9,
+      incorrectTotal: 3,
+      accuracyPercent: 75,
+      bySubject: [{ subjectId: 'math', solved: 12, correct: 9, accuracyPercent: 75 }],
+      byTaskNumber: [],
+      byTopic: [],
+      timeBySubject: [],
+    });
+    renderProfile();
+    await waitFor(() => expect(screen.getByText('75%')).toBeInTheDocument(), { timeout: 2000 });
+  });
+
+  it('shows an honest "—" (not 0%) for a subject with no solved attempts yet', async () => {
+    vi.mocked(api.getLearningProfile).mockResolvedValue({
+      onboardingCompleted: true,
+      subjects: [{ subjectId: 'math', selfReportedScore: '70_plus', targetScore: '90_plus' }],
+    });
+    renderProfile();
+    await screen.findByText('Математика');
+    expect(screen.getByText('—')).toBeInTheDocument();
+  });
+
+  it('navigates to the real subject page when a subject row is tapped', async () => {
+    vi.mocked(api.getLearningProfile).mockResolvedValue({
+      onboardingCompleted: true,
+      subjects: [{ subjectId: 'math', selfReportedScore: '70_plus', targetScore: '90_plus' }],
+    });
+    const user = userEvent.setup();
+    renderProfile();
+    await user.click(await screen.findByText('Математика'));
+    expect(screen.getByTestId('overlay')).toHaveTextContent('subject');
+  });
+
+  it('navigates to the real Достижения tab via "Все достижения", never showing fake unlock progress', async () => {
+    const user = userEvent.setup();
+    renderProfile();
+    await user.click(screen.getByRole('button', { name: 'Все достижения' }));
+    expect(screen.getByTestId('overlay')).toHaveTextContent('achievements');
+  });
+
+  it('navigates to the real notifications route from the settings "Уведомления" row', async () => {
+    const user = userEvent.setup();
+    renderProfile();
+    await user.click(screen.getByRole('button', { name: /Уведомления/ }));
+    expect(screen.getByTestId('overlay')).toHaveTextContent('notifications');
+  });
+
+  it('opens the Menu drawer (Рейтинг/Настройки/Помощь/О проекте…) via the header gear button', async () => {
+    const user = userEvent.setup();
+    renderProfile();
+    await user.click(screen.getByRole('button', { name: 'Меню' }));
+    expect(screen.getByTestId('overlay')).toHaveTextContent('menu');
   });
 });

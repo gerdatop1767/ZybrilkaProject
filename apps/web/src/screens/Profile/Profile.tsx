@@ -6,20 +6,27 @@ import { subjects as staticSubjects } from '../../data/subjects.js';
 import { Card } from '../../ui/Card/Card.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { SectionHeader } from '../../ui/SectionHeader/SectionHeader.js';
+import { StatTile } from '../../ui/Statistics/StatTile.js';
+import { SubjectTile } from '../../ui/SubjectTile/SubjectTile.js';
 import { useNavigation } from '../../lib/navigation.js';
 import { SlideUp } from '../../ui/motion/motion.js';
 import styles from './Profile.module.css';
 
-function subjectShortName(subjectId: string): string {
-  return staticSubjects.find((s) => s.id === subjectId)?.shortName ?? subjectId;
+function findSubject(subjectId: string) {
+  return staticSubjects.find((s) => s.id === subjectId);
 }
 
 /**
- * Profile — identity (no auth/user-profile backend exists yet, so no
- * name/avatar/bio is shown as if it were real), real solved/accuracy
- * from `GET /progress/summary`, and a neutral placeholder for
- * achievements (no achievements backend exists — see docs/
- * PRODUCTION_DATA_MODEL.md before building one instead of guessing).
+ * Mobile Профиль, rebuilt against the approved reference
+ * (profile_mobile_target.jpeg) as closely as the real data allows. No
+ * auth/account backend exists yet — no real name, username, avatar
+ * photo, class/grade, level or XP — so the identity card uses the same
+ * honest "не задано" convention ProfileDesktop already established,
+ * instead of inventing a person. Достижения has no backend either
+ * (see AchievementsMobile), so that section stays a neutral prompt
+ * rather than fabricated badge progress. Everything else (solved/
+ * accuracy, real per-subject accuracy, real subjects/targets) comes
+ * straight from GET /progress/summary and GET /me/learning/profile.
  */
 export function Profile() {
   const { navigate } = useNavigation();
@@ -48,62 +55,128 @@ export function Profile() {
     };
   }, []);
 
+  const hasSubjects = (learningProfile?.subjects.length ?? 0) > 0;
+
   return (
     <SlideUp className={styles.stack}>
-      <h1 className="text-h1">Профиль</h1>
+      <div className={styles.headerRow}>
+        <h1 className="text-h1">Профиль</h1>
+        <button
+          type="button"
+          className={styles.iconButton}
+          aria-label="Меню"
+          onClick={() => navigate({ screen: 'menu' })}
+        >
+          <Icon name="settings" size={20} />
+        </button>
+      </div>
 
-      <Card>
-        <div className={styles.statsRow}>
-          <div className={styles.stat}>
-            <span className="text-stat">{progress?.solvedTotal ?? 0}</span>
-            <span className="text-body-sm text-secondary">Решено</span>
-          </div>
-          <div className={styles.stat}>
-            <span className="text-stat">
-              {progress ? Math.round(progress.accuracyPercent) : 0}%
-            </span>
-            <span className="text-body-sm text-secondary">Точность</span>
+      <Card className={styles.identityCard}>
+        <div className={styles.identity}>
+          <span className={styles.avatarWrap} aria-hidden="true">
+            <Icon name="profile" size={32} />
+          </span>
+          <div className={styles.identityText}>
+            <p className="text-h3">Имя не задано</p>
+            <p className="text-body-sm text-secondary">Профиль ещё не настроен</p>
           </div>
         </div>
       </Card>
 
-      <div>
-        <SectionHeader title="Предметы ЕГЭ" />
-        <Card>
-          {learningProfile && learningProfile.subjects.length > 0 ? (
-            <div className={styles.subjectsList}>
-              {learningProfile.subjects.map((s) => (
-                <div key={s.subjectId} className={styles.subjectRow}>
-                  <span className="text-body">{subjectShortName(s.subjectId)}</span>
-                  <span className="text-body-sm text-secondary">
-                    Сейчас: {selfReportedScoreLabel(s.selfReportedScore)} · Цель:{' '}
-                    {targetScoreLabel(s.targetScore)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-body-sm text-secondary">Предметы и цели ещё не выбраны.</p>
-          )}
-          <button
-            type="button"
-            className={styles.settingsRow}
-            onClick={() => navigate({ screen: 'onboarding' })}
-          >
-            <span className={styles.settingsIcon}>
-              <Icon name="topic" size={18} />
-            </span>
-            <span className={styles.settingsLabel}>
-              {learningProfile && learningProfile.subjects.length > 0
-                ? 'Изменить предметы и цели'
-                : 'Выбрать предметы'}
-            </span>
-          </button>
-        </Card>
+      <div className={styles.statsGrid}>
+        <StatTile
+          className={styles.statTile}
+          icon="target"
+          iconColor="var(--color-accent-primary)"
+          label="Решено"
+          value={progress?.solvedTotal ?? 0}
+        />
+        <StatTile
+          className={styles.statTile}
+          icon="progress"
+          iconColor="var(--color-accent-secondary)"
+          label="Точность"
+          value={progress ? Math.round(progress.accuracyPercent) : 0}
+          suffix="%"
+        />
       </div>
 
       <div>
-        <SectionHeader title="Достижения" />
+        <SectionHeader
+          title="Предметы ЕГЭ"
+          action={{ label: 'Изменить', onClick: () => navigate({ screen: 'onboarding' }) }}
+        />
+        {hasSubjects ? (
+          <div className={styles.subjectsList}>
+            {learningProfile!.subjects.map((s) => {
+              const subject = findSubject(s.subjectId);
+              const stats = progress?.bySubject.find((b) => b.subjectId === s.subjectId);
+              const hasAccuracy = (stats?.solved ?? 0) > 0;
+              return (
+                <button
+                  key={s.subjectId}
+                  type="button"
+                  className={styles.subjectCard}
+                  onClick={() => navigate({ screen: 'subject', subjectId: s.subjectId })}
+                >
+                  {subject && <SubjectTile glyph={subject.glyph} color={subject.color} size={40} />}
+                  <span className={styles.subjectText}>
+                    <span className="text-body">{subject?.shortName ?? s.subjectId}</span>
+                    <span className="text-body-sm text-secondary">
+                      Сейчас: {selfReportedScoreLabel(s.selfReportedScore)} · Цель:{' '}
+                      {targetScoreLabel(s.targetScore)}
+                    </span>
+                  </span>
+                  <span className={styles.subjectPercent}>
+                    {hasAccuracy ? (
+                      <>
+                        <span className="text-body-sm" style={{ fontWeight: 700 }}>
+                          {Math.round(stats!.accuracyPercent)}%
+                        </span>
+                        <span className={styles.subjectBar}>
+                          <span
+                            className={styles.subjectBarFill}
+                            style={{
+                              width: `${Math.round(stats!.accuracyPercent)}%`,
+                              background: subject?.color,
+                            }}
+                          />
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-body-sm text-secondary">—</span>
+                    )}
+                  </span>
+                  <Icon name="chevronRight" size={18} className={styles.subjectChevron} />
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <Card>
+            <p className="text-body-sm text-secondary">Предметы и цели ещё не выбраны.</p>
+          </Card>
+        )}
+        <button
+          type="button"
+          className={styles.settingsRow}
+          onClick={() => navigate({ screen: 'onboarding' })}
+        >
+          <span className={styles.settingsIcon}>
+            <Icon name="topic" size={18} />
+          </span>
+          <span className={styles.settingsLabel}>
+            {hasSubjects ? 'Изменить предметы и цели' : 'Выбрать предметы'}
+          </span>
+          <Icon name="chevronRight" size={16} className={styles.subjectChevron} />
+        </button>
+      </div>
+
+      <div>
+        <SectionHeader
+          title="Достижения"
+          action={{ label: 'Все достижения', onClick: () => navigate({ screen: 'achievements' }) }}
+        />
         <Card>
           <p className="text-body-sm text-secondary">Достижения скоро появятся здесь.</p>
         </Card>
@@ -122,6 +195,36 @@ export function Profile() {
             </span>
             <span className={styles.settingsLabel}>Пройти диагностику заново</span>
           </button>
+          <button
+            type="button"
+            className={styles.settingsRow}
+            onClick={() => navigate({ screen: 'notifications' })}
+          >
+            <span className={styles.settingsIcon}>
+              <Icon name="notifications" size={18} />
+            </span>
+            <span className={styles.settingsLabel}>
+              Уведомления
+              <span className={styles.settingsSublabel}>Напоминания, серия, обновления</span>
+            </span>
+            <Icon name="chevronRight" size={16} className={styles.subjectChevron} />
+          </button>
+          <div className={styles.settingsRow}>
+            <span className={styles.settingsIcon}>
+              <Icon name="language" size={18} />
+            </span>
+            <span className={styles.settingsLabel}>Язык</span>
+            <span className="text-body-sm text-secondary">Русский</span>
+          </div>
+          <div className={styles.settingsRow}>
+            <span className={styles.settingsIcon}>
+              <Icon name="shield" size={18} />
+            </span>
+            <span className={styles.settingsLabel}>
+              Конфиденциальность
+              <span className={styles.settingsSublabel}>Данные и безопасность</span>
+            </span>
+          </div>
           <div className={styles.settingsInfo}>
             <Icon name="info" size={18} />
             <span className="text-body-sm">

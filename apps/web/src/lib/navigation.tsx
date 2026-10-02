@@ -129,6 +129,11 @@ export type OverlayRoute =
   | { screen: 'trainingTopic' }
   | { screen: 'trainingRandom' }
   | { screen: 'trainingVariants' }
+  /** The dedicated "Тренировка → По номерам" screen (real, not a WIP
+   * placeholder) — multi-select task numbers, an independent
+   * 🎲 Случайное / 🔄 Только нерешённые mode per number, and an
+   * optional shuffle of solving order. See TrainingByNumber.tsx. */
+  | { screen: 'trainingByNumber' }
   | { screen: 'rating' }
   | { screen: 'about' }
   | { screen: 'menu' }
@@ -161,6 +166,7 @@ const routeLabels: Partial<Record<Route['screen'], string>> = {
   learningSession: 'Тренировка',
   subjectCatalog: 'Предметы',
   mistakes: 'Мои ошибки',
+  trainingByNumber: 'По номерам',
   rating: 'Рейтинг',
   about: 'О проекте',
 };

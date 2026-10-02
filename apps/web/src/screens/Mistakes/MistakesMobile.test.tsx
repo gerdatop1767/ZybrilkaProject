@@ -24,6 +24,20 @@ const apiMistakes = [
     createdAt: '2026-09-25T00:00:00.000Z',
     updatedAt: '2026-09-25T00:00:00.000Z',
   },
+  {
+    id: 'm2',
+    taskId: '22222222-2222-2222-2222-222222222222',
+    subjectId: 'math',
+    taskNumber: 17,
+    topicName: 'Параметры',
+    conditionMd: 'Найдите все значения параметра a',
+    userAnswer: '0',
+    correctAnswer: '1',
+    timesWrong: 1,
+    status: 'open' as const,
+    createdAt: '2026-09-26T00:00:00.000Z',
+    updatedAt: '2026-09-26T00:00:00.000Z',
+  },
 ];
 
 function OverlayMarker() {
@@ -74,5 +88,29 @@ describe('MistakesMobile', () => {
     await screen.findByText(apiMistakes[0]!.conditionMd);
     await user.click(screen.getByText(apiMistakes[0]!.conditionMd));
     expect(screen.getByTestId('overlay')).toHaveTextContent('task:returnTo=mistakes');
+  });
+
+  it('groups the real mistakes by task number, with the number as the group header', async () => {
+    vi.mocked(api.getMistakes).mockResolvedValue(apiMistakes);
+    renderScreen();
+    await screen.findByText(apiMistakes[0]!.conditionMd);
+    expect(screen.getByRole('button', { name: /№15/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /№17/ })).toBeInTheDocument();
+  });
+
+  it('collapses and re-expands a task-number group without losing the real mistake', async () => {
+    vi.mocked(api.getMistakes).mockResolvedValue(apiMistakes);
+    const user = userEvent.setup();
+    renderScreen();
+    await screen.findByText(apiMistakes[0]!.conditionMd);
+    const group15Header = screen.getByRole('button', { name: /№15/ });
+    expect(group15Header).toHaveAttribute('aria-expanded', 'true');
+    await user.click(group15Header);
+    expect(group15Header).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText(apiMistakes[0]!.conditionMd)).not.toBeInTheDocument();
+    // The other group (№17) stays untouched and visible.
+    expect(screen.getByText(apiMistakes[1]!.conditionMd)).toBeInTheDocument();
+    await user.click(group15Header);
+    expect(await screen.findByText(apiMistakes[0]!.conditionMd)).toBeInTheDocument();
   });
 });

@@ -1,14 +1,15 @@
 import type { BottomNavItem } from './BottomNav.js';
 
 /**
- * The 5-item nav. The second slot opens "Мои ошибки" directly (fix
- * audit Block 2) — a real, high-value training mode — rather than a
- * generic "Тренировка" tab; the full training entry point stays
- * reachable from Home and the menu.
+ * The 5-item nav (matches the approved reference,
+ * profile_mobile_target.jpeg): Главная / Задания / Статистика /
+ * Достижения / Профиль. "Мои ошибки" stays reachable from Statistics'
+ * own link and the Menu drawer — it's no longer a tab slot, but it was
+ * never removed as a feature.
  */
 export const defaultBottomNavItems: readonly BottomNavItem[] = [
   { id: 'home', label: 'Главная', icon: 'home' },
-  { id: 'mistakes', label: 'Мои ошибки', icon: 'mistakes' },
+  { id: 'training', label: 'Задания', icon: 'training' },
   { id: 'statistics', label: 'Статистика', icon: 'progress' },
   { id: 'achievements', label: 'Достижения', icon: 'achievements' },
   { id: 'profile', label: 'Профиль', icon: 'profile' },
