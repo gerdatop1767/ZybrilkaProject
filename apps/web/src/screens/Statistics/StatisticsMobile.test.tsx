@@ -191,6 +191,7 @@ describe('StatisticsMobile — По номерам detail (Statistics 2.0)', () 
       medianTimeMs: 11000,
       timedAttempts: 4,
       lastAttemptAt: new Date().toISOString(),
+      taskType: 'Тригонометрические уравнения',
       errorBreakdown: [],
       skillBreakdown: [],
       recentAccuracy: null,

@@ -36,8 +36,8 @@ function mockCollections(items = [YASHCHENKO_COLLECTION]) {
 }
 
 function OverlayMarker() {
-  const { overlay } = useNavigation();
-  return <p data-testid="overlay">{overlay?.screen ?? 'none'}</p>;
+  const { overlay, tab } = useNavigation();
+  return <p data-testid="overlay">{overlay?.screen ?? `tab:${tab}`}</p>;
 }
 
 function renderSubject() {
@@ -152,13 +152,27 @@ describe('SubjectDesktop — Темы (real API, no fake hash)', () => {
   });
 });
 
-describe('SubjectDesktop — Случайные задания source filter', () => {
-  it('shows the real source selector for random tasks', async () => {
+describe('SubjectDesktop — "Случайные задания" mode removed (now lives in Training)', () => {
+  it('no longer shows a "Случайные задания" mode tab', () => {
+    mockCollections();
+    renderSubject();
+    expect(screen.queryByText('Случайные задания')).not.toBeInTheDocument();
+  });
+
+  it('only shows the remaining three mode tabs, so the grid is not empty/broken', () => {
+    mockCollections();
+    renderSubject();
+    expect(screen.getByText('Темы')).toBeInTheDocument();
+    expect(screen.getByText('Варианты')).toBeInTheDocument();
+    expect(screen.getByText('Избранное')).toBeInTheDocument();
+  });
+
+  it('"Быстрый старт" → "Случайное задание" now navigates to Training instead of a removed mode', async () => {
     mockCollections();
     const user = userEvent.setup();
     renderSubject();
-    await user.click(screen.getByText('Случайные задания'));
-    expect(screen.getByText('Общий банк')).toBeInTheDocument();
+    await user.click(screen.getByText('Случайное задание'));
+    await waitFor(() => expect(screen.getByTestId('overlay')).toHaveTextContent('training'));
   });
 });
 

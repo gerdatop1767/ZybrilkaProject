@@ -4,6 +4,14 @@
   gap: var(--space-3, 12px);
 }
 
+/* Statistics 2.0's "По номерам" overview — same cards/colors/progress
+   bars, just denser so all numbers read as one compact block instead
+   of a tall list (never a new visual style, just tighter spacing). */
+.gridCompact {
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: var(--space-2, 8px);
+}
+
 .card {
   display: flex;
   flex-direction: column;
@@ -15,6 +23,24 @@
   border-radius: var(--radius-md, 10px);
   min-height: var(--touch-target-min);
   animation: fadeIn 0.35s ease-out both;
+}
+
+.cardCompact {
+  gap: 4px;
+  padding: 6px var(--space-2, 8px);
+  min-height: 0;
+}
+
+.cardCompact .number {
+  font-size: 12px;
+}
+
+.cardCompact .percent {
+  font-size: 11px;
+}
+
+.cardCompact .track {
+  height: 4px;
 }
 
 .number {

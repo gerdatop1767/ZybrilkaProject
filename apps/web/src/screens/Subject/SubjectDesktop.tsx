@@ -46,7 +46,6 @@ type TopicProgressItem = ProgressByTopicResponse['items'][number];
 const modes: readonly { id: SubjectModeId; label: string; caption: string; icon: IconName }[] = [
   { id: 'topics', label: 'Темы', caption: 'Все темы по номерам', icon: 'reference' },
   { id: 'variants', label: 'Варианты', caption: 'Полные варианты ЕГЭ', icon: 'variant' },
-  { id: 'random', label: 'Случайные задания', caption: 'Тренировка без тем', icon: 'smart' },
   { id: 'favorites', label: 'Избранное', caption: 'Сохранённые задания', icon: 'favorite' },
 ];
 
@@ -74,7 +73,6 @@ export function SubjectDesktop({
   const [selectedTopic, setSelectedTopic] = useState<TopicProgressItem | null>(null);
   const [collections, setCollections] = useState<readonly CollectionListItem[]>([]);
   const [collectionsLoaded, setCollectionsLoaded] = useState(false);
-  const [randomSlug, setRandomSlug] = useState<string | null>(collectionSlug ?? null);
   const [topicsSlug, setTopicsSlug] = useState<string | null>(collectionSlug ?? null);
   const [topics, setTopics] = useState<readonly TopicProgressItem[]>([]);
 
@@ -105,8 +103,6 @@ export function SubjectDesktop({
   // derived (not synced via an effect) so it falls back to "Общий банк"
   // the moment the real list loads, without a set-state-in-effect round trip.
   const knownSlugs = new Set(collections.map((item) => item.collection.slug));
-  const effectiveRandomSlug =
-    collectionsLoaded && randomSlug && !knownSlugs.has(randomSlug) ? null : randomSlug;
   const effectiveTopicsSlug =
     collectionsLoaded && topicsSlug && !knownSlugs.has(topicsSlug) ? null : topicsSlug;
 
@@ -136,11 +132,7 @@ export function SubjectDesktop({
   // → Back lands back here instead of falling through to Home.
   function currentReturnTo(): Route {
     const slug =
-      mode === 'random'
-        ? (effectiveRandomSlug ?? undefined)
-        : mode === 'topics'
-          ? (effectiveTopicsSlug ?? undefined)
-          : (collectionSlug ?? undefined);
+      mode === 'topics' ? (effectiveTopicsSlug ?? undefined) : (collectionSlug ?? undefined);
     return { screen: 'subject', subjectId: subject.id, collectionSlug: slug, initialMode: mode };
   }
 
@@ -264,14 +256,6 @@ export function SubjectDesktop({
               onStart={startVariant}
             />
           )}
-          {mode === 'random' && (
-            <RandomModeCard
-              collections={collections}
-              selectedSlug={effectiveRandomSlug}
-              onSourceChange={setRandomSlug}
-              onStart={() => startTraining(1, effectiveRandomSlug ?? undefined)}
-            />
-          )}
           {mode === 'favorites' && (
             <Card>
               <p className="text-h3" style={{ marginBottom: 'var(--space-3)' }}>
@@ -311,17 +295,14 @@ export function SubjectDesktop({
               <button
                 type="button"
                 className={styles.quickRow}
-                onClick={() => {
-                  setMode('random');
-                  setSelectedTopic(null);
-                }}
+                onClick={() => navigate({ screen: 'training' })}
               >
                 <Icon name="smart" size={18} />
                 <span>
                   <p className="text-body-sm" style={{ fontWeight: 700 }}>
                     Случайное задание
                   </p>
-                  <p className="text-body-sm text-secondary">Любая тема</p>
+                  <p className="text-body-sm text-secondary">Любая тема — в Тренировке</p>
                 </span>
                 <Icon name="arrowRight" size={16} className={styles.quickArrow} />
               </button>
@@ -449,42 +430,6 @@ function TopicDetail({
         style={{ marginTop: 'var(--space-4)' }}
       >
         Начать тренировку <Icon name="arrowRight" size={16} />
-      </Button>
-    </Card>
-  );
-}
-
-function RandomModeCard({
-  collections,
-  selectedSlug,
-  onSourceChange,
-  onStart,
-}: {
-  collections: readonly CollectionListItem[];
-  selectedSlug: string | null;
-  onSourceChange: (slug: string | null) => void;
-  onStart: () => void;
-}) {
-  return (
-    <Card className={styles.placeholderCard}>
-      <span className={styles.placeholderIcon}>
-        <Icon name="smart" size={28} />
-      </span>
-      <p className="text-h3">Случайные задания</p>
-      <p className="text-body-sm text-secondary">
-        Тренировка вперемешку по всем темам — источник задаёт, откуда они берутся
-      </p>
-      <div className={styles.sourceSelect} style={{ marginTop: 'var(--space-4)' }}>
-        <span className="text-body-sm text-secondary">Источник:</span>
-        <Select
-          options={sourceSelectOptions(collections)}
-          value={selectedSlug ?? ALL_SOURCES_VALUE}
-          onChange={(value) => onSourceChange(value === ALL_SOURCES_VALUE ? null : value)}
-          sheetTitle="Источник"
-        />
-      </div>
-      <Button variant="primary" onClick={onStart} style={{ marginTop: 'var(--space-4)' }}>
-        Начать случайное задание <Icon name="arrowRight" size={16} />
       </Button>
     </Card>
   );

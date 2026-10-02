@@ -216,6 +216,40 @@ describe('GET /api/v1/progress/by-task-number/:taskNumber/detail', () => {
     }
   });
 
+  it("taskType reports the real topic name attached to this number's tasks, not a guess from user attempts", async () => {
+    const [task] = await testDb.db
+      .select()
+      .from(schema.tasks)
+      .where(eq(schema.tasks.status, 'published'));
+    if (!task?.topicId) return; // no topic-tagged task in this bank — nothing to assert
+    const [topic] = await testDb.db
+      .select()
+      .from(schema.topics)
+      .where(eq(schema.topics.id, task.topicId));
+
+    // Two different users, one with real attempts, one with none —
+    // taskType must be identical for both: it's task metadata, never
+    // derived from who solved what.
+    const solver = randomUUID();
+    await app.inject({
+      method: 'POST',
+      url: `/api/v1/tasks/${task.id}/attempt`,
+      headers: { 'x-anon-id': solver },
+      payload: { answer: task.correctAnswer },
+    });
+    const solverRes = await detail(solver, task.taskNumber);
+    const strangerRes = await detail(randomUUID(), task.taskNumber);
+
+    expect(solverRes.json().taskType).toBe(topic!.name);
+    expect(strangerRes.json().taskType).toBe(topic!.name);
+  });
+
+  it('taskType is null for a task number with no topic-tagged published task, never invented', async () => {
+    const anonId = randomUUID();
+    const res = await detail(anonId, 999);
+    expect(res.json().taskType).toBeNull();
+  });
+
   it('a skill linked but never attempted by this user reports mastery 0, not omitted', async () => {
     const links = await testDb.db.select().from(schema.taskSkills);
     if (links.length === 0) return;

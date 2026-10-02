@@ -277,17 +277,17 @@ describe('Training — "Умная тренировка" (Phase 10: real backend
   });
 });
 
-describe('Training — "По номерам" (task selection: normal/random/unseen)', () => {
-  it('requires a number before starting', async () => {
+describe('Training — "По номерам" (multi-select task-number training)', () => {
+  it('requires at least one number before starting', async () => {
     const user = userEvent.setup();
     renderTraining();
     await user.click(screen.getByRole('button', { name: /По номерам/ }));
     await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
-    expect(await screen.findByText('Выбери номер задания.')).toBeInTheDocument();
+    expect(await screen.findByText('Выбери хотя бы один номер задания.')).toBeInTheDocument();
     expect(api.getRandomTask).not.toHaveBeenCalled();
   });
 
-  it('normal (both toggles off) calls getRandomTask scoped to the selected number, unchanged existing behavior', async () => {
+  it('a single selected number defaults to "Случайное" and calls getRandomTask scoped to it', async () => {
     const user = userEvent.setup();
     vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
     renderTraining();
@@ -296,13 +296,18 @@ describe('Training — "По номерам" (task selection: normal/random/unse
     await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
     await waitFor(() => {
       expect(api.getRandomTask).toHaveBeenCalledWith(
-        expect.objectContaining({ subject: 'math', taskNumber: 5, unseen: undefined }),
+        expect.objectContaining({
+          subject: 'math',
+          taskNumber: 5,
+          collection: undefined,
+          unseen: undefined,
+        }),
       );
     });
     await waitFor(() => expect(screen.getByTestId('overlay')).toHaveTextContent('task:5'));
   });
 
-  it('"Рандом" drops the collection scope', async () => {
+  it('"Случайное" drops the collection scope', async () => {
     const user = userEvent.setup();
     vi.mocked(api.listCollections).mockResolvedValue([COLLECTION]);
     vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
@@ -314,7 +319,6 @@ describe('Training — "По номерам" (task selection: normal/random/unse
     await user.click(await screen.findByRole('option', { name: 'ЕГЭ 2026 Ященко' }));
 
     await user.click(screen.getByRole('button', { name: '№5' }));
-    await user.click(screen.getByRole('button', { name: 'Рандом' }));
     await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
     await waitFor(() => {
       expect(api.getRandomTask).toHaveBeenCalledWith(
@@ -323,22 +327,7 @@ describe('Training — "По номерам" (task selection: normal/random/unse
     });
   });
 
-  it('"Не встречавшиеся" sends unseen:true', async () => {
-    const user = userEvent.setup();
-    vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
-    renderTraining();
-    await user.click(screen.getByRole('button', { name: /По номерам/ }));
-    await user.click(screen.getByRole('button', { name: '№5' }));
-    await user.click(screen.getByRole('button', { name: 'Не встречавшиеся' }));
-    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
-    await waitFor(() => {
-      expect(api.getRandomTask).toHaveBeenCalledWith(
-        expect.objectContaining({ taskNumber: 5, unseen: true }),
-      );
-    });
-  });
-
-  it('"Рандом" + "Не встречавшиеся" combine: unseen:true and no collection scope', async () => {
+  it('"Только нерешённые" sends unseen:true and keeps the collection scope', async () => {
     const user = userEvent.setup();
     vi.mocked(api.listCollections).mockResolvedValue([COLLECTION]);
     vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
@@ -350,17 +339,68 @@ describe('Training — "По номерам" (task selection: normal/random/unse
     await user.click(await screen.findByRole('option', { name: 'ЕГЭ 2026 Ященко' }));
 
     await user.click(screen.getByRole('button', { name: '№5' }));
-    await user.click(screen.getByRole('button', { name: 'Рандом' }));
-    await user.click(screen.getByRole('button', { name: 'Не встречавшиеся' }));
+    await user.click(screen.getByRole('button', { name: 'Только нерешённые' }));
     await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
     await waitFor(() => {
       expect(api.getRandomTask).toHaveBeenCalledWith(
-        expect.objectContaining({ taskNumber: 5, collection: undefined, unseen: true }),
+        expect.objectContaining({
+          taskNumber: 5,
+          collection: COLLECTION.collection.slug,
+          unseen: true,
+        }),
       );
     });
   });
 
-  it('shows the specific "all tasks seen" message instead of silently falling back to a seen task', async () => {
+  it('mixes independent modes across different numbers in one run', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getRandomTask).mockImplementation((params) =>
+      Promise.resolve({ ...RANDOM_TASK, taskNumber: params.taskNumber! }),
+    );
+    renderTraining();
+    await user.click(screen.getByRole('button', { name: /По номерам/ }));
+    await user.click(screen.getByRole('button', { name: '№5' }));
+    await user.click(screen.getByRole('button', { name: '№7' }));
+    const unseenToggles = screen.getAllByRole('button', { name: 'Только нерешённые' });
+    // №5 stays "Случайное" (default); mark №7 (the second row) "Только нерешённые".
+    await user.click(unseenToggles[1]!);
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+
+    await waitFor(() => expect(api.getRandomTask).toHaveBeenCalledTimes(2));
+    expect(api.getRandomTask).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ taskNumber: 5, unseen: undefined }),
+    );
+    expect(api.getRandomTask).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ taskNumber: 7, unseen: true }),
+    );
+  });
+
+  it('"Перемешать порядок" reorders which selected number is solved first', async () => {
+    const user = userEvent.setup();
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0); // always swap to front
+    vi.mocked(api.getRandomTask).mockImplementation((params) =>
+      Promise.resolve({ ...RANDOM_TASK, taskNumber: params.taskNumber! }),
+    );
+    renderTraining();
+    await user.click(screen.getByRole('button', { name: /По номерам/ }));
+    await user.click(screen.getByRole('button', { name: '№5' }));
+    await user.click(screen.getByRole('button', { name: '№7' }));
+    await user.click(screen.getByRole('button', { name: 'Перемешать порядок' }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+
+    await waitFor(() => expect(api.getRandomTask).toHaveBeenCalledTimes(2));
+    // With Math.random mocked to 0, Fisher-Yates always swaps the last
+    // element to the front — the sorted [5, 7] becomes [7, 5].
+    expect(api.getRandomTask).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ taskNumber: 7 }),
+    );
+    randomSpy.mockRestore();
+  });
+
+  it('shows the specific "no unseen tasks" message for that number, never silently substituting a random task', async () => {
     const user = userEvent.setup();
     vi.mocked(api.getRandomTask).mockRejectedValue(
       new api.ApiError(404, { error: 'no_unseen_tasks' }),
@@ -368,11 +408,11 @@ describe('Training — "По номерам" (task selection: normal/random/unse
     renderTraining();
     await user.click(screen.getByRole('button', { name: /По номерам/ }));
     await user.click(screen.getByRole('button', { name: '№5' }));
-    await user.click(screen.getByRole('button', { name: 'Не встречавшиеся' }));
+    await user.click(screen.getByRole('button', { name: 'Только нерешённые' }));
     await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
     expect(
       await screen.findByText(
-        'Все задания этого номера уже встречались. Можно отключить «Не встречавшиеся».',
+        'Для №5 больше нет нерешённых заданий. Можно сменить режим на «Случайное» для этого номера.',
       ),
     ).toBeInTheDocument();
   });

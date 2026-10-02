@@ -1,7 +1,18 @@
 import type { Database } from '@zybrilka/db';
 import { schema } from '@zybrilka/db';
 import type { ProgressByTaskNumberQuery, ProgressByTopicQuery } from '@zybrilka/shared';
-import { and, asc, count, countDistinct, eq, gte, inArray, isNotNull, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  countDistinct,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  sql,
+} from 'drizzle-orm';
 import { taskIdsForCollectionOrVariant } from '../tasks/repo.js';
 
 export async function getTotals(db: Database, userId: string) {
@@ -370,4 +381,36 @@ export async function getTaskStatisticsForTaskNumber(
     .from(schema.taskStatistics)
     .innerJoin(schema.tasks, eq(schema.taskStatistics.taskId, schema.tasks.id))
     .where(and(eq(schema.tasks.subjectId, subjectId), eq(schema.tasks.taskNumber, taskNumber)));
+}
+
+/**
+ * Statistics 2.0's "Тип задания" — the real topic name already
+ * attached (via `tasks.topicId` -> `topics.name`) to this subject's
+ * published tasks for this number, never inferred from user attempts.
+ * A number's tasks almost always share one topic (e.g. №13 ->
+ * "Тригонометрические уравнения"); if a number genuinely has more than
+ * one (mixed demo/seed content), the one covering the most published
+ * tasks wins — still pure task metadata, never a guess from statistics.
+ * `null` when no published task of this number has a topic at all —
+ * callers show an honest empty state, never an invented label.
+ */
+export async function getDominantTopicNameForTaskNumber(
+  db: Database,
+  subjectId: string,
+  taskNumber: number,
+): Promise<string | null> {
+  const rows = await db
+    .select({ topicName: schema.topics.name, taskCount: count() })
+    .from(schema.tasks)
+    .innerJoin(schema.topics, eq(schema.tasks.topicId, schema.topics.id))
+    .where(
+      and(
+        eq(schema.tasks.subjectId, subjectId),
+        eq(schema.tasks.taskNumber, taskNumber),
+        eq(schema.tasks.status, 'published' as const),
+      ),
+    )
+    .groupBy(schema.topics.name)
+    .orderBy(desc(count()), asc(schema.topics.name));
+  return rows[0]?.topicName ?? null;
 }

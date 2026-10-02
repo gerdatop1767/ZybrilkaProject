@@ -5,6 +5,12 @@ import styles from './TaskNumberGrid.module.css';
 export interface TaskNumberGridProps {
   rows: readonly TaskNumberProgress[];
   onSelect?: (number: number) => void;
+  /** Denser cards/grid for contexts where every number must stay
+   * quickly scannable without taking up much vertical space (Statistics
+   * 2.0's "По номерам" overview) — same colors/radii/progress bars,
+   * just smaller. The default (full-size) cards still back Mobile's
+   * dedicated "По заданиям" tab unchanged. */
+  compact?: boolean;
 }
 
 const statusClass: Record<TaskNumberProgress['status'], string> = {
@@ -22,14 +28,18 @@ const statusClass: Record<TaskNumberProgress['status'], string> = {
  * to a two-column card grid (desktop's own "Задания по номерам" is a
  * card grid too — see 02_task_numbers_desktop.png).
  */
-export function TaskNumberGrid({ rows, onSelect }: TaskNumberGridProps) {
+export function TaskNumberGrid({ rows, onSelect, compact = false }: TaskNumberGridProps) {
   return (
-    <div className={styles.grid} role="list" aria-label="Прогресс по всем заданиям">
+    <div
+      className={clsx(styles.grid, compact && styles.gridCompact)}
+      role="list"
+      aria-label="Прогресс по всем заданиям"
+    >
       {rows.map((row) => (
         <button
           key={row.number}
           type="button"
-          className={clsx(styles.card, statusClass[row.status])}
+          className={clsx(styles.card, compact && styles.cardCompact, statusClass[row.status])}
           role="listitem"
           onClick={() => onSelect?.(row.number)}
         >

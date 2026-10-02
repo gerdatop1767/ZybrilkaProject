@@ -120,6 +120,28 @@ describe('StatisticsDesktop — real progress data', () => {
   });
 });
 
+describe('StatisticsDesktop — Statistics 2.0 ordering (additive, never replacing existing stats)', () => {
+  it('places "По номерам" after the existing charts, never before them', () => {
+    vi.mocked(api.getProgressByTaskNumber).mockResolvedValue({
+      items: [{ subjectId: 'math', taskNumber: 5, total: 4, completed: 3 }],
+    });
+    renderStatistics();
+    const headings = screen
+      .getAllByText(/^(Активность по дням|Распределение по темам|По номерам)$/)
+      .map((el) => el.textContent);
+    expect(headings.indexOf('По номерам')).toBeGreaterThan(headings.indexOf('Активность по дням'));
+    expect(headings.indexOf('По номерам')).toBeGreaterThan(
+      headings.indexOf('Распределение по темам'),
+    );
+  });
+
+  it('keeps the existing charts visible alongside "По номерам" (additive, not a replacement)', () => {
+    renderStatistics();
+    expect(screen.getByText('Активность по дням')).toBeInTheDocument();
+    expect(screen.getByText('По номерам')).toBeInTheDocument();
+  });
+});
+
 describe('StatisticsDesktop — По номерам detail (Statistics 2.0)', () => {
   it('clicking a real task number opens its detail, with a working back button', async () => {
     vi.mocked(api.getProgressByTaskNumber).mockResolvedValue({
@@ -137,6 +159,7 @@ describe('StatisticsDesktop — По номерам detail (Statistics 2.0)', ()
       medianTimeMs: 11000,
       timedAttempts: 4,
       lastAttemptAt: new Date().toISOString(),
+      taskType: 'Тригонометрические уравнения',
       errorBreakdown: [],
       skillBreakdown: [],
       recentAccuracy: null,
@@ -149,7 +172,9 @@ describe('StatisticsDesktop — По номерам detail (Statistics 2.0)', ()
     const user = userEvent.setup();
     renderStatistics();
     await user.click(await screen.findByText('№5'));
-    expect(await screen.findByText('75%')).toBeInTheDocument();
+    // The percent itself animates in (useCountUp) — assert the static,
+    // non-animated delta label instead of racing the animation.
+    expect(await screen.findByText('3 из 4')).toBeInTheDocument();
     expect(api.getTaskNumberStatisticsDetail).toHaveBeenCalledWith('math', 5);
 
     await user.click(screen.getByText('Назад к статистике'));
@@ -172,6 +197,7 @@ describe('StatisticsDesktop — По номерам detail (Statistics 2.0)', ()
       medianTimeMs: null,
       timedAttempts: 0,
       lastAttemptAt: null,
+      taskType: null,
       errorBreakdown: [],
       skillBreakdown: [],
       recentAccuracy: null,

@@ -224,10 +224,11 @@ export async function getTaskNumberStatisticsDetail(
   // Speed Learning: baseline candidates in strict priority order —
   // taskNumber -> skill -> subject -> global task-level (last resort).
   const skillIds = skillBreakdown.map((s) => s.skillId);
-  const [skillTimedRaw, subjectTimed, taskStatsRows] = await Promise.all([
+  const [skillTimedRaw, subjectTimed, taskStatsRows, taskType] = await Promise.all([
     repo.getTimedAttemptsForSkills(db, userId, skillIds),
     repo.getTimedAttemptsForSubject(db, userId, subjectId),
     repo.getTaskStatisticsForTaskNumber(db, subjectId, taskNumber),
+    repo.getDominantTopicNameForTaskNumber(db, subjectId, taskNumber),
   ]);
   const skillTimes = Array.from(new Map(skillTimedRaw.map((r) => [r.id, r.timeSpentMs])).values());
 
@@ -276,6 +277,7 @@ export async function getTaskNumberStatisticsDetail(
     medianTimeMs,
     timedAttempts,
     lastAttemptAt,
+    taskType,
     errorBreakdown,
     skillBreakdown,
     recentAccuracy,

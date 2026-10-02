@@ -237,16 +237,46 @@ describe('App — first-login gate (Learning Profile, Phase 1)', () => {
     window.history.replaceState(null, '', '/');
   });
 
-  it('redirects a brand-new user (onboardingCompleted: false) to onboarding on load', async () => {
+  it('shows the public landing (not an automatic onboarding redirect) for a brand-new user', async () => {
     vi.mocked(api.getLearningProfile).mockResolvedValue({
       onboardingCompleted: false,
       subjects: [],
     });
     renderApp();
     await waitFor(() => {
-      expect(screen.getByText('Добро пожаловать в Zybrilka!')).toBeInTheDocument();
+      expect(screen.getByText(/ЕГЭ становится проще/)).toBeInTheDocument();
     });
+    expect(window.location.pathname).toBe('/');
+    expect(screen.queryByText('Добро пожаловать в Zybrilka!')).not.toBeInTheDocument();
+  });
+
+  it('"Начать бесплатно" on the landing is what actually starts onboarding', async () => {
+    vi.mocked(api.getLearningProfile).mockResolvedValue({
+      onboardingCompleted: false,
+      subjects: [],
+    });
+    const user = userEvent.setup();
+    renderApp();
+    await screen.findByText(/ЕГЭ становится проще/);
+    await user.click(screen.getByRole('button', { name: /Начать бесплатно/ }));
+    expect(screen.getByText('Добро пожаловать в Zybrilka!')).toBeInTheDocument();
     expect(window.location.pathname).toBe('/onboarding');
+  });
+
+  it('shows the desktop landing (not the normal marketing Home) for a brand-new user', async () => {
+    vi.mocked(api.getLearningProfile).mockResolvedValue({
+      onboardingCompleted: false,
+      subjects: [],
+    });
+    const restore = mockDesktop(true);
+    renderApp();
+    await waitFor(() => {
+      expect(screen.getByText(/ЕГЭ становится проще/)).toBeInTheDocument();
+    });
+    // The desktop landing has no sidebar — it's shown outside the
+    // normal app shell, same as the mobile landing has no bottom nav.
+    expect(screen.queryByRole('navigation', { name: 'Zybrilka' })).not.toBeInTheDocument();
+    restore();
   });
 
   it('does not redirect a returning user (onboardingCompleted: true)', async () => {
