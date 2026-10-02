@@ -105,8 +105,9 @@ export async function getDaily(
   db: Database,
   userId: string,
   days: number,
+  subjectId?: string,
 ): Promise<ProgressDailyResponse> {
-  const rows = await repo.getDaily(db, userId, days);
+  const rows = await repo.getDaily(db, userId, days, subjectId);
   return {
     items: rows.map((row) => ({
       date: row.date,

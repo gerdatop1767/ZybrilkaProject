@@ -38,3 +38,13 @@
   align-items: center;
   gap: 4px;
 }
+
+.subjectRowButton {
+  display: block;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}

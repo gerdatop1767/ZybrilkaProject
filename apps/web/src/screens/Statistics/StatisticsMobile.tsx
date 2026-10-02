@@ -20,6 +20,7 @@ import type {
 import { Card } from '../../ui/Card/Card.js';
 import { Tabs } from '../../ui/Tabs/Tabs.js';
 import { Icon } from '../../ui/Icon/Icon.js';
+import { BottomSheet } from '../../ui/BottomSheet/BottomSheet.js';
 import { SubjectHeaderMobile } from '../../ui/SubjectHeader/SubjectHeaderMobile.js';
 import { BackRow } from '../../ui/BackRow/BackRow.js';
 import { StatTile } from '../../ui/Statistics/StatTile.js';
@@ -63,7 +64,9 @@ const DEFAULT_SUBJECT_ID = 'math';
 export function StatisticsMobile() {
   const { navigate } = useNavigation();
   const [subTab, setSubTab] = useState('overview');
-  const subject = subjects.find((s) => s.id === DEFAULT_SUBJECT_ID) ?? subjects[0]!;
+  const [subjectId, setSubjectId] = useState(DEFAULT_SUBJECT_ID);
+  const [subjectPickerOpen, setSubjectPickerOpen] = useState(false);
+  const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
   const [realProgress, setRealProgress] = useState<ProgressSummary | null>(null);
   const [taskNumberItems, setTaskNumberItems] = useState<
     Awaited<ReturnType<typeof getProgressByTaskNumber>>['items']
@@ -73,6 +76,8 @@ export function StatisticsMobile() {
   const [selectedTaskNumber, setSelectedTaskNumber] = useState<number | null>(null);
   const [detail, setDetail] = useState<TaskNumberStatisticsDetail | null | undefined>(undefined);
 
+  // Not scoped to the selected subject — fetched once, filtered
+  // client-side below, so switching subjects never re-requests either.
   useEffect(() => {
     let cancelled = false;
     void getProgressSummary()
@@ -83,6 +88,20 @@ export function StatisticsMobile() {
         // No backend data yet (or the request failed) — headline tiles
         // stay at their neutral zero/dash state below.
       });
+    void getMistakes()
+      .then((items) => {
+        if (!cancelled) setMistakes(items.map(toSampleMistake));
+      })
+      .catch(() => {
+        if (!cancelled) setMistakes([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
     void getProgressByTaskNumber({ subject: subject.id })
       .then((res) => {
         if (!cancelled) setTaskNumberItems(res.items);
@@ -97,31 +116,39 @@ export function StatisticsMobile() {
       .catch(() => {
         if (!cancelled) setTopics([]);
       });
-    void getMistakes()
-      .then((items) => {
-        if (!cancelled) setMistakes(items.map(toSampleMistake));
-      })
-      .catch(() => {
-        if (!cancelled) setMistakes([]);
-      });
     return () => {
       cancelled = true;
     };
   }, [subject.id]);
 
+  const subjectMistakes = useMemo(
+    () => mistakes.filter((m) => m.subjectId === subject.id),
+    [mistakes, subject.id],
+  );
   const difficultTopics = useMemo(
     () =>
-      mistakes.length > 0
-        ? computeMistakesSummary(mistakes).topicBreakdown.filter((row) => row.topic !== 'Остальные')
+      subjectMistakes.length > 0
+        ? computeMistakesSummary(subjectMistakes).topicBreakdown.filter(
+            (row) => row.topic !== 'Остальные',
+          )
         : [],
-    [mistakes],
+    [subjectMistakes],
   );
   const taskNumberProgress = useMemo(
     () => toTaskNumberProgress(taskNumberItems),
     [taskNumberItems],
   );
-  const solvedTotal = realProgress?.solvedTotal ?? 0;
-  const accuracyPercent = realProgress ? Math.round(realProgress.accuracyPercent) : 0;
+  const subjectRow = realProgress?.bySubject.find((s) => s.subjectId === subject.id) ?? null;
+  const solvedTotal = subjectRow?.solved ?? 0;
+  const accuracyPercent = subjectRow ? Math.round(subjectRow.accuracyPercent) : 0;
+
+  function selectSubject(id: string) {
+    setSubjectId(id);
+    setSubjectPickerOpen(false);
+    // The previously selected number may not even exist for the new
+    // subject — same precedent as StatisticsDesktop's selectSubject.
+    setSelectedTaskNumber(null);
+  }
 
   function openDetail(taskNumber: number) {
     setSelectedTaskNumber(taskNumber);
@@ -168,12 +195,35 @@ export function StatisticsMobile() {
       <SubjectHeaderMobile
         subject={subject}
         title="Статистика"
+        onSelectSubject={() => setSubjectPickerOpen(true)}
         trailing={
           <button type="button" className={styles.trailingButton} aria-label="Выбрать период">
             <Icon name="calendar" size={20} />
           </button>
         }
       />
+
+      <BottomSheet
+        open={subjectPickerOpen}
+        onClose={() => setSubjectPickerOpen(false)}
+        title="Предмет"
+      >
+        <div className={styles.subjectPickerList} role="listbox" aria-label="Предмет">
+          {subjects.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              role="option"
+              aria-selected={s.id === subject.id}
+              className={styles.subjectPickerOption}
+              onClick={() => selectSubject(s.id)}
+            >
+              {s.shortName}
+              {s.id === subject.id && <Icon name="check" size={18} />}
+            </button>
+          ))}
+        </div>
+      </BottomSheet>
 
       <Tabs
         items={subTabs}
@@ -324,7 +374,7 @@ export function StatisticsMobile() {
               label="Точность"
               value={accuracyPercent}
               suffix="%"
-              deltaLabel={`${realProgress?.correctTotal ?? 0} верных`}
+              deltaLabel={`${subjectRow?.correct ?? 0} верных`}
             />
             <StatTile
               icon="xp"

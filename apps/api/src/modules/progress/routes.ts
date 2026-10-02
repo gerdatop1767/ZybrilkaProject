@@ -66,7 +66,12 @@ export const progressRoutes: FastifyPluginAsync<ProgressRoutesOptions> = async (
     if (!query.success) {
       return reply.code(400).send({ error: 'invalid_query', issues: query.error.issues });
     }
-    return service.getDaily(db, request.userId, query.data.days ?? DEFAULT_DAILY_DAYS);
+    return service.getDaily(
+      db,
+      request.userId,
+      query.data.days ?? DEFAULT_DAILY_DAYS,
+      query.data.subject,
+    );
   });
 
   // Statistics 2.0 — the "По номерам → №N" detail (Step 15). `subject`

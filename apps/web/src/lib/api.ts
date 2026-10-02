@@ -223,9 +223,12 @@ export function getTaskNumberStatisticsDetail(
  * bucketing/dedup rules. Only days with at least one attempt come
  * back; callers zero-fill the requested range themselves.
  */
-export function getProgressDaily(params: { days?: number } = {}): Promise<ProgressDailyResponse> {
+export function getProgressDaily(
+  params: { days?: number; subject?: string } = {},
+): Promise<ProgressDailyResponse> {
   const query = new URLSearchParams();
   if (params.days) query.set('days', String(params.days));
+  if (params.subject) query.set('subject', params.subject);
   const qs = query.toString();
   return apiFetch(`/progress/daily${qs ? `?${qs}` : ''}`);
 }

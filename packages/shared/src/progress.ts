@@ -94,6 +94,8 @@ export type ProgressByTopicResponse = z.infer<typeof progressByTopicResponseSche
 
 export const progressDailyQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(90).optional(),
+  /** Scopes the daily activity to one subject — omitted means every subject. */
+  subject: z.string().optional(),
 });
 export type ProgressDailyQuery = z.infer<typeof progressDailyQuerySchema>;
 

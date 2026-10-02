@@ -38,6 +38,47 @@ beforeEach(() => {
   vi.mocked(api.getMistakes).mockResolvedValue([]);
 });
 
+describe('StatisticsMobile — subject filter', () => {
+  it('opens a real subject picker from the header and refilters every real metric', async () => {
+    vi.mocked(api.getProgressSummary).mockResolvedValue({
+      solvedTotal: 20,
+      correctTotal: 15,
+      incorrectTotal: 5,
+      accuracyPercent: 75,
+      bySubject: [
+        { subjectId: 'math', solved: 12, correct: 9, accuracyPercent: 75 },
+        { subjectId: 'russian', solved: 8, correct: 6, accuracyPercent: 75 },
+      ],
+      byTaskNumber: [],
+      byTopic: [],
+      timeBySubject: [],
+    });
+    const user = userEvent.setup();
+    renderWithNav();
+
+    // Default subject is "Математика" — real data for it shows up.
+    await waitFor(() => expect(screen.getByText('9 верных')).toBeInTheDocument());
+    expect(vi.mocked(api.getProgressByTaskNumber)).toHaveBeenLastCalledWith({ subject: 'math' });
+
+    await user.click(screen.getByRole('button', { name: /Математика/ }));
+    await user.click(screen.getByRole('option', { name: /Русский язык/ }));
+
+    // Switching subjects refetches the subject-scoped endpoints with the
+    // new subject, and the headline figure switches to that subject's
+    // real bySubject row — not the aggregate, not the previous subject.
+    await waitFor(() =>
+      expect(vi.mocked(api.getProgressByTaskNumber)).toHaveBeenLastCalledWith({
+        subject: 'russian',
+      }),
+    );
+    await waitFor(() => expect(screen.getByText('6 верных')).toBeInTheDocument());
+    // /progress/summary and /mistakes are fetched once, not re-requested
+    // per subject switch — they're filtered client-side instead.
+    expect(vi.mocked(api.getProgressSummary)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(api.getMistakes)).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('StatisticsMobile', () => {
   it('shows the overview tab by default with real data, not a stub', () => {
     renderWithNav();
@@ -131,13 +172,13 @@ describe('StatisticsMobile — real progress data', () => {
     expect(within(grid).getAllByText('Не решалось').length).toBeGreaterThan(0);
   });
 
-  it('the solvedTotal/accuracy headline tiles use real /progress/summary data', async () => {
+  it('the solvedTotal/accuracy headline tiles use real /progress/summary data for the selected subject', async () => {
     vi.mocked(api.getProgressSummary).mockResolvedValue({
-      solvedTotal: 12,
-      correctTotal: 9,
-      incorrectTotal: 3,
+      solvedTotal: 20,
+      correctTotal: 15,
+      incorrectTotal: 5,
       accuracyPercent: 75,
-      bySubject: [],
+      bySubject: [{ subjectId: 'math', solved: 12, correct: 9, accuracyPercent: 75 }],
       byTaskNumber: [],
       byTopic: [],
       timeBySubject: [],
