@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigation } from '../../lib/navigation.js';
+import { getRouteLabel, useNavigation, type Route } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
 import { getSubjectContent } from '../../data/subjectContent.js';
-import { ApiError, getRandomTask, listCollections } from '../../lib/api.js';
+import { listCollections } from '../../lib/api.js';
+import { resolveTaskBatch, type TaskPickFilter } from '../../lib/startTraining.js';
 import type { CollectionListItem } from '@zybrilka/shared';
 import { BackRow } from '../../ui/BackRow/BackRow.js';
 import { Button } from '../../ui/Button/Button.js';
@@ -12,23 +13,13 @@ import { SectionHeader } from '../../ui/SectionHeader/SectionHeader.js';
 import { SlideUp } from '../../ui/motion/motion.js';
 import styles from './TrainingByNumber.module.css';
 
-/** Independent per-number choice — a user can mix both across their
- * selected numbers in one training run. 'random' draws from the whole
- * published pool for that number (ignoring any selected Сборник);
- * 'unseen' uses the real backend `unseen` filter (GET
- * /tasks/random?unseen=true), scoped to the selected Сборник. */
-type ByNumberMode = 'random' | 'unseen';
-
-/** Fisher-Yates — only ever reorders which already-selected numbers the
- * user solves first; never affects which task is picked for a number
- * (that stays exactly `getRandomTask`/the real `unseen` filter). */
-function shuffled<T>(items: readonly T[]): T[] {
-  const result = [...items];
-  for (let i = result.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j]!, result[i]!];
-  }
-  return result;
+interface NumberSelection {
+  /** "Ignore the selected Сборник, draw from the whole bank" — see
+   * `TaskPickFilter`'s doc comment on why this (not a sequential vs
+   * random distinction the backend has no concept of) is what 🎲
+   * really toggles. */
+  random: boolean;
+  unseen: boolean;
 }
 
 const subjectSelectOptions = subjects.map((subject) => ({
@@ -36,24 +27,49 @@ const subjectSelectOptions = subjects.map((subject) => ({
   label: subject.name,
 }));
 
+function backLabelFor(route: Route | undefined): string {
+  if (!route) return 'Тренировка';
+  if (route.screen === 'subject') {
+    return subjects.find((s) => s.id === route.subjectId)?.shortName ?? 'Предмет';
+  }
+  return getRouteLabel(route);
+}
+
+export interface TrainingByNumberProps {
+  /** Pre-selects the subject (e.g. arriving from Subject's own
+   * "Задания по номерам" tab) — absent falls back to "Математика",
+   * same default Training/TrainingByNumber always had. */
+  subjectId?: string;
+  /** Pre-selects "Сборник" — see SubjectDesktopProps for the same
+   * pattern. */
+  collectionSlug?: string;
+  /** Where Back/the resulting training session's Back arrow should
+   * return to — Training's mode grid or Subject's own tab, whichever
+   * actually opened this screen (audit: Back routing fix). Absent
+   * falls back to "Тренировка", the screen's own previous default. */
+  from?: Route;
+}
+
 /**
  * Тренировка → По номерам: its own real screen, not a cramped block
- * inside Training — a user picks one or more task numbers (№1…№19) and,
- * independently per number, 🎲 Случайное or 🔄 Только нерешённые,
- * optionally shuffles the solving order, then starts. Reuses exactly
- * the same `getRandomTask`/real `unseen` filter and
- * `customOrderedTasks` task-navigation mechanism Training/Subject's
- * "Собери вариант" already use — no second task-selection mechanism.
- * One shared component for desktop/mobile (same business logic, the
- * layout itself is already responsive), matching Training.tsx's own
- * precedent.
+ * inside Training — a user picks one or more task numbers (№1…№19)
+ * and, independently per number, 🎲 Случайное / 🔄 Только нерешённые —
+ * both can be on at once, they are not mutually exclusive — optionally
+ * shuffles the solving order, then starts. Reuses exactly the same
+ * `getRandomTask`/real `unseen` filter and `customOrderedTasks`
+ * task-navigation mechanism Training/Subject's "Собери вариант"
+ * already use via the shared `resolveTaskBatch` — no second
+ * task-selection mechanism. One shared component for desktop/mobile
+ * (same business logic, the layout itself is already responsive).
  */
-export function TrainingByNumber() {
+export function TrainingByNumber({ subjectId, collectionSlug, from }: TrainingByNumberProps) {
   const { navigate } = useNavigation();
-  const [subjectId, setSubjectId] = useState('math');
+  const [selectedSubjectId, setSelectedSubjectId] = useState(subjectId ?? 'math');
   const [collections, setCollections] = useState<readonly CollectionListItem[]>([]);
-  const [collectionSlug, setCollectionSlug] = useState<string | null>(null);
-  const [selection, setSelection] = useState<Record<number, ByNumberMode>>({});
+  const [selectedCollectionSlug, setSelectedCollectionSlug] = useState<string | null>(
+    collectionSlug ?? null,
+  );
+  const [selection, setSelection] = useState<Record<number, NumberSelection>>({});
   const [shuffleOrder, setShuffleOrder] = useState(false);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
@@ -73,11 +89,20 @@ export function TrainingByNumber() {
     };
   }, []);
 
+  function thisScreenRoute(): Route {
+    return {
+      screen: 'trainingByNumber',
+      subjectId: selectedSubjectId,
+      collectionSlug: selectedCollectionSlug ?? undefined,
+      from,
+    };
+  }
+
   // A number not valid for the newly selected subject (e.g. №19 after
   // switching to a subject with fewer numbers) must not stay silently
   // selected — the chip grid below it won't even render that number.
   function selectSubject(id: string) {
-    setSubjectId(id);
+    setSelectedSubjectId(id);
     const max = getSubjectContent(id).taskNumberCount;
     setSelection((prev) =>
       Object.fromEntries(Object.entries(prev).filter(([n]) => Number(n) <= max)),
@@ -91,63 +116,58 @@ export function TrainingByNumber() {
         delete next[number];
         return next;
       }
-      return { ...prev, [number]: 'random' };
+      return { ...prev, [number]: { random: false, unseen: false } };
     });
   }
 
-  function setNumberMode(number: number, mode: ByNumberMode) {
-    setSelection((prev) => (number in prev ? { ...prev, [number]: mode } : prev));
+  function toggleFlag(number: number, flag: 'random' | 'unseen') {
+    setSelection((prev) =>
+      number in prev
+        ? { ...prev, [number]: { ...prev[number]!, [flag]: !prev[number]![flag] } }
+        : prev,
+    );
   }
 
   async function handleStart() {
     setStartError(null);
-    const numbers = Object.keys(selection).map(Number);
+    const numbers = Object.keys(selection)
+      .map(Number)
+      .sort((a, b) => a - b);
     if (numbers.length === 0) {
       setStartError('Выбери хотя бы один номер задания.');
       return;
     }
-    const orderedNumbers = shuffleOrder ? shuffled(numbers) : numbers.slice().sort((a, b) => a - b);
+
+    const filters: TaskPickFilter[] = numbers.map((number) => ({
+      subject: selectedSubjectId,
+      taskNumber: number,
+      collection: selectedCollectionSlug ?? undefined,
+      random: selection[number]!.random,
+      unseen: selection[number]!.unseen,
+    }));
 
     setStarting(true);
     try {
-      // Resolved one at a time (not Promise.all) so a `no_unseen_tasks`
-      // on one number stops immediately with an honest, specific
-      // message — never silently swapping in a random task for it, and
-      // never discarding tasks already fetched for earlier numbers.
-      const tasks: Awaited<ReturnType<typeof getRandomTask>>[] = [];
-      for (const number of orderedNumbers) {
-        const mode = selection[number]!;
-        try {
-          const task = await getRandomTask({
-            subject: subjectId,
-            taskNumber: number,
-            collection: mode === 'random' ? undefined : (collectionSlug ?? undefined),
-            unseen: mode === 'unseen' || undefined,
-          });
-          tasks.push(task);
-        } catch (error) {
-          if (
-            error instanceof ApiError &&
-            (error.body as { error?: string })?.error === 'no_unseen_tasks'
-          ) {
-            setStartError(
-              `Для №${number} больше нет нерешённых заданий. Можно сменить режим на «Случайное» для этого номера.`,
-            );
-          } else {
-            setStartError('Не нашлось подходящих заданий — попробуй другие номера или режимы.');
-          }
-          return;
+      const result = await resolveTaskBatch(filters, { shuffleOrder });
+      if ('error' in result) {
+        if (result.error.reason === 'no_unseen_tasks') {
+          setStartError(
+            `Для №${result.error.filter.taskNumber} больше нет нерешённых заданий. Можно выключить «Только нерешённые» для этого номера.`,
+          );
+        } else {
+          setStartError('Не нашлось подходящих заданий — попробуй другие номера или режимы.');
         }
+        return;
       }
 
-      const first = tasks[0]!;
+      const first = result.tasks[0]!;
       navigate({
         screen: 'task',
         subjectId: first.subjectId,
         taskNumber: first.taskNumber,
         taskId: first.id,
-        customOrderedTasks: tasks.map((t) => ({ taskId: t.id, taskNumber: t.taskNumber })),
-        returnTo: { screen: 'trainingByNumber' },
+        customOrderedTasks: result.tasks.map((t) => ({ taskId: t.id, taskNumber: t.taskNumber })),
+        returnTo: thisScreenRoute(),
       });
     } finally {
       setStarting(false);
@@ -160,16 +180,16 @@ export function TrainingByNumber() {
 
   return (
     <SlideUp className={styles.stack}>
-      <BackRow to={{ screen: 'training' }} label="Тренировка" />
-      <h1 className="text-h1">По номерам</h1>
+      <BackRow to={from ?? { screen: 'training' }} label={backLabelFor(from)} />
+      <h1 className="text-h1">Задания по номерам</h1>
       <p className="text-body-sm text-secondary">
-        Выбери один или несколько номеров — для каждого можно задать свой режим подбора.
+        Выбери один или несколько номеров — для каждого можно включить своё сочетание режимов.
       </p>
 
       <Select
         label="Предмет"
         options={subjectSelectOptions}
-        value={subjectId}
+        value={selectedSubjectId}
         onChange={selectSubject}
       />
 
@@ -181,8 +201,10 @@ export function TrainingByNumber() {
               value: c.collection.slug,
               label: c.collection.title,
             }))}
-            value={collectionSlug}
-            onChange={(slug) => setCollectionSlug(slug === collectionSlug ? null : slug)}
+            value={selectedCollectionSlug}
+            onChange={(slug) =>
+              setSelectedCollectionSlug(slug === selectedCollectionSlug ? null : slug)
+            }
             placeholder="Все источники"
           />
         </div>
@@ -192,7 +214,7 @@ export function TrainingByNumber() {
         <SectionHeader title="Номера заданий" />
         <div className={styles.chipRow}>
           {Array.from(
-            { length: getSubjectContent(subjectId).taskNumberCount },
+            { length: getSubjectContent(selectedSubjectId).taskNumberCount },
             (_, i) => i + 1,
           ).map((number) => (
             <Chip key={number} selected={number in selection} onClick={() => toggleNumber(number)}>
@@ -207,7 +229,7 @@ export function TrainingByNumber() {
           <SectionHeader title="Режим для каждого номера" />
           <div className={styles.modeList}>
             {sortedSelected.map((number) => {
-              const mode = selection[number]!;
+              const flags = selection[number]!;
               return (
                 <div key={number} className={styles.modeRow}>
                   <span className="text-body-sm" style={{ fontWeight: 700 }}>
@@ -216,15 +238,15 @@ export function TrainingByNumber() {
                   <div className={styles.chipRow}>
                     <Chip
                       icon="dice"
-                      selected={mode === 'random'}
-                      onClick={() => setNumberMode(number, 'random')}
+                      selected={flags.random}
+                      onClick={() => toggleFlag(number, 'random')}
                     >
                       Случайное
                     </Chip>
                     <Chip
                       icon="retry"
-                      selected={mode === 'unseen'}
-                      onClick={() => setNumberMode(number, 'unseen')}
+                      selected={flags.unseen}
+                      onClick={() => toggleFlag(number, 'unseen')}
                     >
                       Только нерешённые
                     </Chip>

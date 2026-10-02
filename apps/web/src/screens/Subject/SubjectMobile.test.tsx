@@ -239,6 +239,26 @@ describe('SubjectMobile', () => {
   });
 });
 
+describe('SubjectMobile — Задания по номерам tab (audit: the tab that went missing)', () => {
+  it('shows a separate "По номерам" tab alongside Темы/Варианты/Избранное', () => {
+    mockCollections();
+    mockProgress();
+    renderSubject();
+    expect(screen.getByRole('button', { name: 'По номерам' })).toBeInTheDocument();
+  });
+
+  it('navigates to the dedicated TrainingByNumber screen, carrying subject/collection/from', async () => {
+    mockCollections();
+    mockProgress();
+    const user = userEvent.setup();
+    renderSubject();
+    await user.click(screen.getByRole('button', { name: 'По номерам' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('overlay')).toHaveTextContent('trainingByNumber'),
+    );
+  });
+});
+
 describe('SubjectMobile — VariantBuilder (Task Workspace block — "Варианты → Общие → сформировать вариант")', () => {
   it('resolves every picked number (not just the first) into a real customOrderedTasks list', async () => {
     mockCollections();

@@ -42,14 +42,17 @@ function renderApp() {
   );
 }
 
-describe('AppMobile — bottom nav (matches profile_mobile_target.jpeg: Главная/Задания/Статистика/Достижения/Профиль)', () => {
+describe('AppMobile — bottom nav (Главная/Задания/Статистика/Мои ошибки/Профиль)', () => {
   it('renders all five real nav slots', () => {
     renderApp();
     expect(screen.getByRole('button', { name: 'Главная' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Задания' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Статистика' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Достижения' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Мои ошибки' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Профиль' })).toBeInTheDocument();
+    // "Достижения" is no longer its own nav slot — it moved inside
+    // Статистика (see the next describe block).
+    expect(screen.queryByRole('button', { name: 'Достижения' })).not.toBeInTheDocument();
   });
 
   it('"Задания" opens the real Training setup screen directly, not a WIP placeholder', async () => {
@@ -73,7 +76,22 @@ describe('AppMobile — bottom nav (matches profile_mobile_target.jpeg: Глав
     expect(screen.getByRole('button', { name: 'Главная' })).toBeInTheDocument();
   });
 
-  it('"Мои ошибки" stays reachable (Statistics\' own link), even though it is no longer a bottom-nav slot', async () => {
+  it('"Мои ошибки" opens the real Mistakes screen directly, with the bottom nav still visible', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getMistakes).mockResolvedValue([]);
+    renderApp();
+    await user.click(screen.getByRole('button', { name: 'Мои ошибки' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('overlay')).toHaveTextContent('mistakes');
+    });
+    const mistakesTab = screen.getByRole('button', { name: 'Мои ошибки' });
+    expect(mistakesTab).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Главная' })).toBeInTheDocument();
+  });
+});
+
+describe('AppMobile — Достижения/Рейтинг moved inside Статистика', () => {
+  it('Статистика offers real Достижения/Рейтинг sections, using the same honest placeholder the standalone screens show', async () => {
     const user = userEvent.setup();
     vi.mocked(api.getProgressSummary).mockResolvedValue({
       solvedTotal: 0,
@@ -87,11 +105,71 @@ describe('AppMobile — bottom nav (matches profile_mobile_target.jpeg: Глав
     });
     renderApp();
     await user.click(screen.getByRole('button', { name: 'Статистика' }));
-    const mistakesLink = await screen.findByRole('button', { name: /Анализ ошибок|Мои ошибки/ });
-    await user.click(mistakesLink);
-    await waitFor(() => {
-      expect(screen.getByTestId('overlay')).toHaveTextContent('mistakes');
-    });
+    await user.click(await screen.findByRole('tab', { name: 'Достижения' }));
+    expect(screen.getAllByText('Достижения').length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('tab', { name: 'Рейтинг' }));
+    expect(screen.getAllByText('Рейтинг').length).toBeGreaterThan(0);
+  });
+});
+
+describe('AppMobile — Subject → Задания по номерам → task → Back (routing fix)', () => {
+  const MATH_COLLECTION = {
+    collection: {
+      id: 'c1',
+      subjectId: 'math',
+      slug: 'ege-2026-yashchenko',
+      title: 'ЕГЭ 2026 Ященко',
+      publisher: 'Ященко',
+      year: 2026,
+      description: null,
+    },
+    variants: [],
+  };
+
+  const RANDOM_TASK = {
+    id: 'task-1',
+    subjectId: 'math',
+    taskNumber: 5,
+    topicId: null,
+    topicName: null,
+    difficulty: 2 as const,
+    conditionMd: 'Условие',
+    imageUrl: null,
+    hintMd: null,
+    answerType: 'short_answer' as const,
+    answerOptions: null,
+    answerParts: null,
+    source: 'ФИПИ',
+    sourceUrl: null,
+    sourceYear: 2026,
+    tags: [],
+    status: 'published' as const,
+  };
+
+  it('Back from the started task returns to По номерам (not Subject, not a hardcoded Тренировка)', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.listCollections).mockResolvedValue([MATH_COLLECTION]);
+    vi.mocked(api.getProgressByTopic).mockResolvedValue({ items: [] });
+    vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
+
+    renderApp();
+    await user.click(screen.getByRole('button', { name: 'Главная' }));
+    // Open Subject via a direct navigate through Menu isn't exercised
+    // here — Subject itself is unit-tested for the tab; this covers the
+    // real screen-swap + Back chain starting from inside По номерам.
+    await user.click(screen.getByRole('button', { name: 'Профиль' }));
+    await user.click(screen.getByRole('button', { name: 'Меню' }));
+    await user.click(screen.getByRole('button', { name: 'Все задания' }));
+    await user.click(await screen.findByText('Математика'));
+    await user.click(await screen.findByRole('button', { name: 'По номерам' }));
+
+    await user.click(await screen.findByRole('button', { name: '№5' }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+    await waitFor(() => expect(screen.getByTestId('overlay')).toHaveTextContent('task:5'));
+
+    const backButton = screen.getByRole('button', { name: /Назад|Математика/ });
+    await user.click(backButton);
+    await waitFor(() => expect(screen.getByRole('button', { name: '№5' })).toBeInTheDocument());
   });
 });
 
