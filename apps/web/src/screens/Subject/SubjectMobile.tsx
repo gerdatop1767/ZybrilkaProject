@@ -28,8 +28,9 @@ function sourceSelectOptions(collections: readonly CollectionListItem[]) {
   ];
 }
 
-const modes: readonly { id: SubjectModeId; label: string; icon: IconName }[] = [
+const modes: readonly { id: SubjectModeId | 'byNumber'; label: string; icon: IconName }[] = [
   { id: 'topics', label: 'Темы', icon: 'reference' },
+  { id: 'byNumber', label: 'По номерам', icon: 'checklist' },
   { id: 'variants', label: 'Варианты', icon: 'variant' },
   { id: 'favorites', label: 'Избранное', icon: 'favorite' },
 ];
@@ -156,7 +157,16 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
     });
   }
 
-  function selectMode(id: SubjectModeId) {
+  function selectMode(id: SubjectModeId | 'byNumber') {
+    if (id === 'byNumber') {
+      navigate({
+        screen: 'trainingByNumber',
+        subjectId: subject.id,
+        collectionSlug: effectiveTopicsSlug ?? undefined,
+        from: currentReturnTo(),
+      });
+      return;
+    }
     setMode(id);
     setSelectedTopic(null);
   }

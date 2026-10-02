@@ -332,6 +332,25 @@ describe('SubjectDesktop — Варианты (real collections, source isolatio
   });
 });
 
+describe('SubjectDesktop — Задания по номерам tab (audit: the tab that went missing)', () => {
+  it('shows a separate "Задания по номерам" tab alongside Темы/Варианты/Избранное', () => {
+    mockCollections();
+    renderSubject();
+    expect(screen.getByText('Задания по номерам')).toBeInTheDocument();
+    expect(screen.getByText('Выбрать конкретное задание')).toBeInTheDocument();
+  });
+
+  it('navigates to the dedicated TrainingByNumber screen, carrying subject/collection/from — not an inline block', async () => {
+    mockCollections();
+    const user = userEvent.setup();
+    renderSubject();
+    await user.click(screen.getByText('Задания по номерам'));
+    await waitFor(() =>
+      expect(screen.getByTestId('overlay')).toHaveTextContent('trainingByNumber'),
+    );
+  });
+});
+
 describe('SubjectDesktop — BackRow', () => {
   it('returns to the parent screen it opened from (subjectCatalog), not the tab underneath', async () => {
     mockCollections();

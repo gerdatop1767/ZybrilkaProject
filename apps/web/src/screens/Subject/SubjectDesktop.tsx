@@ -43,8 +43,19 @@ export interface SubjectDesktopProps {
 
 type TopicProgressItem = ProgressByTopicResponse['items'][number];
 
-const modes: readonly { id: SubjectModeId; label: string; caption: string; icon: IconName }[] = [
+const modes: readonly {
+  id: SubjectModeId | 'byNumber';
+  label: string;
+  caption: string;
+  icon: IconName;
+}[] = [
   { id: 'topics', label: 'Темы', caption: 'Все темы по номерам', icon: 'reference' },
+  {
+    id: 'byNumber',
+    label: 'Задания по номерам',
+    caption: 'Выбрать конкретное задание',
+    icon: 'checklist',
+  },
   { id: 'variants', label: 'Варианты', caption: 'Полные варианты ЕГЭ', icon: 'variant' },
   { id: 'favorites', label: 'Избранное', caption: 'Сохранённые задания', icon: 'favorite' },
 ];
@@ -218,6 +229,15 @@ export function SubjectDesktop({
             type="button"
             className={clsx(styles.modeButton, mode === item.id && styles.modeButtonActive)}
             onClick={() => {
+              if (item.id === 'byNumber') {
+                navigate({
+                  screen: 'trainingByNumber',
+                  subjectId: subject.id,
+                  collectionSlug: effectiveTopicsSlug ?? undefined,
+                  from: currentReturnTo(),
+                });
+                return;
+              }
               setMode(item.id);
               setSelectedTopic(null);
             }}

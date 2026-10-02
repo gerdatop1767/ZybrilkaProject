@@ -62,10 +62,10 @@ function OverlayMarker() {
   return <p data-testid="overlay">{overlay?.screen ?? 'none'}</p>;
 }
 
-function renderScreen() {
+function renderScreen(props: Partial<React.ComponentProps<typeof TrainingByNumber>> = {}) {
   return render(
     <NavigationProvider>
-      <TrainingByNumber />
+      <TrainingByNumber {...props} />
       <OverlayMarker />
     </NavigationProvider>,
   );
@@ -84,7 +84,7 @@ describe('TrainingByNumber', () => {
     expect(api.getRandomTask).not.toHaveBeenCalled();
   });
 
-  it('a single selected number defaults to "Случайное" and calls getRandomTask scoped to it', async () => {
+  it('a newly selected number defaults to both flags off — "обычный выбор"', async () => {
     const user = userEvent.setup();
     vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
     renderScreen();
@@ -103,7 +103,7 @@ describe('TrainingByNumber', () => {
     await waitFor(() => expect(screen.getByTestId('overlay')).toHaveTextContent('task:5'));
   });
 
-  it('"Случайное" drops the collection scope', async () => {
+  it('🎲 and 🔄 are independent — both can be on for the same number at once', async () => {
     const user = userEvent.setup();
     vi.mocked(api.listCollections).mockResolvedValue([COLLECTION]);
     vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
@@ -114,15 +114,28 @@ describe('TrainingByNumber', () => {
     await user.click(await screen.findByRole('option', { name: 'ЕГЭ 2026 Ященко' }));
 
     await user.click(screen.getByRole('button', { name: '№5' }));
+    await user.click(screen.getByRole('button', { name: 'Случайное' }));
+    await user.click(screen.getByRole('button', { name: 'Только нерешённые' }));
+    expect(screen.getByRole('button', { name: 'Случайное' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Только нерешённые' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+
     await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
     await waitFor(() => {
+      // 🎲 ON drops the Сборник scope (draws from the whole bank), 🔄
+      // ON adds the real unseen filter — both at once, never exclusive.
       expect(api.getRandomTask).toHaveBeenCalledWith(
-        expect.objectContaining({ taskNumber: 5, collection: undefined }),
+        expect.objectContaining({ taskNumber: 5, collection: undefined, unseen: true }),
       );
     });
   });
 
-  it('"Только нерешённые" sends unseen:true and keeps the collection scope', async () => {
+  it('🎲 OFF + 🔄 ON stays scoped to the selected Сборник with the unseen filter', async () => {
     const user = userEvent.setup();
     vi.mocked(api.listCollections).mockResolvedValue([COLLECTION]);
     vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
@@ -146,16 +159,40 @@ describe('TrainingByNumber', () => {
     });
   });
 
-  it('mixes independent modes across different numbers in one run', async () => {
+  it('🎲 ON + 🔄 OFF drops the collection scope without the unseen filter', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.listCollections).mockResolvedValue([COLLECTION]);
+    vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
+    renderScreen();
+
+    const trigger = await screen.findByRole('button', { name: /Все источники/ });
+    await user.click(trigger);
+    await user.click(await screen.findByRole('option', { name: 'ЕГЭ 2026 Ященко' }));
+
+    await user.click(screen.getByRole('button', { name: '№5' }));
+    await user.click(screen.getByRole('button', { name: 'Случайное' }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+    await waitFor(() => {
+      expect(api.getRandomTask).toHaveBeenCalledWith(
+        expect.objectContaining({ taskNumber: 5, collection: undefined, unseen: undefined }),
+      );
+    });
+  });
+
+  it('mixes independent flag combinations across different numbers in one run', async () => {
     const user = userEvent.setup();
     vi.mocked(api.getRandomTask).mockImplementation((params) =>
-      Promise.resolve({ ...RANDOM_TASK, taskNumber: params.taskNumber! }),
+      Promise.resolve({
+        ...RANDOM_TASK,
+        id: `task-${params.taskNumber}`,
+        taskNumber: params.taskNumber!,
+      }),
     );
     renderScreen();
     await user.click(screen.getByRole('button', { name: '№5' }));
     await user.click(screen.getByRole('button', { name: '№7' }));
     const unseenToggles = screen.getAllByRole('button', { name: 'Только нерешённые' });
-    // №5 stays "Случайное" (default); mark №7 (the second row) "Только нерешённые".
+    // №5 stays off/off (default); mark №7 (the second row) unseen.
     await user.click(unseenToggles[1]!);
     await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
 
@@ -174,7 +211,11 @@ describe('TrainingByNumber', () => {
     const user = userEvent.setup();
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0); // always swap to front
     vi.mocked(api.getRandomTask).mockImplementation((params) =>
-      Promise.resolve({ ...RANDOM_TASK, taskNumber: params.taskNumber! }),
+      Promise.resolve({
+        ...RANDOM_TASK,
+        id: `task-${params.taskNumber}`,
+        taskNumber: params.taskNumber!,
+      }),
     );
     renderScreen();
     await user.click(screen.getByRole('button', { name: '№5' }));
@@ -203,7 +244,7 @@ describe('TrainingByNumber', () => {
     await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
     expect(
       await screen.findByText(
-        'Для №5 больше нет нерешённых заданий. Можно сменить режим на «Случайное» для этого номера.',
+        'Для №5 больше нет нерешённых заданий. Можно выключить «Только нерешённые» для этого номера.',
       ),
     ).toBeInTheDocument();
   });
@@ -221,17 +262,19 @@ describe('TrainingByNumber', () => {
     });
   });
 
-  it("deselecting the subject's now-invalid numbers after switching subject keeps selection consistent", async () => {
+  it("seeds the subject/collection from props (e.g. arriving from Subject's own tab)", async () => {
+    vi.mocked(api.listCollections).mockResolvedValue([
+      { ...COLLECTION, collection: { ...COLLECTION.collection, subjectId: 'russian' } },
+    ]);
+    renderScreen({ subjectId: 'russian' });
+    expect(await screen.findByRole('button', { name: /Русский язык/ })).toBeInTheDocument();
+  });
+
+  it('BackRow returns to the real `from` route instead of a hardcoded Training', async () => {
     const user = userEvent.setup();
-    renderScreen();
-    await user.click(screen.getByRole('button', { name: '№5' }));
-    const subjectSelect = screen.getByRole('button', { name: /Математика/ });
-    await user.click(subjectSelect);
-    await user.click(await screen.findByRole('option', { name: 'Русский язык' }));
-    // №5 may or may not still be valid depending on subject content, but
-    // the screen must still render without crashing and keep a working
-    // "Начать тренировку" flow — not asserting exact numbers here since
-    // subjectContent is real data, just that the screen is still usable.
-    expect(screen.getByRole('button', { name: 'Начать тренировку' })).toBeInTheDocument();
+    renderScreen({ from: { screen: 'subject', subjectId: 'math', initialMode: 'topics' } });
+    expect(screen.getByRole('button', { name: 'Математика' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Математика' }));
+    expect(screen.getByTestId('overlay')).toHaveTextContent('subject');
   });
 });

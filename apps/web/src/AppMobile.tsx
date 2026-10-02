@@ -41,13 +41,16 @@ export function AppMobile() {
   const contentOverlay = isMenuOpen ? null : overlay;
 
   function selectTab(id: string) {
-    // Профиль is a real overlay screen (see navigation.tsx's doc comment
-    // on `profile`), not a MainTabId, so it needs its own navigate()
-    // carrying `from` — unlike every other overlay entry, the bottom
-    // nav stays visible over it (see the dedicated branch below), so
-    // `from` only matters for BackRow if the user later drills further in.
+    // Профиль/Мои ошибки are real overlay screens (see navigation.tsx's
+    // doc comments), not MainTabIds, so they need their own navigate()
+    // — unlike every other overlay entry, the bottom nav stays visible
+    // over them (see the dedicated branch below).
     if (id === 'profile') {
       navigate({ screen: 'profile', from: { screen: tab } });
+      return;
+    }
+    if (id === 'mistakes') {
+      navigate({ screen: 'mistakes' });
       return;
     }
     navigate({ screen: id as MainTabId });
@@ -55,19 +58,30 @@ export function AppMobile() {
 
   const menu = <MobileMenu open={isMenuOpen} onClose={back} activeTab={tab} />;
 
-  // Профиль is the one overlay that keeps the bottom nav visible (with
-  // "Профиль" highlighted) — every other overlay below is a chrome-less
-  // full-screen takeover. See navigation.tsx: `profile` deliberately
-  // stays an OverlayRoute (not a MainTabId) so Desktop's `from`-based
-  // BackRow keeps working untouched; this is a mobile-only rendering
-  // choice, not a routing change.
-  if (contentOverlay && contentOverlay.screen === 'profile') {
+  // Профиль and Мои ошибки are the two overlays that keep the bottom
+  // nav visible (with their own slot highlighted) — every other
+  // overlay below is a chrome-less full-screen takeover. See
+  // navigation.tsx: both deliberately stay OverlayRoutes (not
+  // MainTabIds) so Desktop's own routing/BackRow keeps working
+  // untouched; this is a mobile-only rendering choice, not a routing
+  // change.
+  if (
+    contentOverlay &&
+    (contentOverlay.screen === 'profile' || contentOverlay.screen === 'mistakes')
+  ) {
     return (
       <>
         <MobileShell
-          nav={<BottomNav items={defaultBottomNavItems} activeId="profile" onSelect={selectTab} />}
+          nav={
+            <BottomNav
+              items={defaultBottomNavItems}
+              activeId={contentOverlay.screen}
+              onSelect={selectTab}
+            />
+          }
         >
-          <Profile />
+          {contentOverlay.screen === 'profile' && <Profile />}
+          {contentOverlay.screen === 'mistakes' && <MistakesMobile />}
         </MobileShell>
         {menu}
       </>
@@ -116,7 +130,6 @@ export function AppMobile() {
         {contentOverlay.screen === 'learningSession' && (
           <LearningSession key={contentOverlay.sessionId} sessionId={contentOverlay.sessionId} />
         )}
-        {contentOverlay.screen === 'mistakes' && <MistakesMobile />}
         {contentOverlay.screen === 'trainingTopic' && (
           <WipPlaceholder title="Тренировка по теме" note="Экран в разработке — следующий блок." />
         )}
@@ -126,7 +139,13 @@ export function AppMobile() {
         {contentOverlay.screen === 'trainingVariants' && (
           <WipPlaceholder title="Варианты" note="Экран в разработке — следующий блок." />
         )}
-        {contentOverlay.screen === 'trainingByNumber' && <TrainingByNumber />}
+        {contentOverlay.screen === 'trainingByNumber' && (
+          <TrainingByNumber
+            subjectId={contentOverlay.subjectId}
+            collectionSlug={contentOverlay.collectionSlug}
+            from={contentOverlay.from}
+          />
+        )}
         {contentOverlay.screen === 'rating' && <RatingMobile />}
         {contentOverlay.screen === 'about' && <AboutMobile />}
         {contentOverlay.screen === 'learningCenter' && (

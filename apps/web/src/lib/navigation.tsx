@@ -129,11 +129,21 @@ export type OverlayRoute =
   | { screen: 'trainingTopic' }
   | { screen: 'trainingRandom' }
   | { screen: 'trainingVariants' }
-  /** The dedicated "Тренировка → По номерам" screen (real, not a WIP
-   * placeholder) — multi-select task numbers, an independent
-   * 🎲 Случайное / 🔄 Только нерешённые mode per number, and an
-   * optional shuffle of solving order. See TrainingByNumber.tsx. */
-  | { screen: 'trainingByNumber' }
+  /** The dedicated "Задания по номерам" screen (real, not a WIP
+   * placeholder) — multi-select task numbers, two *independent*
+   * toggles per number (🎲 Случайное / 🔄 Только нерешённые — both can
+   * be on at once), and an optional shuffle of solving order. See
+   * TrainingByNumber.tsx. Reachable both from Training's mode grid and
+   * from Subject's own "Задания по номерам" tab — `from` carries
+   * whichever one it was, and an optional `subjectId`/`collectionSlug`
+   * seed the screen's own pickers, matching the `subject` overlay's
+   * own `from`/`collectionSlug` pattern. */
+  | {
+      screen: 'trainingByNumber';
+      from?: Route;
+      subjectId?: string;
+      collectionSlug?: string;
+    }
   | { screen: 'rating' }
   | { screen: 'about' }
   | { screen: 'menu' }

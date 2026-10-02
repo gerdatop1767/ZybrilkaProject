@@ -1,5 +1,6 @@
-import { getRandomTask } from './api.js';
+import { ApiError, getRandomTask } from './api.js';
 import type { Route } from './navigation.js';
+import type { TaskPublic } from '@zybrilka/shared';
 
 /**
  * The only way a `{ screen: 'task' }` route should ever be reached:
@@ -61,6 +62,10 @@ export function startRealTask(
     taskNumber?: number;
     collection?: string;
     topic?: string;
+    /** Excludes tasks the user already has an attempt on — the same
+     * real `unseen` filter every other entry point uses, never a
+     * second mechanism. */
+    unseen?: boolean;
     /** Where Task's back arrow should return to (audit Block 3) — see
      * `returnTo` on the `task` route in navigation.tsx. Absent means
      * "no known parent overlay", same as before this existed. */
@@ -77,4 +82,102 @@ export function startRealTask(
       returnTo: params.returnTo,
     });
   });
+}
+
+/** Fisher-Yates — used wherever a selection of slots (task numbers,
+ * identical-filter repeats) needs its *solving order* shuffled, never
+ * which task gets picked for a slot (that stays exactly
+ * `getRandomTask`/the real `unseen` filter). */
+export function shuffled<T>(items: readonly T[]): T[] {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j]!, result[i]!];
+  }
+  return result;
+}
+
+/** One slot to resolve into a real task. `random` here means "ignore
+ * the selected Сборник and draw from the whole published pool" (the
+ * only real axis `getRandomTask` exposes beyond `unseen` — there is no
+ * backend concept of a "non-random" pick, so OFF simply means "stay
+ * scoped to the chosen source" rather than widen the pool). `unseen`
+ * is the real backend `unseen` filter. The two are fully independent:
+ * any of the four combinations is valid and maps onto a single real
+ * `GET /tasks/random` call — no new backend mechanism. */
+export interface TaskPickFilter {
+  subject: string;
+  topic?: string;
+  taskNumber?: number;
+  collection?: string;
+  random: boolean;
+  unseen: boolean;
+}
+
+export type TaskBatchError =
+  | { reason: 'no_unseen_tasks'; index: number; filter: TaskPickFilter }
+  | { reason: 'none'; index: number; filter: TaskPickFilter };
+
+/**
+ * Resolves a batch of independent `TaskPickFilter` slots into real
+ * tasks — one at a time (never `Promise.all`), so a failure on one
+ * slot stops immediately with an honest, specific error instead of
+ * silently dropping it or substituting a random task for it, and
+ * never discards tasks already resolved for earlier slots. A batch of
+ * exactly one filter is the same code path as several — "По номерам"
+ * (one filter per picked number), "По теме" with picked numbers (one
+ * filter per number), and "По теме" with a fixed amount (the same
+ * filter repeated N times, with a bounded de-dup retry since nothing
+ * server-side excludes a task already drawn earlier in this same
+ * batch) all go through this one function. Never resolves more than
+ * `filters.length` tasks up front — "∞ Без ограничения" simply never
+ * calls this with more than one filter (see `startRealTask`).
+ */
+export async function resolveTaskBatch(
+  filters: readonly TaskPickFilter[],
+  options: { shuffleOrder?: boolean } = {},
+): Promise<{ tasks: TaskPublic[] } | { error: TaskBatchError }> {
+  // "Перемешать порядок" reorders which slot is *solved* first — the
+  // returned list (which becomes `customOrderedTasks`) stays in
+  // exactly this order, shuffled or not.
+  const order = options.shuffleOrder
+    ? shuffled(filters.map((_, i) => i))
+    : filters.map((_, i) => i);
+  const tasks: TaskPublic[] = [];
+  const usedIds = new Set<string>();
+
+  for (const index of order) {
+    const filter = filters[index]!;
+    const query = {
+      subject: filter.subject,
+      topic: filter.topic,
+      taskNumber: filter.taskNumber,
+      collection: filter.random ? undefined : filter.collection,
+      unseen: filter.unseen || undefined,
+    };
+    try {
+      let task = await getRandomTask(query);
+      // Nothing server-side excludes a task already drawn earlier in
+      // this batch, so a handful of identical-filter slots (fixed
+      // "Количество заданий" over the same topic/subject) can repeat —
+      // a bounded local retry avoids that in the common case without
+      // inventing a new backend exclusion mechanism. Exhausting the
+      // retries just accepts the repeat rather than erroring.
+      for (let attempt = 0; usedIds.has(task.id) && attempt < 4; attempt += 1) {
+        task = await getRandomTask(query);
+      }
+      usedIds.add(task.id);
+      tasks.push(task);
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        (error.body as { error?: string })?.error === 'no_unseen_tasks'
+      ) {
+        return { error: { reason: 'no_unseen_tasks', index, filter } };
+      }
+      return { error: { reason: 'none', index, filter } };
+    }
+  }
+
+  return { tasks };
 }

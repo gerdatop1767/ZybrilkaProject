@@ -86,7 +86,13 @@ export function AppDesktop() {
         {overlay.screen === 'trainingVariants' && (
           <WipPlaceholder title="Варианты" note="Экран в разработке — следующий блок." />
         )}
-        {overlay.screen === 'trainingByNumber' && <TrainingByNumber />}
+        {overlay.screen === 'trainingByNumber' && (
+          <TrainingByNumber
+            subjectId={overlay.subjectId}
+            collectionSlug={overlay.collectionSlug}
+            from={overlay.from}
+          />
+        )}
         {overlay.screen === 'rating' && <RatingDesktop />}
         {overlay.screen === 'about' && <AboutDesktop />}
         {overlay.screen === 'learningCenter' && <LearningCenterDesktop />}

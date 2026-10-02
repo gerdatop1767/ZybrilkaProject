@@ -28,6 +28,7 @@ import { TaskNumberGrid } from '../../ui/Statistics/TaskNumberGrid.js';
 import { TaskNumberDetailPanel } from '../../ui/Statistics/TaskNumberDetailPanel.js';
 import { TopicProgressRow } from '../../ui/Statistics/TopicProgressRow.js';
 import { NewMockExamCard } from '../../ui/Statistics/MockExamCard.js';
+import { WipPlaceholder } from '../../ui/WipPlaceholder/WipPlaceholder.js';
 import { CircularProgress } from '../../ui/Progress/CircularProgress.js';
 import { DonutChart } from '../../ui/Charts/DonutChart.js';
 import { FadeIn } from '../../ui/motion/motion.js';
@@ -39,6 +40,8 @@ const subTabs = [
   { id: 'byTask', label: 'По заданиям' },
   { id: 'byTopic', label: 'По темам' },
   { id: 'exams', label: 'Пробники' },
+  { id: 'achievements', label: 'Достижения' },
+  { id: 'rating', label: 'Рейтинг' },
 ];
 
 const DEFAULT_SUBJECT_ID = 'math';
@@ -274,6 +277,25 @@ export function StatisticsMobile() {
               <NewMockExamCard />
             </div>
           </Card>
+        </FadeIn>
+      )}
+
+      {subTab === 'achievements' && (
+        <FadeIn className={styles.stack}>
+          {/* No achievements backend exists yet (unlock logic,
+              categories, progress tracking) — the same honest
+              placeholder the standalone Достижения screen already
+              shows, never fabricated unlock data. */}
+          <WipPlaceholder title="Достижения" note="Экран в разработке — следующий блок." />
+        </FadeIn>
+      )}
+
+      {subTab === 'rating' && (
+        <FadeIn className={styles.stack}>
+          {/* No leaderboard backend exists yet (ranking aggregation,
+              persistent user profiles) — same honest placeholder the
+              standalone Рейтинг screen already shows. */}
+          <WipPlaceholder title="Рейтинг" note="Экран в разработке — следующий блок." />
         </FadeIn>
       )}
 

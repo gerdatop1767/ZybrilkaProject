@@ -1,4 +1,5 @@
 import {
+  Infinity as InfinityIcon,
   Home,
   Dumbbell,
   Swords,
@@ -212,6 +213,7 @@ export const icons = {
   share: Share2,
   edit: Pencil,
   pause: Pause,
+  infinite: InfinityIcon,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof icons;
