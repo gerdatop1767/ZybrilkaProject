@@ -23,6 +23,8 @@
     "db:migrate:prod": "node dist/migrate.js",
     "db:seed": "tsx --conditions=@zybrilka/source src/seed.ts",
     "db:seed:prod": "node dist/seed.js",
+    "db:sync-subjects": "tsx --conditions=@zybrilka/source src/syncSubjects.ts",
+    "db:sync-subjects:prod": "node dist/syncSubjects.js",
     "db:import:ege-2026-v1": "tsx --conditions=@zybrilka/source src/importEge2026Variant1.ts",
     "db:import:ege-2026-v1:prod": "node dist/importEge2026Variant1.js"
   },
