@@ -31,6 +31,17 @@ export const progressSummarySchema = z.object({
       accuracyPercent: z.number().min(0).max(100),
     }),
   ),
+  /** Statistics 2.0 — real per-subject timing, additive to `bySubject`.
+   * Absent subject (no timed attempts yet) just isn't in the array —
+   * never a fabricated 0ms entry. */
+  timeBySubject: z.array(
+    z.object({
+      subjectId: z.string(),
+      averageTimeMs: z.number().nonnegative(),
+      medianTimeMs: z.number().nonnegative(),
+      timedAttempts: z.number().int().positive(),
+    }),
+  ),
 });
 export type ProgressSummary = z.infer<typeof progressSummarySchema>;
 

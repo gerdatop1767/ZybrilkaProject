@@ -1,40 +1,42 @@
 import type { ProgressByTaskNumberResponse, ProgressDailyResponse } from '@zybrilka/shared';
 import type { DailyPoint, TaskNumberProgress } from '../data/sampleStatistics.js';
 
-const MAX_TASK_NUMBER = 19;
-
 /**
  * Maps real per-task-number X/Y (Block A's total/completed — same
- * source of truth as Subject's "По номерам") onto the fixed 1–19
- * "Прогресс по заданиям" strip/grid — numbers with no attempt at all
- * render as "не решалось" rather than a fabricated percent. `percent`
- * here is *completion* (completed/total), not accuracy: Statistics and
- * Subject now show the same real metric for a task number instead of
- * two different ones.
+ * source of truth as Subject's "По номерам") onto the "Прогресс по
+ * заданиям" strip/grid. The number list itself is derived from the
+ * real response (every number that actually has published tasks,
+ * `total > 0`) rather than a fixed range — subjects don't all have the
+ * same count of task numbers, so a hardcoded range would either cut
+ * off real numbers or show numbers that don't exist for this subject.
+ * Numbers with no attempt at all render as "не решалось" rather than a
+ * fabricated percent. `percent` here is *completion* (completed/total),
+ * not accuracy: Statistics and Subject now show the same real metric
+ * for a task number instead of two different ones.
  */
 export function toTaskNumberProgress(
   items: ProgressByTaskNumberResponse['items'],
 ): readonly TaskNumberProgress[] {
-  const byNumber = new Map(items.map((row) => [row.taskNumber, row]));
-
-  return Array.from({ length: MAX_TASK_NUMBER }, (_, i) => {
-    const number = i + 1;
-    const row = byNumber.get(number);
-    if (!row || row.completed === 0) {
-      return { number, percent: null, status: 'untried' as const };
-    }
-    const percent = Math.round((row.completed / row.total) * 100);
-    const status: TaskNumberProgress['status'] =
-      percent >= 70 ? 'strong' : percent >= 40 ? 'medium' : 'weak';
-    return { number, percent, status };
-  });
+  return items
+    .filter((row) => row.total > 0)
+    .slice()
+    .sort((a, b) => a.taskNumber - b.taskNumber)
+    .map((row) => {
+      const { taskNumber: number, completed, total } = row;
+      if (completed === 0) {
+        return { number, percent: null, status: 'untried' as const };
+      }
+      const percent = Math.round((completed / total) * 100);
+      const status: TaskNumberProgress['status'] =
+        percent >= 70 ? 'strong' : percent >= 40 ? 'medium' : 'weak';
+      return { number, percent, status };
+    });
 }
 
 /**
  * Zero-fills the requested day range (UTC calendar days, oldest first)
- * around the sparse real `/progress/daily` response — same precedent
- * as `toTaskNumberProgress`'s fixed 1–19 range: a day with no activity
- * is a real zero, not a missing chart point.
+ * around the sparse real `/progress/daily` response: a day with no
+ * activity is a real zero, not a missing chart point.
  */
 export function toDailyPoints(
   items: ProgressDailyResponse['items'],

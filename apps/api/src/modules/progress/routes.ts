@@ -3,9 +3,13 @@ import {
   progressByTaskNumberQuerySchema,
   progressByTopicQuerySchema,
   progressDailyQuerySchema,
+  taskNumberStatisticsDetailQuerySchema,
 } from '@zybrilka/shared';
 import type { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
 import * as service from './service.js';
+
+const taskNumberParamsSchema = z.object({ taskNumber: z.coerce.number().int().positive() });
 
 const DEFAULT_DAILY_DAYS = 30;
 
@@ -63,5 +67,28 @@ export const progressRoutes: FastifyPluginAsync<ProgressRoutesOptions> = async (
       return reply.code(400).send({ error: 'invalid_query', issues: query.error.issues });
     }
     return service.getDaily(db, request.userId, query.data.days ?? DEFAULT_DAILY_DAYS);
+  });
+
+  // Statistics 2.0 — the "По номерам → №N" detail (Step 15). `subject`
+  // is required (unlike the coverage endpoints above) since a detail
+  // view only ever makes sense for one chosen subject.
+  app.get('/progress/by-task-number/:taskNumber/detail', async (request, reply) => {
+    if (!request.userId) {
+      return reply.code(400).send({ error: 'missing_anon_id' });
+    }
+    const params = taskNumberParamsSchema.safeParse(request.params);
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_params', issues: params.error.issues });
+    }
+    const query = taskNumberStatisticsDetailQuerySchema.safeParse(request.query);
+    if (!query.success) {
+      return reply.code(400).send({ error: 'invalid_query', issues: query.error.issues });
+    }
+    return service.getTaskNumberStatisticsDetail(
+      db,
+      request.userId,
+      query.data.subject,
+      params.data.taskNumber,
+    );
   });
 };

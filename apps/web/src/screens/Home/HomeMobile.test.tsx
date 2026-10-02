@@ -54,6 +54,7 @@ beforeEach(() => {
     bySubject: [],
     byTaskNumber: [],
     byTopic: [],
+    timeBySubject: [],
   });
 });
 
@@ -73,6 +74,7 @@ describe('HomeMobile', () => {
       bySubject: [],
       byTaskNumber: [],
       byTopic: [],
+      timeBySubject: [],
     });
     renderHome();
     await waitFor(() => expect(screen.getByText('248')).toBeInTheDocument());

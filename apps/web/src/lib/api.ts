@@ -11,6 +11,7 @@ import type {
   ProgressDailyResponse,
   ProgressSummary,
   SaveLearningProfileRequest,
+  TaskNumberStatisticsDetail,
   TaskPublic,
   TaskWithSolution,
   VariantDetail,
@@ -191,6 +192,19 @@ export function getProgressByTopic(params: {
   if (params.variant) query.set('variant', params.variant);
   const qs = query.toString();
   return apiFetch(`/progress/by-topic${qs ? `?${qs}` : ''}`);
+}
+
+/**
+ * Statistics 2.0 — the "По номерам → №N" detail (real attempts/
+ * errors/skills/speed-signal breakdown for one subject+taskNumber).
+ */
+export function getTaskNumberStatisticsDetail(
+  subjectId: string,
+  taskNumber: number,
+): Promise<TaskNumberStatisticsDetail> {
+  return apiFetch(
+    `/progress/by-task-number/${taskNumber}/detail?subject=${encodeURIComponent(subjectId)}`,
+  );
 }
 
 /**

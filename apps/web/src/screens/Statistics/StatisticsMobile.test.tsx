@@ -11,6 +11,7 @@ vi.mock('../../lib/api.js', () => ({
   getProgressByTopic: vi.fn(),
   getMistakes: vi.fn(),
   getRandomTask: vi.fn(() => new Promise(() => {})),
+  getTaskNumberStatisticsDetail: vi.fn(() => new Promise(() => {})),
 }));
 
 function renderWithNav() {
@@ -30,6 +31,7 @@ beforeEach(() => {
     bySubject: [],
     byTaskNumber: [],
     byTopic: [],
+    timeBySubject: [],
   });
   vi.mocked(api.getProgressByTaskNumber).mockResolvedValue({ items: [] });
   vi.mocked(api.getProgressByTopic).mockResolvedValue({ items: [] });
@@ -39,17 +41,25 @@ beforeEach(() => {
 describe('StatisticsMobile', () => {
   it('shows the overview tab by default with real data, not a stub', () => {
     renderWithNav();
-    expect(screen.getByText('Прогресс по заданиям (1–19)')).toBeInTheDocument();
+    expect(screen.getByText('Прогресс по заданиям')).toBeInTheDocument();
     expect(screen.queryByText('Экран в разработке — следующий блок.')).not.toBeInTheDocument();
   });
 
-  it('По заданиям tab always shows the full real 1–19 grid, not a stub', async () => {
+  it('По заданиям tab shows every real task number for the subject, not a hardcoded range', async () => {
+    vi.mocked(api.getProgressByTaskNumber).mockResolvedValue({
+      items: Array.from({ length: 19 }, (_, i) => ({
+        subjectId: 'math',
+        taskNumber: i + 1,
+        total: 1,
+        completed: 0,
+      })),
+    });
     const user = userEvent.setup();
     renderWithNav();
     await user.click(screen.getByRole('tab', { name: 'По заданиям' }));
     expect(screen.queryByText('Экран в разработке — следующий блок.')).not.toBeInTheDocument();
     for (let n = 1; n <= 19; n += 1) {
-      expect(screen.getByText(`№${n}`)).toBeInTheDocument();
+      await screen.findByText(`№${n}`);
     }
   });
 
@@ -83,10 +93,13 @@ describe('StatisticsMobile', () => {
   });
 
   it('every task-number card is a real tappable button', async () => {
+    vi.mocked(api.getProgressByTaskNumber).mockResolvedValue({
+      items: [{ subjectId: 'math', taskNumber: 1, total: 4, completed: 3 }],
+    });
     const user = userEvent.setup();
     renderWithNav();
     await user.click(screen.getByRole('tab', { name: 'По заданиям' }));
-    const card = screen.getByText('№1').closest('button');
+    const card = (await screen.findByText('№1')).closest('button');
     expect(card).toBeInTheDocument();
     // Should not throw when tapped.
     await user.click(card!);
@@ -103,7 +116,10 @@ describe('StatisticsMobile', () => {
 describe('StatisticsMobile — real progress data', () => {
   it('shows real per-task-number completion once the API responds, including untried numbers', async () => {
     vi.mocked(api.getProgressByTaskNumber).mockResolvedValue({
-      items: [{ subjectId: 'math', taskNumber: 1, total: 4, completed: 3 }],
+      items: [
+        { subjectId: 'math', taskNumber: 1, total: 4, completed: 3 },
+        { subjectId: 'math', taskNumber: 2, total: 5, completed: 0 },
+      ],
     });
     const user = userEvent.setup();
     renderWithNav();
@@ -124,6 +140,7 @@ describe('StatisticsMobile — real progress data', () => {
       bySubject: [],
       byTaskNumber: [],
       byTopic: [],
+      timeBySubject: [],
     });
     renderWithNav();
     // The percent itself animates in (useCountUp) — assert the static,
@@ -154,5 +171,47 @@ describe('StatisticsMobile — real progress data', () => {
     await waitFor(() =>
       expect(screen.queryByText('Пока нет данных об ошибках.')).not.toBeInTheDocument(),
     );
+  });
+});
+
+describe('StatisticsMobile — По номерам detail (Statistics 2.0)', () => {
+  it('tapping a task number opens a full-screen detail with real data and a working back button', async () => {
+    vi.mocked(api.getProgressByTaskNumber).mockResolvedValue({
+      items: [{ subjectId: 'math', taskNumber: 5, total: 4, completed: 3 }],
+    });
+    vi.mocked(api.getTaskNumberStatisticsDetail).mockResolvedValue({
+      subjectId: 'math',
+      taskNumber: 5,
+      attempts: 4,
+      uniqueTasksAttempted: 3,
+      correctAttempts: 3,
+      incorrectAttempts: 1,
+      accuracy: 75,
+      averageTimeMs: 12000,
+      medianTimeMs: 11000,
+      timedAttempts: 4,
+      lastAttemptAt: new Date().toISOString(),
+      errorBreakdown: [],
+      skillBreakdown: [],
+      recentAccuracy: null,
+      previousAccuracy: null,
+      recentAverageTimeMs: null,
+      accuracyTrend: [],
+      timeTrend: [],
+      speedSignal: { value: null, baselineLevel: null, baselineMedianMs: null, sampleSize: 0 },
+    });
+    const user = userEvent.setup();
+    renderWithNav();
+    await user.click(screen.getByRole('tab', { name: 'По заданиям' }));
+    await user.click(await screen.findByText('№5'));
+
+    // The percent itself animates in (useCountUp) — assert the static,
+    // non-animated delta label instead of racing the animation.
+    expect(await screen.findByText('3 из 4')).toBeInTheDocument();
+    expect(api.getTaskNumberStatisticsDetail).toHaveBeenCalledWith('math', 5);
+
+    await user.click(screen.getByText('Статистика'));
+    expect(screen.queryByText('3 из 4')).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'По заданиям' })).toBeInTheDocument();
   });
 });

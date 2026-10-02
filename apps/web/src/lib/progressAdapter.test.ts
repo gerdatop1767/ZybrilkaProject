@@ -2,10 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { toDailyPoints, toTaskNumberProgress } from './progressAdapter.js';
 
 describe('toTaskNumberProgress', () => {
-  it('fills all 19 numbers, marking untried numbers with percent=null', () => {
+  it('derives the number list from real data, never a hardcoded range', () => {
     const rows = toTaskNumberProgress([]);
-    expect(rows).toHaveLength(19);
-    expect(rows.every((r) => r.percent === null && r.status === 'untried')).toBe(true);
+    expect(rows).toHaveLength(0);
+  });
+
+  it('only includes numbers with real published tasks (total>0), sorted ascending', () => {
+    const rows = toTaskNumberProgress([
+      { subjectId: 'math', taskNumber: 21, total: 3, completed: 1 },
+      { subjectId: 'math', taskNumber: 0, total: 0, completed: 0 },
+      { subjectId: 'math', taskNumber: 2, total: 4, completed: 2 },
+    ]);
+    expect(rows.map((r) => r.number)).toEqual([2, 21]);
   });
 
   it('a number with completed=0 stays untried even when total>0', () => {

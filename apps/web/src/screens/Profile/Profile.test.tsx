@@ -36,6 +36,7 @@ beforeEach(() => {
     bySubject: [],
     byTaskNumber: [],
     byTopic: [],
+    timeBySubject: [],
   });
   vi.mocked(api.getLearningProfile).mockResolvedValue({ onboardingCompleted: false, subjects: [] });
 });
@@ -56,6 +57,7 @@ describe('Profile', () => {
       bySubject: [],
       byTaskNumber: [],
       byTopic: [],
+      timeBySubject: [],
     });
     renderProfile();
     await waitFor(() => expect(screen.getByText('42')).toBeInTheDocument());

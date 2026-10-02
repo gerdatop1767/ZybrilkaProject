@@ -35,7 +35,14 @@ export async function recordErrorSignaturesForAttempt(
  * `gradeMultiPart`, exactly like `submitAttempt` does when the attempt
  * is first created, so a rebuild reproduces identical signatures.
  */
-function buildDetectionInput(attempt: repo.AttemptForErrorDetection): DetectErrorSignaturesInput {
+/** Exported for Statistics 2.0's per-task-number error breakdown
+ * (`apps/api/src/modules/progress/service.ts`), which re-runs detection
+ * scoped to one task number instead of reading the global per-user
+ * `user_error_statistics` table — same deterministic function, just a
+ * narrower input set. */
+export function buildDetectionInput(
+  attempt: repo.AttemptForErrorDetection,
+): DetectErrorSignaturesInput {
   if (attempt.answerType === 'multi_part') {
     const spec = parseMultiPartSpec(attempt.correctAnswer);
     const userAnswers = parseMultiPartUserAnswer(attempt.answerRaw);
