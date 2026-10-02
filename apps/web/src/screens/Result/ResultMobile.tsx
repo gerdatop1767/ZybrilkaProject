@@ -8,6 +8,10 @@ import {
   toSampleTask,
 } from '../../lib/taskAdapter.js';
 import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
+import { useActiveLearningSessionForTask } from '../../lib/learningSessionContext.js';
+import { formatElapsed } from '../../lib/formatElapsed.js';
+import { LearningSessionBadge } from '../../ui/LearningSession/LearningSessionBadge.js';
+import { LearningSessionResultAction } from '../../ui/LearningSession/LearningSessionResultAction.js';
 import type { SampleTask, TaskVariant } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { getProgressSummary } from '../../lib/api.js';
@@ -43,6 +47,10 @@ export interface ResultMobileProps {
   /** Where the back arrow returns to — see `returnTo` on the `result`
    * route in navigation.tsx (audit Block 3). */
   returnTo?: Route;
+  /** The real elapsed solving time submitted with this attempt (see
+   * `useSolvingTimer`) — absent when the timer was never started, in
+   * which case no time chip is shown at all rather than a fabricated one. */
+  timeSpentMs?: number;
 }
 
 const XP_REWARD = 20;
@@ -64,6 +72,7 @@ export function ResultMobile({
   variantId,
   customOrderedTasks,
   returnTo,
+  timeSpentMs,
 }: ResultMobileProps) {
   const { navigate, back } = useNavigation();
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
@@ -76,6 +85,7 @@ export function ResultMobile({
     returnTo,
   });
   const goBack = returnTo ? () => navigate(returnTo) : back;
+  const learningSession = useActiveLearningSessionForTask(taskId);
   // The router remounts this component (key={taskId}) whenever the task
   // or its correctness changes, so state starts fresh here.
   const [task, setTask] = useState<SampleTask | null>(null);
@@ -148,7 +158,7 @@ export function ResultMobile({
       screen: 'subject',
       subjectId: task.subjectId,
       collectionSlug,
-      initialMode: 'byNumber',
+      initialMode: 'topics',
     });
   }
 
@@ -194,6 +204,11 @@ export function ResultMobile({
           correct ? styles.feedbackCorrect : styles.feedbackWrong,
         )}
       >
+        {learningSession && (
+          <div className={styles.statRow}>
+            <LearningSessionBadge session={learningSession} />
+          </div>
+        )}
         {/* QA v3 Block 2: the task itself — same renderer/order as
          * TaskMobile and ResultDesktop's "Условие" card — so the user
          * sees "вот какое было задание" before the result below it,
@@ -227,10 +242,12 @@ export function ResultMobile({
           <span className={styles.statChip}>
             <Icon name="xp" size={16} className={styles.statIconGold} />+{Math.round(xp)} XP
           </span>
-          <span className={styles.statChip}>
-            <Icon name="progress" size={16} className={styles.statIconBlue} />
-            Время 1:24
-          </span>
+          {timeSpentMs !== undefined && (
+            <span className={styles.statChip}>
+              <Icon name="progress" size={16} className={styles.statIconBlue} />
+              Время {formatElapsed(timeSpentMs)}
+            </span>
+          )}
           {accuracyPercent !== null && (
             <span className={styles.statChip}>
               <Icon name="star" size={16} className={styles.statIconGold} />
@@ -332,6 +349,12 @@ export function ResultMobile({
             <Icon name="grid" size={16} /> К списку заданий
           </Button>
         </div>
+
+        {learningSession && (
+          <div className={styles.actions}>
+            <LearningSessionResultAction session={learningSession} />
+          </div>
+        )}
       </div>
 
       <ToolsPanelMobile

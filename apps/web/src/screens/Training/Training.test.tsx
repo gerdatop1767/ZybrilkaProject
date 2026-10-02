@@ -3,13 +3,29 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Training } from './Training.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
+import {
+  LearningSessionProvider,
+  useLearningSessionContext,
+} from '../../lib/learningSessionContext.js';
 import * as api from '../../lib/api.js';
 
-vi.mock('../../lib/api.js', () => ({
-  listCollections: vi.fn(),
-  getRandomTask: vi.fn(),
-  getVariant: vi.fn(),
-}));
+vi.mock('../../lib/api.js', () => {
+  class MockApiError extends Error {
+    constructor(
+      public status: number,
+      public body: unknown,
+    ) {
+      super(`API request failed with status ${status}`);
+    }
+  }
+  return {
+    listCollections: vi.fn(),
+    getRandomTask: vi.fn(),
+    getVariant: vi.fn(),
+    startLearningSession: vi.fn(),
+    ApiError: MockApiError,
+  };
+});
 
 const COLLECTION = {
   collection: {
@@ -52,11 +68,19 @@ function OverlayMarker() {
   return <p data-testid="overlay">{overlay?.screen ?? 'none'}</p>;
 }
 
+function SessionMarker() {
+  const { session } = useLearningSessionContext();
+  return <p data-testid="session">{session ? `${session.status}:${session.sessionId}` : 'none'}</p>;
+}
+
 function renderTraining() {
   return render(
     <NavigationProvider>
-      <Training />
-      <OverlayMarker />
+      <LearningSessionProvider>
+        <Training />
+        <OverlayMarker />
+        <SessionMarker />
+      </LearningSessionProvider>
     </NavigationProvider>,
   );
 }
@@ -177,5 +201,193 @@ describe('Training', () => {
     renderTraining();
     await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
     expect(await screen.findByText(/Не нашлось подходящих заданий/)).toBeInTheDocument();
+  });
+});
+
+describe('Training — "Умная тренировка" (Phase 10: real backend learning session)', () => {
+  it('starts a real session via the API and stores the real sessionId, never a fake one', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.startLearningSession).mockResolvedValue({
+      sessionId: 'session-42',
+      subject: 'math',
+      status: 'active',
+      position: 1,
+      total: 10,
+      task: RANDOM_TASK,
+    });
+    renderTraining();
+
+    await user.click(screen.getByRole('button', { name: /Умная тренировка/ }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+
+    await waitFor(() => {
+      expect(api.startLearningSession).toHaveBeenCalledWith(
+        expect.objectContaining({ subjectId: 'math', limit: 10 }),
+      );
+    });
+    // Navigates straight into the EXISTING task overlay with the real
+    // task the backend picked — never a second task-solving screen.
+    await waitFor(() => {
+      expect(screen.getByTestId('overlay')).toHaveTextContent('task:5');
+    });
+    expect(screen.getByTestId('session')).toHaveTextContent('active:session-42');
+  });
+
+  it('shows an error and never fakes a session when the backend can find no candidate task', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.startLearningSession).mockResolvedValue(null);
+    renderTraining();
+
+    await user.click(screen.getByRole('button', { name: /Умная тренировка/ }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+
+    expect(
+      await screen.findByText(/Не нашлось подходящих заданий для умной тренировки/),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('session')).toHaveTextContent('none');
+    expect(screen.getByTestId('overlay')).not.toHaveTextContent('task');
+  });
+
+  it('routes an immediately-completed session (no candidates at all) to the summary screen, not a fake task', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.startLearningSession).mockResolvedValue({
+      sessionId: 'session-empty',
+      subject: 'math',
+      status: 'completed',
+      position: 0,
+      total: 10,
+      summary: {
+        attempted: 0,
+        correct: 0,
+        incorrect: 0,
+        accuracy: null,
+        skillsPracticed: 0,
+        mistakesCreated: 0,
+      },
+    });
+    renderTraining();
+
+    await user.click(screen.getByRole('button', { name: /Умная тренировка/ }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('overlay')).toHaveTextContent('learningSession');
+    });
+    expect(screen.getByTestId('session')).toHaveTextContent('completed:session-empty');
+  });
+});
+
+describe('Training — "По номерам" (task selection: normal/random/unseen)', () => {
+  it('requires a number before starting', async () => {
+    const user = userEvent.setup();
+    renderTraining();
+    await user.click(screen.getByRole('button', { name: /По номерам/ }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+    expect(await screen.findByText('Выбери номер задания.')).toBeInTheDocument();
+    expect(api.getRandomTask).not.toHaveBeenCalled();
+  });
+
+  it('normal (both toggles off) calls getRandomTask scoped to the selected number, unchanged existing behavior', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
+    renderTraining();
+    await user.click(screen.getByRole('button', { name: /По номерам/ }));
+    await user.click(screen.getByRole('button', { name: '№5' }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+    await waitFor(() => {
+      expect(api.getRandomTask).toHaveBeenCalledWith(
+        expect.objectContaining({ subject: 'math', taskNumber: 5, unseen: undefined }),
+      );
+    });
+    await waitFor(() => expect(screen.getByTestId('overlay')).toHaveTextContent('task:5'));
+  });
+
+  it('"Рандом" drops the collection scope', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.listCollections).mockResolvedValue([COLLECTION]);
+    vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
+    renderTraining();
+    await user.click(screen.getByRole('button', { name: /По номерам/ }));
+
+    const trigger = await screen.findByRole('button', { name: /Все источники/ });
+    await user.click(trigger);
+    await user.click(await screen.findByRole('option', { name: 'ЕГЭ 2026 Ященко' }));
+
+    await user.click(screen.getByRole('button', { name: '№5' }));
+    await user.click(screen.getByRole('button', { name: 'Рандом' }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+    await waitFor(() => {
+      expect(api.getRandomTask).toHaveBeenCalledWith(
+        expect.objectContaining({ taskNumber: 5, collection: undefined }),
+      );
+    });
+  });
+
+  it('"Не встречавшиеся" sends unseen:true', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
+    renderTraining();
+    await user.click(screen.getByRole('button', { name: /По номерам/ }));
+    await user.click(screen.getByRole('button', { name: '№5' }));
+    await user.click(screen.getByRole('button', { name: 'Не встречавшиеся' }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+    await waitFor(() => {
+      expect(api.getRandomTask).toHaveBeenCalledWith(
+        expect.objectContaining({ taskNumber: 5, unseen: true }),
+      );
+    });
+  });
+
+  it('"Рандом" + "Не встречавшиеся" combine: unseen:true and no collection scope', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.listCollections).mockResolvedValue([COLLECTION]);
+    vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
+    renderTraining();
+    await user.click(screen.getByRole('button', { name: /По номерам/ }));
+
+    const trigger = await screen.findByRole('button', { name: /Все источники/ });
+    await user.click(trigger);
+    await user.click(await screen.findByRole('option', { name: 'ЕГЭ 2026 Ященко' }));
+
+    await user.click(screen.getByRole('button', { name: '№5' }));
+    await user.click(screen.getByRole('button', { name: 'Рандом' }));
+    await user.click(screen.getByRole('button', { name: 'Не встречавшиеся' }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+    await waitFor(() => {
+      expect(api.getRandomTask).toHaveBeenCalledWith(
+        expect.objectContaining({ taskNumber: 5, collection: undefined, unseen: true }),
+      );
+    });
+  });
+
+  it('shows the specific "all tasks seen" message instead of silently falling back to a seen task', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getRandomTask).mockRejectedValue(
+      new api.ApiError(404, { error: 'no_unseen_tasks' }),
+    );
+    renderTraining();
+    await user.click(screen.getByRole('button', { name: /По номерам/ }));
+    await user.click(screen.getByRole('button', { name: '№5' }));
+    await user.click(screen.getByRole('button', { name: 'Не встречавшиеся' }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+    expect(
+      await screen.findByText(
+        'Все задания этого номера уже встречались. Можно отключить «Не встречавшиеся».',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('works for an arbitrary subject/taskNumber combination — never hardcoded to one number', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getRandomTask).mockResolvedValue({ ...RANDOM_TASK, taskNumber: 12 });
+    renderTraining();
+    await user.click(screen.getByRole('button', { name: /По номерам/ }));
+    await user.click(screen.getByRole('button', { name: '№12' }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+    await waitFor(() => {
+      expect(api.getRandomTask).toHaveBeenCalledWith(
+        expect.objectContaining({ subject: 'math', taskNumber: 12 }),
+      );
+    });
   });
 });

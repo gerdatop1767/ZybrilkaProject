@@ -1,9 +1,14 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { useEffect } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { serializeMultiPartSpec, serializeMultiPartUserAnswer } from '@zybrilka/shared';
 import { ResultDesktop } from './ResultDesktop.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
+import {
+  LearningSessionProvider,
+  useLearningSessionContext,
+} from '../../lib/learningSessionContext.js';
 import * as api from '../../lib/api.js';
 
 vi.mock('../../lib/api.js', () => ({
@@ -11,6 +16,7 @@ vi.mock('../../lib/api.js', () => ({
   listTasksByNumber: vi.fn(),
   getVariant: vi.fn(),
   getVariantForTask: vi.fn(),
+  getLearningSessionNext: vi.fn(),
 }));
 
 const TASK_ID = '11111111-1111-1111-1111-111111111111';
@@ -265,7 +271,7 @@ describe('ResultDesktop — multi_part task', () => {
 });
 
 describe('ResultDesktop — "К списку заданий"', () => {
-  it('goes to the Subject screen in "По номерам" mode, not Home, preserving the source', async () => {
+  it('goes to the Subject screen in "Темы" mode, not Home, preserving the source', async () => {
     const user = userEvent.setup();
     vi.mocked(api.getVariantForTask).mockResolvedValue({
       variant: {
@@ -302,7 +308,7 @@ describe('ResultDesktop — "К списку заданий"', () => {
     await screen.findByText(EXPLANATION);
     await user.click(screen.getByRole('button', { name: 'К списку заданий' }));
     expect(screen.getByTestId('overlay')).toHaveTextContent(
-      `subject:${baseTask.subjectId}:ege-2026-yashchenko:byNumber`,
+      `subject:${baseTask.subjectId}:ege-2026-yashchenko:topics`,
     );
   });
 
@@ -323,5 +329,146 @@ describe('ResultDesktop — "К списку заданий"', () => {
     await screen.findByText(EXPLANATION);
     await user.click(screen.getByRole('button', { name: 'Попробовать ещё раз' }));
     expect(screen.getByTestId('overlay')).toHaveTextContent('task');
+  });
+});
+
+function SessionMarker() {
+  const { session } = useLearningSessionContext();
+  return <p data-testid="session">{session ? `${session.status}:${session.sessionId}` : 'none'}</p>;
+}
+
+function Primer({ taskId, position, total }: { taskId: string; position: number; total: number }) {
+  const { setSession } = useLearningSessionContext();
+  useEffect(() => {
+    setSession({
+      status: 'active',
+      sessionId: 'session-1',
+      subjectId: 'math',
+      currentTaskId: taskId,
+      currentTaskNumber: 15,
+      position,
+      total,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
+describe('ResultDesktop — learning session integration (Phase 10)', () => {
+  it('shows no session UI for a normal (non-session) result — EXISTING "Следующее задание" stays the only action', async () => {
+    render(
+      <NavigationProvider>
+        <LearningSessionProvider>
+          <ResultDesktop
+            subjectId={baseTask.subjectId}
+            taskNumber={baseTask.taskNumber}
+            taskId={TASK_ID}
+            correct
+            userAnswer={CORRECT_ANSWER}
+          />
+        </LearningSessionProvider>
+      </NavigationProvider>,
+    );
+    await screen.findByText(EXPLANATION);
+    expect(screen.queryByText(/Завершить тренировку/)).not.toBeInTheDocument();
+    // Only one "Следующее задание" action — the pre-existing taskNav one.
+    expect(screen.getAllByText('Следующее задание')).toHaveLength(1);
+  });
+
+  it('calls the real /next endpoint (never a 2nd attempt endpoint) and advances to the task the backend returns', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getLearningSessionNext).mockResolvedValue({
+      sessionId: 'session-1',
+      subject: 'math',
+      status: 'active',
+      position: 2,
+      total: 5,
+      task: { ...baseTask, id: SIBLING_A, taskNumber: 15 },
+    });
+    render(
+      <NavigationProvider>
+        <LearningSessionProvider>
+          <Primer taskId={TASK_ID} position={1} total={5} />
+          <ResultDesktop
+            subjectId={baseTask.subjectId}
+            taskNumber={baseTask.taskNumber}
+            taskId={TASK_ID}
+            correct={false}
+            userAnswer="неверный ответ"
+          />
+          <SessionMarker />
+        </LearningSessionProvider>
+      </NavigationProvider>,
+    );
+    await screen.findByText(EXPLANATION);
+    expect(await screen.findByRole('button', { name: /Тренировка · 1 из 5/ })).toBeInTheDocument();
+
+    // Two "Следующее задание" buttons now exist: the pre-existing
+    // taskNav one (index 0, unchanged, disabled with no sibling
+    // context here) and this session's own action (index 1) — this
+    // clicks the session one specifically, never touching the other.
+    const nextButtons = screen.getAllByRole('button', { name: /Следующее задание/ });
+    await user.click(nextButtons[1]!);
+    await vi.waitFor(() => {
+      expect(api.getLearningSessionNext).toHaveBeenCalledWith('session-1');
+    });
+    await vi.waitFor(() => {
+      expect(screen.getByTestId('session')).toHaveTextContent('active:session-1');
+    });
+  });
+
+  it('shows "Завершить тренировку" on the final task of the session', async () => {
+    render(
+      <NavigationProvider>
+        <LearningSessionProvider>
+          <Primer taskId={TASK_ID} position={5} total={5} />
+          <ResultDesktop
+            subjectId={baseTask.subjectId}
+            taskNumber={baseTask.taskNumber}
+            taskId={TASK_ID}
+            correct
+            userAnswer={CORRECT_ANSWER}
+          />
+        </LearningSessionProvider>
+      </NavigationProvider>,
+    );
+    await screen.findByText(EXPLANATION);
+    expect(await screen.findByText(/Завершить тренировку/)).toBeInTheDocument();
+  });
+});
+
+describe('ResultDesktop — real solving time display (replaces the old static "00:12:34")', () => {
+  it('shows the real submitted timeSpentMs, formatted as mm:ss', async () => {
+    render(
+      <NavigationProvider>
+        <ResultDesktop
+          subjectId={baseTask.subjectId}
+          taskNumber={baseTask.taskNumber}
+          taskId={TASK_ID}
+          correct
+          userAnswer={CORRECT_ANSWER}
+          timeSpentMs={84000}
+        />
+      </NavigationProvider>,
+    );
+    await screen.findByText(EXPLANATION);
+    expect(screen.getByText('01:24')).toBeInTheDocument();
+    expect(screen.queryByText('00:12:34')).not.toBeInTheDocument();
+  });
+
+  it('shows no time at all when the task was never timed (never fabricates one)', async () => {
+    render(
+      <NavigationProvider>
+        <ResultDesktop
+          subjectId={baseTask.subjectId}
+          taskNumber={baseTask.taskNumber}
+          taskId={TASK_ID}
+          correct
+          userAnswer={CORRECT_ANSWER}
+        />
+      </NavigationProvider>,
+    );
+    await screen.findByText(EXPLANATION);
+    expect(screen.queryByText('00:12:34')).not.toBeInTheDocument();
   });
 });

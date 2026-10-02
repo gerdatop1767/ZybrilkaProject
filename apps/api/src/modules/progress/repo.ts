@@ -1,7 +1,7 @@
 import type { Database } from '@zybrilka/db';
 import { schema } from '@zybrilka/db';
 import type { ProgressByTaskNumberQuery, ProgressByTopicQuery } from '@zybrilka/shared';
-import { and, count, countDistinct, eq, gte, inArray, isNotNull, sql } from 'drizzle-orm';
+import { and, asc, count, countDistinct, eq, gte, inArray, isNotNull, sql } from 'drizzle-orm';
 import { taskIdsForCollectionOrVariant } from '../tasks/repo.js';
 
 export async function getTotals(db: Database, userId: string) {
@@ -197,4 +197,177 @@ export async function getDaily(db: Database, userId: string, days: number) {
     .where(and(eq(schema.attempts.userId, userId), gte(schema.attempts.createdAt, since)))
     .groupBy(day)
     .orderBy(day);
+}
+
+/**
+ * Statistics 2.0 — every timed attempt this user has made, with its
+ * subject (one query, grouped/median'd in JS by `getTimeBySubject`
+ * below) — `timeSpentMs` is the one column this can't aggregate in SQL
+ * cheaply (needs a real median, not an average) so it's fetched raw.
+ */
+export async function getTimedAttemptsBySubjectRaw(
+  db: Database,
+  userId: string,
+): Promise<{ subjectId: string; timeSpentMs: number }[]> {
+  const rows = await db
+    .select({ subjectId: schema.tasks.subjectId, timeSpentMs: schema.attempts.timeSpentMs })
+    .from(schema.attempts)
+    .innerJoin(schema.tasks, eq(schema.attempts.taskId, schema.tasks.id))
+    .where(and(eq(schema.attempts.userId, userId), isNotNull(schema.attempts.timeSpentMs)));
+  return rows.map((row) => ({ subjectId: row.subjectId, timeSpentMs: row.timeSpentMs! }));
+}
+
+export interface TaskNumberDetailAttemptRow {
+  readonly taskId: string;
+  readonly isCorrect: boolean;
+  readonly createdAt: Date;
+  readonly timeSpentMs: number | null;
+  readonly answerRaw: string;
+  readonly answerType: (typeof schema.taskAnswerTypes)[number];
+  readonly correctAnswer: string;
+}
+
+/**
+ * Every attempt this user has made on a task of this exact
+ * (subject, taskNumber) — the one bulk query the whole task-number
+ * detail is built from (Step 16: no per-metric N+1 queries). Ordered
+ * oldest-first so recent/previous-window slicing in the service layer
+ * is a plain array slice from the end.
+ */
+export async function getAttemptsForTaskNumberDetail(
+  db: Database,
+  userId: string,
+  subjectId: string,
+  taskNumber: number,
+): Promise<TaskNumberDetailAttemptRow[]> {
+  return db
+    .select({
+      taskId: schema.attempts.taskId,
+      isCorrect: schema.attempts.isCorrect,
+      createdAt: schema.attempts.createdAt,
+      timeSpentMs: schema.attempts.timeSpentMs,
+      answerRaw: schema.attempts.answerRaw,
+      answerType: schema.tasks.answerType,
+      correctAnswer: schema.tasks.correctAnswer,
+    })
+    .from(schema.attempts)
+    .innerJoin(schema.tasks, eq(schema.attempts.taskId, schema.tasks.id))
+    .where(
+      and(
+        eq(schema.attempts.userId, userId),
+        eq(schema.tasks.subjectId, subjectId),
+        eq(schema.tasks.taskNumber, taskNumber),
+      ),
+    )
+    .orderBy(asc(schema.attempts.createdAt));
+}
+
+export interface SkillRowForTaskNumber {
+  readonly skillId: string;
+  readonly skillName: string;
+  readonly mastery: number | null;
+  readonly attempts: number | null;
+}
+
+/**
+ * Every skill linked (via `task_skills`) to a task of this
+ * (subject, taskNumber), with this user's real mastery for it — a
+ * `leftJoin` so a skill the user has never attempted still appears
+ * (mastery/attempts null, mapped to 0 in the service), never silently
+ * dropped. A skill may repeat once per linked task sharing it; the
+ * service dedupes by `skillId` (every repeat carries identical
+ * mastery/attempts, since `user_skill_statistics` has one row per
+ * (user, skill) regardless of how many tasks link to it).
+ */
+export async function getSkillRowsForTaskNumber(
+  db: Database,
+  userId: string,
+  subjectId: string,
+  taskNumber: number,
+): Promise<SkillRowForTaskNumber[]> {
+  return db
+    .select({
+      skillId: schema.skills.id,
+      skillName: schema.skills.name,
+      mastery: schema.userSkillStatistics.mastery,
+      attempts: schema.userSkillStatistics.attempts,
+    })
+    .from(schema.taskSkills)
+    .innerJoin(schema.tasks, eq(schema.taskSkills.taskId, schema.tasks.id))
+    .innerJoin(schema.skills, eq(schema.taskSkills.skillId, schema.skills.id))
+    .leftJoin(
+      schema.userSkillStatistics,
+      and(
+        eq(schema.userSkillStatistics.skillId, schema.skills.id),
+        eq(schema.userSkillStatistics.userId, userId),
+      ),
+    )
+    .where(and(eq(schema.tasks.subjectId, subjectId), eq(schema.tasks.taskNumber, taskNumber)));
+}
+
+/**
+ * Speed Learning baseline candidate (skill level): every timed attempt
+ * this user has made on ANY task sharing one of the given skills — a
+ * task linking to more than one of them would otherwise duplicate the
+ * same attempt row per skill match, so this selects the attempt `id`
+ * specifically to dedupe in the service layer.
+ */
+export async function getTimedAttemptsForSkills(
+  db: Database,
+  userId: string,
+  skillIds: readonly string[],
+): Promise<{ id: string; timeSpentMs: number }[]> {
+  if (skillIds.length === 0) return [];
+  const rows = await db
+    .select({ id: schema.attempts.id, timeSpentMs: schema.attempts.timeSpentMs })
+    .from(schema.attempts)
+    .innerJoin(schema.taskSkills, eq(schema.taskSkills.taskId, schema.attempts.taskId))
+    .where(
+      and(
+        eq(schema.attempts.userId, userId),
+        inArray(schema.taskSkills.skillId, [...skillIds]),
+        isNotNull(schema.attempts.timeSpentMs),
+      ),
+    );
+  return rows.map((row) => ({ id: row.id, timeSpentMs: row.timeSpentMs! }));
+}
+
+/** Speed Learning baseline candidate (subject level): every timed
+ * attempt this user has made anywhere in this subject. */
+export async function getTimedAttemptsForSubject(
+  db: Database,
+  userId: string,
+  subjectId: string,
+): Promise<{ timeSpentMs: number }[]> {
+  const rows = await db
+    .select({ timeSpentMs: schema.attempts.timeSpentMs })
+    .from(schema.attempts)
+    .innerJoin(schema.tasks, eq(schema.attempts.taskId, schema.tasks.id))
+    .where(
+      and(
+        eq(schema.attempts.userId, userId),
+        eq(schema.tasks.subjectId, subjectId),
+        isNotNull(schema.attempts.timeSpentMs),
+      ),
+    );
+  return rows.map((row) => ({ timeSpentMs: row.timeSpentMs! }));
+}
+
+/** Speed Learning baseline candidate (global/task level, last resort):
+ * the real, already-computed `task_statistics.averageTimeMs` for every
+ * published task of this (subject, taskNumber) — never a per-user
+ * figure, used only when no personal baseline has enough samples. */
+export async function getTaskStatisticsForTaskNumber(
+  db: Database,
+  subjectId: string,
+  taskNumber: number,
+): Promise<{ averageTimeMs: number | null; attempts: number }[]> {
+  return db
+    .select({
+      averageTimeMs: schema.taskStatistics.averageTimeMs,
+      attempts: schema.taskStatistics.attempts,
+    })
+    .from(schema.taskStatistics)
+    .innerJoin(schema.tasks, eq(schema.taskStatistics.taskId, schema.tasks.id))
+    .where(and(eq(schema.tasks.subjectId, subjectId), eq(schema.tasks.taskNumber, taskNumber)));
 }

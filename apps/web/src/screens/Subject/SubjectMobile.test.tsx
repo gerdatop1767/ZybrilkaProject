@@ -118,51 +118,6 @@ describe('SubjectMobile', () => {
     );
   });
 
-  it('switches to Задания по номерам and shows every task number with real X/Y, not a fake hash', async () => {
-    mockCollections();
-    mockProgress();
-    const user = userEvent.setup();
-    renderSubject();
-    await user.click(screen.getByRole('button', { name: 'По номерам' }));
-    await waitFor(() => {
-      for (let n = 1; n <= 19; n += 1) {
-        expect(screen.getByText(`№${n}`)).toBeInTheDocument();
-      }
-    });
-    expect(api.getProgressByTaskNumber).toHaveBeenCalledWith({
-      subject: 'math',
-      collection: undefined,
-    });
-  });
-
-  it('shows a real "Общий банк" + collection source picker, and switching source refetches', async () => {
-    mockCollections();
-    vi.mocked(api.getProgressByTaskNumber).mockImplementation(({ collection }) =>
-      Promise.resolve({
-        items: Array.from({ length: 19 }, (_, i) => ({
-          subjectId: 'math',
-          taskNumber: i + 1,
-          total: collection ? 1 : 3,
-          completed: 0,
-        })),
-      }),
-    );
-    const user = userEvent.setup();
-    renderSubject();
-    await user.click(screen.getByRole('button', { name: 'По номерам' }));
-    await waitFor(() => expect(screen.getByText('Общий банк')).toBeInTheDocument());
-
-    await user.click(screen.getByRole('button', { name: 'Общий банк' }));
-    await user.click(screen.getByRole('option', { name: 'ЕГЭ 2026 Ященко' }));
-
-    await waitFor(() => {
-      expect(api.getProgressByTaskNumber).toHaveBeenLastCalledWith({
-        subject: 'math',
-        collection: 'ege-2026-yashchenko',
-      });
-    });
-  });
-
   it('switches to Варианты and shows the real collections in the source picker + number chips', async () => {
     mockCollections();
     mockProgress();

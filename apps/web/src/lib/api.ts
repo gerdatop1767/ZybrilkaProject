@@ -3,11 +3,15 @@ import type {
   AttemptResult,
   CollectionListItem,
   FavoritesListResponse,
+  LearningProfileResponse,
+  LearningSessionResponse,
   Mistake,
   ProgressByTaskNumberResponse,
   ProgressByTopicResponse,
   ProgressDailyResponse,
   ProgressSummary,
+  SaveLearningProfileRequest,
+  TaskNumberStatisticsDetail,
   TaskPublic,
   TaskWithSolution,
   VariantDetail,
@@ -93,6 +97,11 @@ export function getRandomTask(params: {
   variant?: string;
   /** A specific topic's id — restricts the random pick to that topic. */
   topic?: string;
+  /** Excludes any task the current user already has an attempt on —
+   * see Training's "Не встречавшиеся" toggle. A 404 `no_unseen_tasks`
+   * (distinct from the generic `no_tasks_available`) means the pool
+   * exists but every task in it was already seen. */
+  unseen?: boolean;
 }): Promise<TaskPublic> {
   const query = new URLSearchParams();
   if (params.subject) query.set('subject', params.subject);
@@ -100,6 +109,7 @@ export function getRandomTask(params: {
   if (params.collection) query.set('collection', params.collection);
   if (params.variant) query.set('variant', params.variant);
   if (params.topic) query.set('topic', params.topic);
+  if (params.unseen) query.set('unseen', 'true');
   const qs = query.toString();
   return apiFetch(`/tasks/random${qs ? `?${qs}` : ''}`);
 }
@@ -185,6 +195,19 @@ export function getProgressByTopic(params: {
 }
 
 /**
+ * Statistics 2.0 — the "По номерам → №N" detail (real attempts/
+ * errors/skills/speed-signal breakdown for one subject+taskNumber).
+ */
+export function getTaskNumberStatisticsDetail(
+  subjectId: string,
+  taskNumber: number,
+): Promise<TaskNumberStatisticsDetail> {
+  return apiFetch(
+    `/progress/by-task-number/${taskNumber}/detail?subject=${encodeURIComponent(subjectId)}`,
+  );
+}
+
+/**
  * Real per-day activity for the "Активность по дням" chart — see
  * apps/api/src/modules/progress/repo.ts's getDaily for the exact
  * bucketing/dedup rules. Only days with at least one attempt come
@@ -210,4 +233,45 @@ export function addFavorite(taskId: string): Promise<void> {
 
 export function removeFavorite(taskId: string): Promise<void> {
   return apiFetch(`/favorites/${taskId}`, { method: 'DELETE' });
+}
+
+/** DB is the source of truth for whether onboarding is done — see
+ * apps/api's learningProfile module. Never inferred from localStorage. */
+export function getLearningProfile(): Promise<LearningProfileResponse> {
+  return apiFetch('/me/learning-profile');
+}
+
+export function saveLearningProfile(
+  request: SaveLearningProfileRequest,
+): Promise<LearningProfileResponse> {
+  return apiFetch('/me/learning-profile', { method: 'PUT', body: JSON.stringify(request) });
+}
+
+/**
+ * ZUBRILKA LEARNING INTELLIGENCE, Phase 10 — thin, typed wrappers over
+ * the real backend session lifecycle (Phase 9). No scoring/selection
+ * logic lives here or anywhere in the frontend: these just forward to
+ * the authoritative endpoints and return their real response shape
+ * from `@zybrilka/shared`, unmodified.
+ */
+export function startLearningSession(params: {
+  subjectId?: string;
+  limit?: number;
+}): Promise<LearningSessionResponse> {
+  return apiFetch('/me/learning/sessions', { method: 'POST', body: JSON.stringify(params) });
+}
+
+/** Must only be called after the user has actually submitted an
+ * attempt on the current task — calling it any earlier would make the
+ * backend recompute and consume a task slot the user never answered
+ * (see Phase 9/10's "next only after a real submission" rule). */
+export function getLearningSessionNext(sessionId: string): Promise<LearningSessionResponse> {
+  return apiFetch(`/me/learning/sessions/${sessionId}/next`);
+}
+
+/** Read-only — never advances the session. Used only to recover "which
+ * task was I on" after a page reload or direct link to
+ * `/learning/session/:sessionId` (Phase 10 refresh-safety). */
+export function getLearningSession(sessionId: string): Promise<LearningSessionResponse> {
+  return apiFetch(`/me/learning/sessions/${sessionId}`);
 }

@@ -112,6 +112,23 @@ button.achievementBadge:active {
   min-width: 0;
 }
 
+.subjectsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.subjectRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) 0;
+}
+
+.subjectRow:not(:last-child) {
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
 .settingsInfo {
   display: flex;
   align-items: center;

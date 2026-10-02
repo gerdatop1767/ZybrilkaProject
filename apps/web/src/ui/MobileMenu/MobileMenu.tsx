@@ -4,7 +4,6 @@ import { Icon } from '../Icon/Icon.js';
 import type { IconName } from '../Icon/icons.js';
 import { SubjectTile } from '../SubjectTile/SubjectTile.js';
 import { Avatar } from '../Leaderboard/Avatar.js';
-import { startRealTask } from '../../lib/startTraining.js';
 import { useNavigation, type MainTabId, type OverlayRoute } from '../../lib/navigation.js';
 import { clsx } from '../../lib/clsx.js';
 import styles from './MobileMenu.module.css';
@@ -32,12 +31,9 @@ const primaryItems: readonly MenuItem[] = [
     label: 'Тренировка',
     icon: 'variant',
     color: 'var(--chart-1)',
-    // The approved screenshots have no idle "Тренировка" screen —
-    // jump straight into a real task, same as AppMobile's `selectTab`
-    // special-case for the id (the bottom nav itself now points its
-    // second slot at "Мои ошибки" instead — audit Block 2). The actual
-    // navigation is special-cased below (`startRealTask`); this route
-    // only needs a valid `screen` for the `isActive` highlight check.
+    // Opens the real Training setup screen (subject → mode → quantity →
+    // start) — Phase 10 made this reachable on mobile too, so this no
+    // longer needs to special-case straight into a random task.
     route: { screen: 'training' },
   },
   {
@@ -176,7 +172,7 @@ export function MobileMenu({ open, onClose, activeTab }: MobileMenuProps) {
           <button
             type="button"
             className={styles.profileRow}
-            onClick={() => go({ screen: 'settings' })}
+            onClick={() => go({ screen: 'profile' })}
           >
             <Avatar username="?" color="var(--color-accent-primary)" size={48} />
             <div className={styles.profileBody}>
@@ -197,9 +193,7 @@ export function MobileMenu({ open, onClose, activeTab }: MobileMenuProps) {
                   type="button"
                   className={clsx(styles.navItem, isActive && styles.navItemActive)}
                   aria-current={isActive ? 'page' : undefined}
-                  onClick={() =>
-                    item.id === 'training' ? startRealTask(navigate) : go(item.route)
-                  }
+                  onClick={() => go(item.route)}
                   style={{ ['--accent' as string]: item.color }}
                 >
                   <span className={styles.navIcon}>

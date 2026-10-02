@@ -4,6 +4,11 @@
   gap: var(--space-4);
 }
 
+.timerRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .card {
   display: flex;
   flex-direction: column;

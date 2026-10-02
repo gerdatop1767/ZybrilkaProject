@@ -465,7 +465,7 @@ describe('TaskMobile', () => {
             subjectId={baseTask.subjectId}
             taskNumber={baseTask.taskNumber}
             taskId={TASK_ID}
-            returnTo={{ screen: 'subject', subjectId: baseTask.subjectId, initialMode: 'byNumber' }}
+            returnTo={{ screen: 'subject', subjectId: baseTask.subjectId, initialMode: 'topics' }}
           />
           <OverlayMarker />
         </NavigationProvider>,
@@ -473,7 +473,7 @@ describe('TaskMobile', () => {
       await screen.findByText(CONDITION);
       await user.click(screen.getByRole('button', { name: 'Назад' }));
       expect(screen.getByTestId('overlay')).toHaveTextContent(
-        `subject:${baseTask.subjectId}:byNumber`,
+        `subject:${baseTask.subjectId}:topics`,
       );
     });
 
@@ -531,5 +531,41 @@ describe('TaskMobile — solution-only illustration never leaks into the solving
     await screen.findByText(CONDITION);
 
     expect(screen.queryByText('Иллюстрация к решению')).not.toBeInTheDocument();
+  });
+});
+
+describe('TaskMobile — real solving timer (compact, top of screen)', () => {
+  it('renders "Начать" and never auto-starts just because the task opened', async () => {
+    renderTask();
+    expect(await screen.findByRole('button', { name: 'Начать' })).toBeInTheDocument();
+  });
+
+  it('starting the timer shows a running clock with a Пауза control', async () => {
+    const user = userEvent.setup();
+    renderTask();
+    await user.click(await screen.findByRole('button', { name: 'Начать' }));
+    expect(screen.queryByRole('button', { name: 'Начать' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Пауза' })).toBeInTheDocument();
+  });
+
+  it('submitting without ever starting sends no timeSpentMs', async () => {
+    const user = userEvent.setup();
+    renderTask();
+    await pasteAnswer(user, CORRECT_ANSWER);
+    await user.click(screen.getByRole('button', { name: /Проверить ответ/ }));
+    await waitFor(() => expect(api.submitAttempt).toHaveBeenCalled());
+    const [, payload] = vi.mocked(api.submitAttempt).mock.calls[0]!;
+    expect(payload.timeSpentMs).toBeUndefined();
+  });
+
+  it('submits a real numeric timeSpentMs once the timer was started', async () => {
+    const user = userEvent.setup();
+    renderTask();
+    await user.click(await screen.findByRole('button', { name: 'Начать' }));
+    await pasteAnswer(user, CORRECT_ANSWER);
+    await user.click(screen.getByRole('button', { name: /Проверить ответ/ }));
+    await waitFor(() => expect(api.submitAttempt).toHaveBeenCalled());
+    const [, payload] = vi.mocked(api.submitAttempt).mock.calls[0]!;
+    expect(typeof payload.timeSpentMs).toBe('number');
   });
 });

@@ -9,6 +9,8 @@ vi.mock('../../lib/api.js', () => ({
   getProgressSummary: vi.fn(),
   getProgressDaily: vi.fn(),
   getMistakes: vi.fn(),
+  getProgressByTaskNumber: vi.fn(),
+  getTaskNumberStatisticsDetail: vi.fn(),
 }));
 
 function renderStatistics() {
@@ -28,9 +30,11 @@ beforeEach(() => {
     bySubject: [],
     byTaskNumber: [],
     byTopic: [],
+    timeBySubject: [],
   });
   vi.mocked(api.getProgressDaily).mockResolvedValue({ items: [] });
   vi.mocked(api.getMistakes).mockResolvedValue([]);
+  vi.mocked(api.getProgressByTaskNumber).mockResolvedValue({ items: [] });
 });
 
 describe('StatisticsDesktop — period switching', () => {
@@ -80,9 +84,10 @@ describe('StatisticsDesktop — real progress data', () => {
       correctTotal: 2,
       incorrectTotal: 1,
       accuracyPercent: 66.7,
-      bySubject: [],
+      bySubject: [{ subjectId: 'math', solved: 3, correct: 2, accuracyPercent: 66.7 }],
       byTaskNumber: [],
       byTopic: [],
+      timeBySubject: [],
     });
     renderStatistics();
     // "N из M" is rendered as-is (not animated), so it reflects the
@@ -112,5 +117,73 @@ describe('StatisticsDesktop — real progress data', () => {
   it('the errors donut and "Сложные темы" use real /mistakes data, showing an empty state with none', () => {
     renderStatistics();
     expect(screen.getAllByText('Пока нет данных об ошибках.').length).toBeGreaterThan(0);
+  });
+});
+
+describe('StatisticsDesktop — По номерам detail (Statistics 2.0)', () => {
+  it('clicking a real task number opens its detail, with a working back button', async () => {
+    vi.mocked(api.getProgressByTaskNumber).mockResolvedValue({
+      items: [{ subjectId: 'math', taskNumber: 5, total: 4, completed: 3 }],
+    });
+    vi.mocked(api.getTaskNumberStatisticsDetail).mockResolvedValue({
+      subjectId: 'math',
+      taskNumber: 5,
+      attempts: 4,
+      uniqueTasksAttempted: 3,
+      correctAttempts: 3,
+      incorrectAttempts: 1,
+      accuracy: 75,
+      averageTimeMs: 12000,
+      medianTimeMs: 11000,
+      timedAttempts: 4,
+      lastAttemptAt: new Date().toISOString(),
+      errorBreakdown: [],
+      skillBreakdown: [],
+      recentAccuracy: null,
+      previousAccuracy: null,
+      recentAverageTimeMs: null,
+      accuracyTrend: [],
+      timeTrend: [],
+      speedSignal: { value: null, baselineLevel: null, baselineMedianMs: null, sampleSize: 0 },
+    });
+    const user = userEvent.setup();
+    renderStatistics();
+    await user.click(await screen.findByText('№5'));
+    expect(await screen.findByText('75%')).toBeInTheDocument();
+    expect(api.getTaskNumberStatisticsDetail).toHaveBeenCalledWith('math', 5);
+
+    await user.click(screen.getByText('Назад к статистике'));
+    expect(screen.queryByText('Назад к статистике')).not.toBeInTheDocument();
+  });
+
+  it('shows an honest empty state when the selected number has no attempts yet', async () => {
+    vi.mocked(api.getProgressByTaskNumber).mockResolvedValue({
+      items: [{ subjectId: 'math', taskNumber: 7, total: 2, completed: 0 }],
+    });
+    vi.mocked(api.getTaskNumberStatisticsDetail).mockResolvedValue({
+      subjectId: 'math',
+      taskNumber: 7,
+      attempts: 0,
+      uniqueTasksAttempted: 0,
+      correctAttempts: 0,
+      incorrectAttempts: 0,
+      accuracy: null,
+      averageTimeMs: null,
+      medianTimeMs: null,
+      timedAttempts: 0,
+      lastAttemptAt: null,
+      errorBreakdown: [],
+      skillBreakdown: [],
+      recentAccuracy: null,
+      previousAccuracy: null,
+      recentAverageTimeMs: null,
+      accuracyTrend: [],
+      timeTrend: [],
+      speedSignal: { value: null, baselineLevel: null, baselineMedianMs: null, sampleSize: 0 },
+    });
+    const user = userEvent.setup();
+    renderStatistics();
+    await user.click(await screen.findByText('№7'));
+    expect(await screen.findByText('Пока нет данных по №7.')).toBeInTheDocument();
   });
 });

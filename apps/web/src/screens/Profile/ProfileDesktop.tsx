@@ -1,10 +1,19 @@
+import { useEffect, useState } from 'react';
+import type { LearningProfileResponse } from '@zybrilka/shared';
 import { useNavigation, getRouteLabel, type Route } from '../../lib/navigation.js';
+import { getLearningProfile } from '../../lib/api.js';
+import { selfReportedScoreLabel, targetScoreLabel } from '../../lib/learningProfileLabels.js';
+import { subjects as staticSubjects } from '../../data/subjects.js';
 import { BackRow } from '../../ui/BackRow/BackRow.js';
 import { Card } from '../../ui/Card/Card.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import type { IconName } from '../../ui/Icon/icons.js';
 import styles from './ProfileDesktop.module.css';
+
+function subjectShortName(subjectId: string): string {
+  return staticSubjects.find((s) => s.id === subjectId)?.shortName ?? subjectId;
+}
 
 interface ProfileRow {
   id: string;
@@ -28,6 +37,23 @@ export interface ProfileDesktopProps {
 
 export function ProfileDesktop({ from }: ProfileDesktopProps) {
   const { navigate } = useNavigation();
+  const [profile, setProfile] = useState<LearningProfileResponse | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getLearningProfile()
+      .then((data) => {
+        if (!cancelled) setProfile(data);
+      })
+      .catch(() => {
+        // No profile yet (or offline) — rows below fall back to the neutral prompts.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const hasSubjects = (profile?.subjects.length ?? 0) > 0;
 
   const basicInfo: readonly ProfileRow[] = [
     { id: 'username', icon: 'profile', label: 'Имя пользователя', value: 'Не задано' },
@@ -40,16 +66,36 @@ export function ProfileDesktop({ from }: ProfileDesktopProps) {
       id: 'subjects',
       icon: 'topic',
       label: 'Предметы ЕГЭ',
-      value: 'Выбранные предметы, порядок, цели',
-      onClick: () => navigate({ screen: 'subjectCatalog' }),
+      value: hasSubjects
+        ? profile!.subjects.map((s) => subjectShortName(s.subjectId)).join(', ')
+        : 'Выбери предметы для подготовки',
+      onClick: () => navigate({ screen: 'onboarding' }),
     },
     {
       id: 'level',
       icon: 'shield',
       label: 'Уровень подготовки',
-      value: 'Укажи текущий уровень',
+      value: hasSubjects
+        ? profile!.subjects
+            .map(
+              (s) =>
+                `${subjectShortName(s.subjectId)}: ${selfReportedScoreLabel(s.selfReportedScore)}`,
+            )
+            .join(', ')
+        : 'Укажи текущий уровень',
+      onClick: () => navigate({ screen: 'onboarding' }),
     },
-    { id: 'goals', icon: 'target', label: 'Цели', value: 'Настрой свои цели по каждому предмету' },
+    {
+      id: 'goals',
+      icon: 'target',
+      label: 'Цели',
+      value: hasSubjects
+        ? profile!.subjects
+            .map((s) => `${subjectShortName(s.subjectId)}: ${targetScoreLabel(s.targetScore)}`)
+            .join(', ')
+        : 'Настрой свои цели по каждому предмету',
+      onClick: () => navigate({ screen: 'onboarding' }),
+    },
   ];
 
   const accountActions: readonly ProfileRow[] = [

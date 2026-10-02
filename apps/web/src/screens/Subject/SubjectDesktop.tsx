@@ -3,7 +3,7 @@ import type { CollectionListItem, ProgressByTopicResponse, TaskPublic } from '@z
 import { useNavigation, type Route } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
 import { startCustomVariant, startRealTask } from '../../lib/startTraining.js';
-import { getProgressByTaskNumber, getProgressByTopic, listCollections } from '../../lib/api.js';
+import { getProgressByTopic, listCollections } from '../../lib/api.js';
 import { getSubjectContent, type SubjectModeId } from '../../data/subjectContent.js';
 import { BackRow, type BackRowProps } from '../../ui/BackRow/BackRow.js';
 import { Card } from '../../ui/Card/Card.js';
@@ -41,22 +41,10 @@ export interface SubjectDesktopProps {
   initialMode?: SubjectModeId;
 }
 
-interface TaskNumberSummary {
-  number: number;
-  solved: number;
-  total: number;
-}
-
 type TopicProgressItem = ProgressByTopicResponse['items'][number];
 
 const modes: readonly { id: SubjectModeId; label: string; caption: string; icon: IconName }[] = [
   { id: 'topics', label: 'Темы', caption: 'Все темы по номерам', icon: 'reference' },
-  {
-    id: 'byNumber',
-    label: 'Задания по номерам',
-    caption: 'Выбрать конкретное задание',
-    icon: 'checklist',
-  },
   { id: 'variants', label: 'Варианты', caption: 'Полные варианты ЕГЭ', icon: 'variant' },
   { id: 'random', label: 'Случайные задания', caption: 'Тренировка без тем', icon: 'smart' },
   { id: 'favorites', label: 'Избранное', caption: 'Сохранённые задания', icon: 'favorite' },
@@ -84,19 +72,10 @@ export function SubjectDesktop({
 
   const [mode, setMode] = useState<SubjectModeId>(initialMode ?? 'topics');
   const [selectedTopic, setSelectedTopic] = useState<TopicProgressItem | null>(null);
-  const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
   const [collections, setCollections] = useState<readonly CollectionListItem[]>([]);
   const [collectionsLoaded, setCollectionsLoaded] = useState(false);
-  const [byNumberSlug, setByNumberSlug] = useState<string | null>(collectionSlug ?? null);
   const [randomSlug, setRandomSlug] = useState<string | null>(collectionSlug ?? null);
   const [topicsSlug, setTopicsSlug] = useState<string | null>(collectionSlug ?? null);
-  const [taskNumbers, setTaskNumbers] = useState<readonly TaskNumberSummary[]>(() =>
-    Array.from({ length: content.taskNumberCount }, (_, i) => ({
-      number: i + 1,
-      solved: 0,
-      total: 0,
-    })),
-  );
   const [topics, setTopics] = useState<readonly TopicProgressItem[]>([]);
 
   const solved = Math.round((subject.taskCount * subject.mastery) / 100);
@@ -126,48 +105,10 @@ export function SubjectDesktop({
   // derived (not synced via an effect) so it falls back to "Общий банк"
   // the moment the real list loads, without a set-state-in-effect round trip.
   const knownSlugs = new Set(collections.map((item) => item.collection.slug));
-  const effectiveByNumberSlug =
-    collectionsLoaded && byNumberSlug && !knownSlugs.has(byNumberSlug) ? null : byNumberSlug;
   const effectiveRandomSlug =
     collectionsLoaded && randomSlug && !knownSlugs.has(randomSlug) ? null : randomSlug;
   const effectiveTopicsSlug =
     collectionsLoaded && topicsSlug && !knownSlugs.has(topicsSlug) ? null : topicsSlug;
-
-  // Real X/Y per number (Block A) — re-fetched whenever the selected
-  // source changes. Numbers with no task in the current scope keep
-  // total=0 rather than being dropped, so the grid never shrinks/jumps.
-  useEffect(() => {
-    let cancelled = false;
-    void getProgressByTaskNumber({
-      subject: subject.id,
-      collection: effectiveByNumberSlug ?? undefined,
-    })
-      .then((res) => {
-        if (cancelled) return;
-        const byNumber = new Map(res.items.map((item) => [item.taskNumber, item]));
-        setTaskNumbers(
-          Array.from({ length: content.taskNumberCount }, (_, i) => {
-            const number = i + 1;
-            const row = byNumber.get(number);
-            return { number, solved: row?.completed ?? 0, total: row?.total ?? 0 };
-          }),
-        );
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setTaskNumbers(
-            Array.from({ length: content.taskNumberCount }, (_, i) => ({
-              number: i + 1,
-              solved: 0,
-              total: 0,
-            })),
-          );
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [subject.id, effectiveByNumberSlug, content.taskNumberCount]);
 
   // Real topics (Block D) — the DB's own topics table, never the static
   // per-subject design content, whose ids/names are a different,
@@ -195,13 +136,11 @@ export function SubjectDesktop({
   // → Back lands back here instead of falling through to Home.
   function currentReturnTo(): Route {
     const slug =
-      mode === 'byNumber'
-        ? (effectiveByNumberSlug ?? undefined)
-        : mode === 'random'
-          ? (effectiveRandomSlug ?? undefined)
-          : mode === 'topics'
-            ? (effectiveTopicsSlug ?? undefined)
-            : (collectionSlug ?? undefined);
+      mode === 'random'
+        ? (effectiveRandomSlug ?? undefined)
+        : mode === 'topics'
+          ? (effectiveTopicsSlug ?? undefined)
+          : (collectionSlug ?? undefined);
     return { screen: 'subject', subjectId: subject.id, collectionSlug: slug, initialMode: mode };
   }
 
@@ -246,9 +185,7 @@ export function SubjectDesktop({
   const parentScreen: 'subjectCatalog' | 'learningCenter' = from ?? 'subjectCatalog';
   const backProps: BackRowProps = selectedTopic
     ? { onBack: () => setSelectedTopic(null), label: subject.shortName }
-    : selectedNumber
-      ? { onBack: () => setSelectedNumber(null), label: 'Задания по номерам' }
-      : { to: { screen: parentScreen }, label: parentLabel };
+    : { to: { screen: parentScreen }, label: parentLabel };
 
   return (
     <div>
@@ -291,7 +228,6 @@ export function SubjectDesktop({
             onClick={() => {
               setMode(item.id);
               setSelectedTopic(null);
-              setSelectedNumber(null);
             }}
           >
             <Icon name={item.icon} size={18} />
@@ -319,25 +255,6 @@ export function SubjectDesktop({
               subjectName={subject.shortName}
               topic={selectedTopic}
               onStart={() => startTopicTraining(selectedTopic)}
-            />
-          )}
-          {mode === 'byNumber' && selectedNumber === null && (
-            <TaskNumberGrid
-              numbers={taskNumbers}
-              collections={collections}
-              selectedSlug={effectiveByNumberSlug}
-              onSourceChange={setByNumberSlug}
-              onSelect={setSelectedNumber}
-            />
-          )}
-          {mode === 'byNumber' && selectedNumber !== null && (
-            <TaskNumberDetail
-              subjectName={subject.shortName}
-              number={selectedNumber}
-              collections={collections}
-              selectedSlug={effectiveByNumberSlug}
-              summary={taskNumbers.find((n) => n.number === selectedNumber)!}
-              onStart={() => startTraining(selectedNumber, effectiveByNumberSlug ?? undefined)}
             />
           )}
           {mode === 'variants' && (
@@ -397,7 +314,6 @@ export function SubjectDesktop({
                 onClick={() => {
                   setMode('random');
                   setSelectedTopic(null);
-                  setSelectedNumber(null);
                 }}
               >
                 <Icon name="smart" size={18} />
@@ -415,7 +331,6 @@ export function SubjectDesktop({
                 onClick={() => {
                   setMode('variants');
                   setSelectedTopic(null);
-                  setSelectedNumber(null);
                 }}
               >
                 <Icon name="variant" size={18} />
@@ -534,102 +449,6 @@ function TopicDetail({
         style={{ marginTop: 'var(--space-4)' }}
       >
         Начать тренировку <Icon name="arrowRight" size={16} />
-      </Button>
-    </Card>
-  );
-}
-
-function TaskNumberGrid({
-  numbers,
-  collections,
-  selectedSlug,
-  onSourceChange,
-  onSelect,
-}: {
-  numbers: readonly TaskNumberSummary[];
-  collections: readonly CollectionListItem[];
-  selectedSlug: string | null;
-  onSourceChange: (slug: string | null) => void;
-  onSelect: (number: number) => void;
-}) {
-  return (
-    <Card>
-      <div className={styles.numberGridHeader}>
-        <div>
-          <p className="text-h3">Задания по номерам</p>
-          <p className="text-body-sm text-secondary">Выбери номер задания ЕГЭ</p>
-        </div>
-        <div className={styles.sourceSelect}>
-          <span className="text-body-sm text-secondary">Источник:</span>
-          <Select
-            options={sourceSelectOptions(collections)}
-            value={selectedSlug ?? ALL_SOURCES_VALUE}
-            onChange={(value) => onSourceChange(value === ALL_SOURCES_VALUE ? null : value)}
-            sheetTitle="Источник"
-          />
-        </div>
-      </div>
-      <div className={styles.numberGrid}>
-        {numbers.map((item) => (
-          <button
-            key={item.number}
-            type="button"
-            className={styles.numberTile}
-            disabled={item.total === 0}
-            onClick={() => {
-              if (item.total > 0) onSelect(item.number);
-            }}
-          >
-            <span className={styles.numberValue}>№{item.number}</span>
-            <span className="text-body-sm text-secondary">
-              {item.total > 0 ? `${item.solved}/${item.total}` : 'Нет заданий'}
-            </span>
-          </button>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
-function TaskNumberDetail({
-  subjectName,
-  number,
-  collections,
-  selectedSlug,
-  summary,
-  onStart,
-}: {
-  subjectName: string;
-  number: number;
-  collections: readonly CollectionListItem[];
-  selectedSlug: string | null;
-  summary: TaskNumberSummary;
-  onStart: () => void;
-}) {
-  const sourceLabel =
-    collections.find((c) => c.collection.slug === selectedSlug)?.collection.title ?? 'Общий банк';
-  const percent = summary.total > 0 ? (summary.solved / summary.total) * 100 : 0;
-  return (
-    <Card>
-      <p className="text-h2">Задание №{number}</p>
-      <p className="text-body-sm text-secondary" style={{ marginTop: 'var(--space-1)' }}>
-        {subjectName} · источник: {sourceLabel} · доступно заданий этого номера: {summary.total}
-      </p>
-      <div className={styles.topicDetailStats}>
-        <span className="text-body-sm text-secondary">
-          {summary.total > 0
-            ? `${summary.solved} / ${summary.total} решено`
-            : 'Нет доступных заданий в этом источнике'}
-        </span>
-        <ProgressBar value={percent} />
-      </div>
-      <Button
-        variant="primary"
-        onClick={onStart}
-        disabled={summary.total === 0}
-        style={{ marginTop: 'var(--space-4)' }}
-      >
-        Начать тренировку по №{number} <Icon name="arrowRight" size={16} />
       </Button>
     </Card>
   );

@@ -4,6 +4,10 @@ import { serializeMultiPartUserAnswer } from '@zybrilka/shared';
 import { getTask, listTasksByNumber, submitAttempt } from '../../lib/api.js';
 import { toSampleTask } from '../../lib/taskAdapter.js';
 import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
+import { useActiveLearningSessionForTask } from '../../lib/learningSessionContext.js';
+import { useSolvingTimer } from '../../lib/useSolvingTimer.js';
+import { SolvingTimer } from '../../ui/Timer/SolvingTimer.js';
+import { LearningSessionBadge } from '../../ui/LearningSession/LearningSessionBadge.js';
 import type { TaskVariant } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
@@ -62,6 +66,8 @@ export function TaskMobile({
     returnTo,
   });
   const goBack = returnTo ? () => navigate(returnTo) : back;
+  const learningSession = useActiveLearningSessionForTask(taskId);
+  const timer = useSolvingTimer();
 
   // The router remounts this component (key={taskId}) on every task
   // change, so state starts fresh here — no manual reset-on-taskId-change
@@ -104,7 +110,12 @@ export function TaskMobile({
     const userAnswerForResult = isMultiPart
       ? serializeMultiPartUserAnswer(submittedAnswer as Record<string, string>)
       : (submittedAnswer as string);
-    void submitAttempt(task.id, { answer: submittedAnswer })
+    // Never counts the time the task sat open before "Начать" — only a
+    // started timer produces a real timeSpentMs (see useSolvingTimer).
+    const neverStarted = timer.status === 'idle';
+    const elapsedMs = timer.finish();
+    const timeSpentMs = neverStarted ? undefined : elapsedMs;
+    void submitAttempt(task.id, { answer: submittedAnswer, timeSpentMs })
       .then((result) => {
         clearCanvasState(task.id);
         navigate({
@@ -117,6 +128,7 @@ export function TaskMobile({
           collectionSlug,
           variantId: taskNav.variantId ?? undefined,
           returnTo,
+          timeSpentMs,
         });
       })
       .finally(() => setChecking(false));
@@ -171,8 +183,13 @@ export function TaskMobile({
         onGoTo={taskNav.goTo}
       />
 
+      <div className={styles.timerRow}>
+        <SolvingTimer timer={timer} />
+      </div>
+
       <div className={styles.card}>
         <div className={styles.metaRow}>
+          {learningSession && <LearningSessionBadge session={learningSession} />}
           <DifficultyTag label={task.difficultyLabel} />
           <span className={styles.metaChip}>
             <Icon name="reference" size={12} /> {task.source}

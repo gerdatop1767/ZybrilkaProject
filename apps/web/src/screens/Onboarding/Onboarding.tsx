@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { SelfReportedScore, TargetScore } from '@zybrilka/shared';
 import { useNavigation } from '../../lib/navigation.js';
+import { getLearningProfile, saveLearningProfile } from '../../lib/api.js';
+import { selfReportedScoreOptions, targetScoreOptions } from '../../lib/learningProfileLabels.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Card } from '../../ui/Card/Card.js';
@@ -12,36 +15,47 @@ import styles from './Onboarding.module.css';
 
 const TOTAL_STEPS = 5;
 
-interface FocusOption {
-  id: string;
-  label: string;
-  description: string;
-}
-
-const focusOptions: readonly FocusOption[] = [
-  {
-    id: 'weak',
-    label: 'Подтянуть слабые темы',
-    description: 'Сфокусируемся на том, что пока не получается',
-  },
-  {
-    id: 'part1',
-    label: 'Первая часть ЕГЭ',
-    description: 'Базовые задания без сложных доказательств',
-  },
-  { id: 'full', label: 'Полная подготовка', description: 'Все темы и типы заданий' },
-];
-
 /**
- * Onboarding (Design Spec Section 6): a 5-step welcome → subjects →
- * focus → diagnostic intro → result flow. UI only — no real adaptive
- * calculation or persistence, per instructions.
+ * Onboarding (ZUBRILKA LEARNING INTELLIGENCE, Phase 1 vertical slice):
+ * welcome → subjects → current level → target → save. Real persistence
+ * via GET/PUT /me/learning-profile — see apps/api's learningProfile
+ * module. Diagnostics, mastery, and everything else from the Learning
+ * Intelligence audit are deliberately out of scope for this phase.
  */
 export function Onboarding() {
   const { navigate, back } = useNavigation();
   const [step, setStep] = useState(1);
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>(['math']);
-  const [focus, setFocus] = useState<string | null>(null);
+  const [levels, setLevels] = useState<Partial<Record<string, SelfReportedScore>>>({});
+  const [targets, setTargets] = useState<Partial<Record<string, TargetScore>>>({});
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Resume an in-progress or completed profile instead of starting blank
+  // — returning here via Profile's "Пройти диагностику заново" should
+  // show what's already saved, not make the user re-pick everything.
+  useEffect(() => {
+    let cancelled = false;
+    getLearningProfile()
+      .then((profile) => {
+        if (cancelled || profile.subjects.length === 0) return;
+        setSelectedSubjects(profile.subjects.map((s) => s.subjectId));
+        setLevels(
+          Object.fromEntries(profile.subjects.map((s) => [s.subjectId, s.selfReportedScore])),
+        );
+        setTargets(Object.fromEntries(profile.subjects.map((s) => [s.subjectId, s.targetScore])));
+      })
+      .catch(() => {
+        // No saved profile yet (or offline) — the blank defaults above are fine.
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingProfile(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function toggleSubject(id: string) {
     setSelectedSubjects((prev) =>
@@ -54,6 +68,28 @@ export function Onboarding() {
       back();
     } else {
       setStep((s) => s - 1);
+    }
+  }
+
+  const canContinueFromLevels = selectedSubjects.every((id) => levels[id] !== undefined);
+  const canContinueFromTargets = selectedSubjects.every((id) => targets[id] !== undefined);
+
+  async function finish() {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await saveLearningProfile({
+        subjects: selectedSubjects.map((subjectId) => ({
+          subjectId,
+          selfReportedScore: levels[subjectId] ?? 'unknown',
+          targetScore: targets[subjectId] ?? 'unknown',
+        })),
+      });
+      navigate({ screen: 'home' });
+    } catch {
+      setSaveError('Не удалось сохранить профиль. Попробуй ещё раз.');
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -83,10 +119,15 @@ export function Onboarding() {
             <Logo size={56} />
             <h1 className="text-h1">Добро пожаловать в Zybrilka!</h1>
             <p className="text-body text-secondary">
-              Бесплатный тренажёр для подготовки к ЕГЭ. Ответим на пару вопросов и подберём
-              тренировку под тебя.
+              Это нужно один раз, чтобы Зубрилка могла подобрать обучение под тебя. Ответим на пару
+              вопросов.
             </p>
-            <Button variant="primary" fullWidth onClick={() => setStep(2)}>
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={() => setStep(2)}
+              disabled={loadingProfile}
+            >
               Начать
             </Button>
           </div>
@@ -120,48 +161,81 @@ export function Onboarding() {
 
         {step === 3 && (
           <>
-            <h1 className="text-h2">На чём сфокусироваться?</h1>
+            <h1 className="text-h2">Примерно на сколько ты сейчас пишешь?</h1>
+            <p className="text-body-sm text-secondary">
+              Это просто ориентир, а не точный результат — если не уверен, выбери «Не знаю».
+            </p>
             <div className={styles.optionList}>
-              {focusOptions.map((option) => {
-                const selected = option.id === focus;
+              {selectedSubjects.map((subjectId) => {
+                const subject = subjects.find((s) => s.id === subjectId);
                 return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    className={clsx(styles.optionCard, selected && styles.optionCardSelected)}
-                    aria-pressed={selected}
-                    onClick={() => setFocus(option.id)}
-                  >
-                    <span className={styles.optionText}>
-                      <span className="text-body">{option.label}</span>
-                      <span className="text-body-sm text-secondary">{option.description}</span>
+                  <div key={subjectId} className={styles.skillRow}>
+                    <span className={clsx('text-body', styles.skillName)}>
+                      {subject?.shortName ?? subjectId}
                     </span>
-                    {selected && (
-                      <span className={styles.optionCheck}>
-                        <Icon name="check" size={20} />
-                      </span>
-                    )}
-                  </button>
+                    <div className={styles.chipGrid}>
+                      {selfReportedScoreOptions.map((option) => (
+                        <Chip
+                          key={option.id}
+                          selected={levels[subjectId] === option.id}
+                          onClick={() => setLevels((prev) => ({ ...prev, [subjectId]: option.id }))}
+                        >
+                          {option.label}
+                        </Chip>
+                      ))}
+                    </div>
+                  </div>
                 );
               })}
             </div>
-            <Button variant="primary" fullWidth disabled={!focus} onClick={() => setStep(4)}>
+            <Button
+              variant="primary"
+              fullWidth
+              disabled={!canContinueFromLevels}
+              onClick={() => setStep(4)}
+            >
               Далее
             </Button>
           </>
         )}
 
         {step === 4 && (
-          <div className={styles.centered}>
-            <h1 className="text-h2">Короткая диагностика</h1>
-            <p className="text-body text-secondary">
-              Диагностика ещё в разработке — скоро она поможет понять твой текущий уровень по темам.
-              Пока можно сразу перейти к тренировкам.
-            </p>
-            <Button variant="primary" fullWidth onClick={() => setStep(5)}>
+          <>
+            <h1 className="text-h2">Какой результат хочешь получить?</h1>
+            <div className={styles.optionList}>
+              {selectedSubjects.map((subjectId) => {
+                const subject = subjects.find((s) => s.id === subjectId);
+                return (
+                  <div key={subjectId} className={styles.skillRow}>
+                    <span className={clsx('text-body', styles.skillName)}>
+                      {subject?.shortName ?? subjectId}
+                    </span>
+                    <div className={styles.chipGrid}>
+                      {targetScoreOptions.map((option) => (
+                        <Chip
+                          key={option.id}
+                          selected={targets[subjectId] === option.id}
+                          onClick={() =>
+                            setTargets((prev) => ({ ...prev, [subjectId]: option.id }))
+                          }
+                        >
+                          {option.label}
+                        </Chip>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <Button
+              variant="primary"
+              fullWidth
+              disabled={!canContinueFromTargets}
+              onClick={() => setStep(5)}
+            >
               Далее
             </Button>
-          </div>
+          </>
         )}
 
         {step === 5 && (
@@ -171,12 +245,17 @@ export function Onboarding() {
             </div>
             <Card>
               <p className="text-body-sm text-secondary">
-                Диагностика и профиль по темам появятся здесь, когда мы их реализуем. Начни
-                тренироваться — прогресс будет собираться по мере решения заданий.
+                Мы сохраним твой выбор и будем подбирать тренировку под тебя по мере решения
+                заданий. Это можно изменить позже в профиле.
               </p>
             </Card>
-            <Button variant="primary" fullWidth onClick={() => navigate({ screen: 'home' })}>
-              Перейти к тренировкам
+            {saveError && (
+              <p className="text-body-sm" style={{ color: 'var(--color-error)' }}>
+                {saveError}
+              </p>
+            )}
+            <Button variant="primary" fullWidth onClick={finish} disabled={saving}>
+              {saving ? 'Сохраняем…' : 'Перейти к тренировкам'}
             </Button>
           </>
         )}

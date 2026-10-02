@@ -1,7 +1,7 @@
 import type { Database } from '@zybrilka/db';
 import { schema } from '@zybrilka/db';
 import type { RandomTaskQuery, TaskListQuery } from '@zybrilka/shared';
-import { and, asc, count, eq, gt, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, count, eq, gt, inArray, notInArray, or, sql } from 'drizzle-orm';
 
 type TaskRow = typeof schema.tasks.$inferSelect;
 
@@ -122,6 +122,10 @@ export async function getTaskById(db: Database, id: string): Promise<TaskWithTop
 export async function getRandomTask(
   db: Database,
   filters: RandomTaskQuery,
+  /** Required (and only meaningful) when `filters.unseen` is set — see
+   * `userId`'s doc on `FastifyRequest` for why this is never a
+   * client-trusted value. */
+  userId?: string | null,
 ): Promise<TaskWithTopic | undefined> {
   const conditions = [eq(schema.tasks.status, 'published' as const)];
   if (filters.subject) conditions.push(eq(schema.tasks.subjectId, filters.subject));
@@ -129,6 +133,17 @@ export async function getRandomTask(
   if (filters.topic) conditions.push(eq(schema.tasks.topicId, filters.topic));
   const scoped = taskIdsForCollectionOrVariant(db, filters);
   if (scoped) conditions.push(inArray(schema.tasks.id, scoped));
+  if (filters.unseen && userId) {
+    conditions.push(
+      notInArray(
+        schema.tasks.id,
+        db
+          .select({ taskId: schema.attempts.taskId })
+          .from(schema.attempts)
+          .where(eq(schema.attempts.userId, userId)),
+      ),
+    );
+  }
 
   const [row] = await db
     .select({ task: schema.tasks, topicName: schema.topics.name })

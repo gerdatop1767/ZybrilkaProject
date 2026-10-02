@@ -57,6 +57,48 @@
       "when": 1790686654794,
       "tag": "0007_favorites",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790861361393,
+      "tag": "0008_user_subject_profiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790863478494,
+      "tag": "0009_skills",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790873628875,
+      "tag": "0010_user_skill_statistics",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790874511732,
+      "tag": "0011_task_statistics",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790875858712,
+      "tag": "0012_user_error_statistics",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790880096296,
+      "tag": "0013_hesitant_shiva",
+      "breakpoints": true
     }
   ]
 }

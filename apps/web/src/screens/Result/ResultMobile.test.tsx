@@ -93,6 +93,7 @@ beforeEach(() => {
     bySubject: [],
     byTaskNumber: [],
     byTopic: [],
+    timeBySubject: [],
   });
 });
 
@@ -310,7 +311,7 @@ describe('ResultMobile — shared chrome', () => {
 });
 
 describe('ResultMobile — "К списку заданий"', () => {
-  it('goes to the Subject screen in "По номерам" mode, not Home, preserving the source', async () => {
+  it('goes to the Subject screen in "Темы" mode, not Home, preserving the source', async () => {
     const user = userEvent.setup();
     vi.mocked(api.getVariantForTask).mockResolvedValue({
       variant: {
@@ -347,7 +348,7 @@ describe('ResultMobile — "К списку заданий"', () => {
     await screen.findByText('Правильно!');
     await user.click(screen.getByRole('button', { name: 'К списку заданий' }));
     expect(screen.getByTestId('overlay')).toHaveTextContent(
-      `subject:${baseTask.subjectId}:ege-2026-yashchenko:byNumber`,
+      `subject:${baseTask.subjectId}:ege-2026-yashchenko:topics`,
     );
   });
 });
@@ -371,5 +372,44 @@ describe('ResultMobile — solution-only illustration (QA v2 Block H)', () => {
     );
 
     expect(await screen.findByText('Иллюстрация к решению')).toBeInTheDocument();
+  });
+});
+
+describe('ResultMobile — real solving time display (replaces the old static "Время 1:24")', () => {
+  it('shows the real submitted timeSpentMs, formatted as mm:ss', async () => {
+    render(
+      <NavigationProvider>
+        <ResultMobile
+          subjectId={baseTask.subjectId}
+          taskNumber={baseTask.taskNumber}
+          taskId={TASK_ID}
+          correct
+          userAnswer={CORRECT_ANSWER}
+          timeSpentMs={84000}
+        />
+      </NavigationProvider>,
+    );
+    await screen.findByText('Правильно!');
+    expect(screen.getByText((_, node) => node?.textContent === 'Время 01:24')).toBeInTheDocument();
+    expect(
+      screen.queryByText((_, node) => node?.textContent === 'Время 1:24'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows no time chip at all when the task was never timed (never fabricates one)', async () => {
+    render(
+      <NavigationProvider>
+        <ResultMobile
+          subjectId={baseTask.subjectId}
+          taskNumber={baseTask.taskNumber}
+          taskId={TASK_ID}
+          correct
+          userAnswer={CORRECT_ANSWER}
+        />
+      </NavigationProvider>,
+    );
+    await screen.findByText('Правильно!');
+    expect(screen.queryByText('Время 1:24')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Время /)).not.toBeInTheDocument();
   });
 });

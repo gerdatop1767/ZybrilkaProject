@@ -17,7 +17,10 @@ import { FriendsMobile } from './screens/Friends/FriendsMobile.js';
 import { FriendProfileMobile } from './screens/Friends/FriendProfileMobile.js';
 import { SubjectCatalogMobile } from './screens/SubjectCatalog/SubjectCatalogMobile.js';
 import { SubjectMobile } from './screens/Subject/SubjectMobile.js';
-import { startRealTask } from './lib/startTraining.js';
+import { Onboarding } from './screens/Onboarding/Onboarding.js';
+import { Profile } from './screens/Profile/Profile.js';
+import { Training } from './screens/Training/Training.js';
+import { LearningSession } from './screens/LearningSession/LearningSession.js';
 
 /**
  * Mobile app tree (S1 Block 6, approved design). Screens not yet
@@ -37,14 +40,6 @@ export function AppMobile() {
   const contentOverlay = isMenuOpen ? null : overlay;
 
   function selectTab(id: string) {
-    // The approved screenshots have no idle "Тренировка" tab screen —
-    // tapping it jumps straight into a real training task (S3.2: a
-    // live random task from the API, not the hardcoded design-mock
-    // task this used to open).
-    if (id === 'training') {
-      startRealTask(navigate, { subject: 'math' });
-      return;
-    }
     // The bottom nav's second slot is "Мои ошибки" (audit Block 2) — a
     // real overlay screen, not a MainTabId, so it needs its own
     // navigate() rather than falling through to the tab branch below.
@@ -100,7 +95,11 @@ export function AppMobile() {
             variantId={contentOverlay.variantId}
             customOrderedTasks={contentOverlay.customOrderedTasks}
             returnTo={contentOverlay.returnTo}
+            timeSpentMs={contentOverlay.timeSpentMs}
           />
+        )}
+        {contentOverlay.screen === 'learningSession' && (
+          <LearningSession key={contentOverlay.sessionId} sessionId={contentOverlay.sessionId} />
         )}
         {contentOverlay.screen === 'mistakes' && <MistakesMobile />}
         {contentOverlay.screen === 'trainingTopic' && (
@@ -120,9 +119,7 @@ export function AppMobile() {
             note="Утверждённый референс для этого экрана ещё не получен."
           />
         )}
-        {contentOverlay.screen === 'onboarding' && (
-          <WipPlaceholder title="Онбординг" note="Экран в разработке — следующий блок." />
-        )}
+        {contentOverlay.screen === 'onboarding' && <Onboarding />}
         {contentOverlay.screen === 'favorites' && (
           <WipPlaceholder title="Избранное" note="Экран в разработке — следующий блок." />
         )}
@@ -140,9 +137,7 @@ export function AppMobile() {
           <WipPlaceholder title="Настройки" note="Экран в разработке — следующий блок." />
         )}
         {contentOverlay.screen === 'help' && <HelpMobile />}
-        {contentOverlay.screen === 'profile' && (
-          <WipPlaceholder title="Профиль" note="Экран в разработке — следующий блок." />
-        )}
+        {contentOverlay.screen === 'profile' && <Profile />}
         {menu}
       </MobileShell>
     );
@@ -154,9 +149,7 @@ export function AppMobile() {
         nav={<BottomNav items={defaultBottomNavItems} activeId={tab} onSelect={selectTab} />}
       >
         {tab === 'home' && <HomeMobile />}
-        {tab === 'training' && (
-          <WipPlaceholder title="Тренировка" note="Экран в разработке — следующий блок." />
-        )}
+        {tab === 'training' && <Training />}
         {tab === 'statistics' && <StatisticsMobile />}
         {tab === 'achievements' && <AchievementsMobile />}
       </MobileShell>

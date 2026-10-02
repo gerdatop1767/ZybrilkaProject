@@ -44,7 +44,7 @@ export type OverlayRoute =
        * pattern subjectId/taskNumber/taskId already use to cross a
        * screen unmount, never a value a component would lose. */
       collectionSlug?: string;
-      /** Opens the Subject page straight into this mode (e.g. `'byNumber'`
+      /** Opens the Subject page straight into this mode (e.g. `'topics'`
        * when returning from Result's "К списку заданий") instead of the
        * default "Темы" tab — absent means "let the page pick its own
        * default", same as before this existed. */
@@ -102,8 +102,26 @@ export type OverlayRoute =
       /** Same purpose as `task.returnTo` above — Result's back arrow
        * needs the same parent-overlay context Task had. */
       returnTo?: Route;
+      /** The real elapsed solving time already submitted with this
+       * attempt (see `useSolvingTimer`) — absent when the timer was
+       * never started. Carried the same way `userAnswer` is, purely for
+       * Result's own display; never re-sent to the backend. */
+      timeSpentMs?: number;
     }
   | { screen: 'mistakes' }
+  /**
+   * ZUBRILKA LEARNING INTELLIGENCE, Phase 10 — the one addressable
+   * entry point for a real backend learning session
+   * (`apps/api/.../learningSession`). Deliberately addressable (unlike
+   * `task`/`result`, see their comment below): a page refresh here
+   * must recover the session from the server via
+   * `GET /me/learning/sessions/:sessionId`, never silently create a
+   * new one or lose the server-authoritative position. Once resolved,
+   * this screen hands off into the normal `task`/`result` overlays
+   * (via `LearningSessionProvider`, not a new route field on them) for
+   * the actual solving UI — see `lib/learningSessionContext.tsx`.
+   */
+  | { screen: 'learningSession'; sessionId: string }
   /** Addressable placeholders for training modes not yet built as
    * their own screens — routing needs a real page for each one so
    * refresh/direct-link/Back-Forward work, even though the mode
@@ -140,6 +158,7 @@ const routeLabels: Partial<Record<Route['screen'], string>> = {
   statistics: 'Статистика',
   achievements: 'Достижения',
   learningCenter: 'Учебный центр',
+  learningSession: 'Тренировка',
   subjectCatalog: 'Предметы',
   mistakes: 'Мои ошибки',
   rating: 'Рейтинг',

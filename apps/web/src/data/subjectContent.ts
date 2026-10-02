@@ -11,7 +11,7 @@
  * `hashString`) — demo content, not real user progress.
  */
 
-export type SubjectModeId = 'topics' | 'byNumber' | 'variants' | 'random' | 'favorites';
+export type SubjectModeId = 'topics' | 'variants' | 'random' | 'favorites';
 
 export interface SubjectTopic {
   id: string;
@@ -25,7 +25,8 @@ export interface SubjectContent {
   tagline: string;
   topics: readonly SubjectTopic[];
   /** How many numbered EGE tasks this subject has (roughly the real
-   * spec's count) — drives "Задания по номерам". */
+   * spec's count) — drives the Variant builder's number grid and
+   * Training's "По номерам" number picker. */
   taskNumberCount: number;
 }
 

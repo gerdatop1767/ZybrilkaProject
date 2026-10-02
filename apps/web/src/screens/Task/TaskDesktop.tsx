@@ -6,6 +6,10 @@ import { getTask, listTasksByNumber, submitAttempt } from '../../lib/api.js';
 import { toSampleTask } from '../../lib/taskAdapter.js';
 import { useFavorite } from '../../lib/useFavorite.js';
 import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
+import { useActiveLearningSessionForTask } from '../../lib/learningSessionContext.js';
+import { useSolvingTimer } from '../../lib/useSolvingTimer.js';
+import { SolvingTimer } from '../../ui/Timer/SolvingTimer.js';
+import { LearningSessionBadge } from '../../ui/LearningSession/LearningSessionBadge.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Calculator } from '../../ui/Calculator/Calculator.js';
@@ -66,6 +70,8 @@ export function TaskDesktop({
   });
   const goBack = returnTo ? () => navigate(returnTo) : back;
   const favorite = useFavorite(taskId);
+  const learningSession = useActiveLearningSessionForTask(taskId);
+  const timer = useSolvingTimer();
 
   // The router remounts this component (key={taskId}) on every task
   // change, so state starts fresh here — no manual reset-on-taskId-change
@@ -126,7 +132,12 @@ export function TaskDesktop({
     const userAnswerForResult = isMultiPart
       ? serializeMultiPartUserAnswer(submittedAnswer as Record<string, string>)
       : (submittedAnswer as string);
-    void submitAttempt(task.id, { answer: submittedAnswer })
+    // Never counts the time the task sat open before "Начать" — only a
+    // started timer produces a real timeSpentMs (see useSolvingTimer).
+    const neverStarted = timer.status === 'idle';
+    const elapsedMs = timer.finish();
+    const timeSpentMs = neverStarted ? undefined : elapsedMs;
+    void submitAttempt(task.id, { answer: submittedAnswer, timeSpentMs })
       .then((result) => {
         clearCanvasState(task.id);
         navigate({
@@ -139,6 +150,7 @@ export function TaskDesktop({
           collectionSlug,
           variantId: taskNav.variantId ?? undefined,
           returnTo,
+          timeSpentMs,
         });
       })
       .finally(() => setChecking(false));
@@ -194,9 +206,7 @@ export function TaskDesktop({
               </span>
               <ProgressBar value={progressPercent} label="Прогресс тренировки" />
             </div>
-            <span className={styles.timer}>
-              <Icon name="time" size={16} /> 00:12:34
-            </span>
+            <SolvingTimer timer={timer} />
             <button
               type="button"
               className={styles.roundButton}
@@ -210,6 +220,7 @@ export function TaskDesktop({
 
           <div className={styles.card}>
             <div className={styles.metaRow}>
+              {learningSession && <LearningSessionBadge session={learningSession} />}
               <span className={styles.currentChip}>Задание {task.indexInSession}</span>
               <span className={styles.metaChip}>{task.topic}</span>
               <span className={styles.metaChip}>Показательные уравнения</span>

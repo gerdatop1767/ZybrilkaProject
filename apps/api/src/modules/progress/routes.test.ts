@@ -68,5 +68,39 @@ describe('GET /api/v1/progress/summary', () => {
       headers: { 'x-anon-id': randomUUID() },
     });
     expect(res.json()).toMatchObject({ solvedTotal: 0, correctTotal: 0, accuracyPercent: 0 });
+    expect(res.json().timeBySubject).toEqual([]);
+  });
+
+  it('timeBySubject (Statistics 2.0) reports real average/median time, never counting untimed attempts as 0', async () => {
+    const anonId = randomUUID();
+    const tasks = await testDb.db.select().from(schema.tasks).where(eq(schema.tasks.taskNumber, 2));
+    await app.inject({
+      method: 'POST',
+      url: `/api/v1/tasks/${tasks[0]!.id}/attempt`,
+      headers: { 'x-anon-id': anonId },
+      payload: { answer: 'wrong', timeSpentMs: 10000 },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `/api/v1/tasks/${tasks[1]!.id}/attempt`,
+      headers: { 'x-anon-id': anonId },
+      payload: { answer: 'wrong' }, // untimed
+    });
+    await app.inject({
+      method: 'POST',
+      url: `/api/v1/tasks/${tasks[0]!.id}/attempt`,
+      headers: { 'x-anon-id': anonId },
+      payload: { answer: tasks[0]!.correctAnswer, timeSpentMs: 30000 },
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/progress/summary',
+      headers: { 'x-anon-id': anonId },
+    });
+    const mathTime = res
+      .json()
+      .timeBySubject.find((t: { subjectId: string }) => t.subjectId === 'math');
+    expect(mathTime).toMatchObject({ averageTimeMs: 20000, medianTimeMs: 20000, timedAttempts: 2 });
   });
 });

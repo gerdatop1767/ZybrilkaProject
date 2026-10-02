@@ -8,17 +8,24 @@ import {
   getProgressByTaskNumber,
   getProgressByTopic,
   getProgressSummary,
+  getTaskNumberStatisticsDetail,
 } from '../../lib/api.js';
 import { toSampleMistake } from '../../lib/mistakeAdapter.js';
 import { toTaskNumberProgress } from '../../lib/progressAdapter.js';
-import type { ProgressByTopicResponse, ProgressSummary } from '@zybrilka/shared';
+import type {
+  ProgressByTopicResponse,
+  ProgressSummary,
+  TaskNumberStatisticsDetail,
+} from '@zybrilka/shared';
 import { Card } from '../../ui/Card/Card.js';
 import { Tabs } from '../../ui/Tabs/Tabs.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { SubjectHeaderMobile } from '../../ui/SubjectHeader/SubjectHeaderMobile.js';
+import { BackRow } from '../../ui/BackRow/BackRow.js';
 import { StatTile } from '../../ui/Statistics/StatTile.js';
 import { TaskNumberBars } from '../../ui/Statistics/TaskNumberBars.js';
 import { TaskNumberGrid } from '../../ui/Statistics/TaskNumberGrid.js';
+import { TaskNumberDetailPanel } from '../../ui/Statistics/TaskNumberDetailPanel.js';
 import { TopicProgressRow } from '../../ui/Statistics/TopicProgressRow.js';
 import { NewMockExamCard } from '../../ui/Statistics/MockExamCard.js';
 import { CircularProgress } from '../../ui/Progress/CircularProgress.js';
@@ -60,6 +67,8 @@ export function StatisticsMobile() {
   >([]);
   const [topics, setTopics] = useState<ProgressByTopicResponse['items']>([]);
   const [mistakes, setMistakes] = useState<readonly Mistake[]>([]);
+  const [selectedTaskNumber, setSelectedTaskNumber] = useState<number | null>(null);
+  const [detail, setDetail] = useState<TaskNumberStatisticsDetail | null | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,12 +120,44 @@ export function StatisticsMobile() {
   const solvedTotal = realProgress?.solvedTotal ?? 0;
   const accuracyPercent = realProgress ? Math.round(realProgress.accuracyPercent) : 0;
 
-  function openTask(taskNumber: number) {
-    startRealTask(navigate, { subject: subject.id, taskNumber });
+  function openDetail(taskNumber: number) {
+    setSelectedTaskNumber(taskNumber);
   }
 
   function openTopic(topic: ProgressByTopicResponse['items'][number]) {
     startRealTask(navigate, { subject: subject.id, topic: topic.topicId });
+  }
+
+  useEffect(() => {
+    if (selectedTaskNumber === null) return;
+    let cancelled = false;
+    void getTaskNumberStatisticsDetail(subject.id, selectedTaskNumber)
+      .then((data) => {
+        if (!cancelled) setDetail(data);
+      })
+      .catch(() => {
+        if (!cancelled) setDetail(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [subject.id, selectedTaskNumber]);
+
+  // The detail fetch above only ever resolves for the number it was
+  // started for — once the selection changes, a previous result (if
+  // any) is stale and must not flash before the new fetch resolves.
+  const displayedDetail = detail && detail.taskNumber === selectedTaskNumber ? detail : undefined;
+
+  if (selectedTaskNumber !== null) {
+    return (
+      <SlideUp className={styles.stack}>
+        <BackRow label="Статистика" onBack={() => setSelectedTaskNumber(null)} />
+        <Card className={styles.cardHeaderRow}>
+          <p className="text-h3">№{selectedTaskNumber}</p>
+        </Card>
+        <TaskNumberDetailPanel taskNumber={selectedTaskNumber} detail={displayedDetail} />
+      </SlideUp>
+    );
   }
 
   return (
@@ -152,7 +193,7 @@ export function StatisticsMobile() {
             <div className={styles.cardHeaderRow}>
               <p className="text-h3">Задания по номерам</p>
             </div>
-            <TaskNumberGrid rows={taskNumberProgress} onSelect={openTask} />
+            <TaskNumberGrid rows={taskNumberProgress} onSelect={openDetail} />
           </Card>
         </FadeIn>
       )}
@@ -272,9 +313,9 @@ export function StatisticsMobile() {
 
           <Card>
             <div className={styles.cardHeaderRow}>
-              <p className="text-h3">Прогресс по заданиям (1–19)</p>
+              <p className="text-h3">Прогресс по заданиям</p>
             </div>
-            <TaskNumberBars rows={taskNumberProgress} onSelect={openTask} />
+            <TaskNumberBars rows={taskNumberProgress} onSelect={openDetail} />
           </Card>
 
           <Card>

@@ -4,6 +4,14 @@ import { healthRoutes } from './routes/health.js';
 import { registerAnonUser } from './plugins/anonUser.js';
 import { collectionsRoutes } from './modules/collections/routes.js';
 import { favoritesRoutes } from './modules/favorites/routes.js';
+import { learningRoutes } from './modules/learning/routes.js';
+import { learningProfileRoutes } from './modules/learningProfile/routes.js';
+import { taskStatisticsRoutes } from './modules/learning/taskStatistics/routes.js';
+import { errorSignaturesRoutes } from './modules/learning/errorSignatures/routes.js';
+import { taskSimilarityRoutes } from './modules/learning/taskSimilarity/routes.js';
+import { recommendationRoutes } from './modules/learning/recommendation/routes.js';
+import { learningPathRoutes } from './modules/learning/learningPath/routes.js';
+import { learningSessionRoutes } from './modules/learning/learningSession/routes.js';
 import { mistakesRoutes } from './modules/mistakes/routes.js';
 import { progressRoutes } from './modules/progress/routes.js';
 import { tasksRoutes } from './modules/tasks/routes.js';
@@ -30,6 +38,14 @@ export function buildApp({ logger = false, version, checkDb, db }: AppOptions) {
     app.register(mistakesRoutes, { db, prefix: '/api/v1' });
     app.register(progressRoutes, { db, prefix: '/api/v1' });
     app.register(favoritesRoutes, { db, prefix: '/api/v1' });
+    app.register(learningProfileRoutes, { db, prefix: '/api/v1' });
+    app.register(learningRoutes, { db, prefix: '/api/v1' });
+    app.register(taskStatisticsRoutes, { db, prefix: '/api/v1' });
+    app.register(errorSignaturesRoutes, { db, prefix: '/api/v1' });
+    app.register(taskSimilarityRoutes, { db, prefix: '/api/v1' });
+    app.register(recommendationRoutes, { db, prefix: '/api/v1' });
+    app.register(learningPathRoutes, { db, prefix: '/api/v1' });
+    app.register(learningSessionRoutes, { db, prefix: '/api/v1' });
   }
 
   return app;
