@@ -8,6 +8,7 @@ import {
   calculateSkillNeed,
   calculateTargetGap,
   calculateTargetRelevance,
+  calculateTaskNumberNeed,
   calculateTaskSimilarity,
   combineRecommendationSignals,
   getComparableDifficulty,
@@ -35,6 +36,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
  * weight, then by signal name for full determinism) and names them. */
 const SIGNAL_LABELS: Record<RecommendationSignal, string> = {
   skillNeed: 'слабый навык в этой задаче',
+  taskNumberNeed: 'вы часто ошибаетесь именно в этом номере задания',
   errorRelevance: 'похожие на ваши частые ошибки',
   difficultyFit: 'сложность соответствует вашему уровню',
   targetRelevance: 'приближает к целевому баллу',
@@ -110,20 +112,34 @@ export async function getNextTaskRecommendation(
   // the full pool (review mode) rather than returning null.
   const candidates = unsolved.length > 0 ? unsolved : allCandidates;
 
-  const [masteryRows, errorStats, subjectProfile, openMistakeTaskIds] = await Promise.all([
-    repo.getUserSkillMasteryForSubject(db, userId, subjectId),
-    errorStatsRepo.getUserErrorStatistics(db, userId),
-    learningProfileRepo
-      .getSubjectProfiles(db, userId)
-      .then((profiles) => profiles.find((p) => p.subjectId === subjectId)),
-    repo.getOpenMistakeTaskIdsForUserSubject(db, userId, subjectId),
-  ]);
+  const [masteryRows, errorStats, subjectProfile, openMistakeTaskIds, taskNumberAttempts] =
+    await Promise.all([
+      repo.getUserSkillMasteryForSubject(db, userId, subjectId),
+      errorStatsRepo.getUserErrorStatistics(db, userId),
+      learningProfileRepo
+        .getSubjectProfiles(db, userId)
+        .then((profiles) => profiles.find((p) => p.subjectId === subjectId)),
+      repo.getOpenMistakeTaskIdsForUserSubject(db, userId, subjectId),
+      repo.getUserAttemptRecordsBySubject(db, userId, subjectId),
+    ]);
 
   const masteryBySkill = new Map(masteryRows.map((r) => [r.skillId, r] as const));
   const userSubjectAverageMastery =
     masteryRows.length > 0
       ? masteryRows.reduce((sum, r) => sum + r.mastery, 0) / masteryRows.length
       : null;
+
+  // Bulk-then-group (same pattern as `taskCountBySkill` below): every
+  // one of the user's real attempts in this subject, grouped by the
+  // taskNumber of the task it was on — the "learning from wrong
+  // answers" extension's own evidence, usable even for tasks with no
+  // `task_skills` rows at all.
+  const attemptsByTaskNumber = new Map<number, { isCorrect: boolean; createdAt: Date }[]>();
+  for (const attempt of taskNumberAttempts) {
+    const list = attemptsByTaskNumber.get(attempt.taskNumber) ?? [];
+    list.push({ isCorrect: attempt.isCorrect, createdAt: attempt.createdAt });
+    attemptsByTaskNumber.set(attempt.taskNumber, list);
+  }
 
   const gap = subjectProfile
     ? calculateTargetGap(subjectProfile.selfReportedScore, subjectProfile.targetScore)
@@ -175,6 +191,7 @@ export async function getNextTaskRecommendation(
 
     const { total, breakdown } = combineRecommendationSignals({
       skillNeed: calculateSkillNeed(skillMasteries),
+      taskNumberNeed: calculateTaskNumberNeed(attemptsByTaskNumber.get(candidate.taskNumber) ?? []),
       errorRelevance: calculateErrorRelevance(
         errorStats,
         toRelevantAnswerType(candidate.answerType),

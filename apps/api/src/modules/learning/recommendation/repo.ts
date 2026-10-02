@@ -116,6 +116,35 @@ export async function getUserSkillMasteryForSubject(
     );
 }
 
+export interface UserTaskNumberAttemptRow {
+  readonly taskNumber: number;
+  readonly isCorrect: boolean;
+  readonly createdAt: Date;
+}
+
+/** Every attempt this user has made on ANY task in this subject,
+ * tagged with that task's `taskNumber` — fetched ONCE per request
+ * (not per candidate) so callers can group it in memory by taskNumber
+ * for `calculateTaskNumberNeed`, the same bulk-then-group pattern
+ * `getCandidateTasksForSubject`'s skill links already use. A task
+ * number the user has never attempted simply has no rows here — never
+ * a fabricated empty-but-present entry. */
+export async function getUserAttemptRecordsBySubject(
+  db: Database,
+  userId: string,
+  subjectId: string,
+): Promise<UserTaskNumberAttemptRow[]> {
+  return db
+    .select({
+      taskNumber: schema.tasks.taskNumber,
+      isCorrect: schema.attempts.isCorrect,
+      createdAt: schema.attempts.createdAt,
+    })
+    .from(schema.attempts)
+    .innerJoin(schema.tasks, eq(schema.tasks.id, schema.attempts.taskId))
+    .where(and(eq(schema.attempts.userId, userId), eq(schema.tasks.subjectId, subjectId)));
+}
+
 /** Task ids the user currently has an OPEN mistake on, in this subject
  * — the real "weak spot" pool `similarityBonus` relates candidates to. */
 export async function getOpenMistakeTaskIdsForUserSubject(

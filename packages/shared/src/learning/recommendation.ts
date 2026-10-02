@@ -1,3 +1,5 @@
+import { calculateSkillMastery, type SkillAttemptRecord } from './mastery.js';
+
 /**
  * ZUBRILKA LEARNING INTELLIGENCE, Phase 7 — deterministic, rule-based
  * next-task recommendation. No AI/ML anywhere: every signal below is a
@@ -15,11 +17,27 @@
  * the product's stated core loop is "find and fix weak areas" — while
  * every other signal nudges the choice without overriding it):
  *
- * - skillNeed (35): average `100 - mastery` over the task's linked
+ * - skillNeed (25): average `100 - mastery` over the task's linked
  *   skills. An unpracticed skill has mastery 0 (Phase 3's cold-start
  *   convention), so it reads as maximum need — honest, not a bug: a
  *   skill the user has never touched genuinely needs practice.
  *   Omitted (not scored 0) when the task has no linked skills.
+ *
+ * - taskNumberNeed (20) — ZUBRILKA LEARNING INTELLIGENCE audit
+ *   ("learning from wrong answers"): reuses Phase 3's
+ *   `calculateSkillMastery` formula UNCHANGED, but grouped by this
+ *   task's `taskNumber` within the subject instead of by skill. An EGE
+ *   task number is itself a real, recurring task TYPE (№13 is always
+ *   "trig equation", №17 is always "planimetry", etc.) — this signal
+ *   lets the system notice "the user keeps failing №5" even for the
+ *   large majority of today's catalog that has no `task_skills` rows
+ *   yet (skills exist only for tasks 13-19). Because it reuses the
+ *   exact recency-window + confidence-shrink formula, repeated recent
+ *   failures on the same task number raise this signal, and real
+ *   correct attempts on that same number lower it again —
+ *   deterministically, never permanently, never randomly. Omitted (not
+ *   scored 0) when the user has never attempted this exact task number
+ *   in this subject.
  *
  * - errorRelevance (15): what share of the user's own recorded error
  *   signatures (Phase 5) are relevant to this task's `answerType`.
@@ -44,14 +62,14 @@
  *   whenever either score is `'unknown'` — never substituted with a
  *   guessed gap.
  *
- * - recency (10): how overdue the task's skills are for review — the
+ * - recency (5): how overdue the task's skills are for review — the
  *   longest idle time (in days) since the user last attempted any of
  *   the task's linked skills, ramped to 100 at `RECENCY_FULL_DAYS`.
  *   Omitted when none of the task's skills have ever been attempted
  *   (that case is already captured honestly by `skillNeed`, not by a
  *   fabricated "infinite" recency).
  *
- * - examImportance (10): what share of the subject's published tasks
+ * - examImportance (5): what share of the subject's published tasks
  *   use at least one of this task's skills — a real, countable proxy
  *   for "how often does this come up on the actual exam", not an
  *   invented weighting. Omitted when the task has no linked skills.
@@ -66,22 +84,46 @@
  * never fake" rule. A candidate where every signal is available gets a
  * score out of the full 100; a candidate with, say, only skillNeed and
  * difficultyFit available still gets an honest 0..100 score computed
- * from just those two, weighted 35:15.
+ * from just those two, weighted 25:15.
+ *
+ * `recency` and `examImportance` were each trimmed from 10 to 5 and
+ * `skillNeed` from 35 to 25 to make room for `taskNumberNeed` — the
+ * only reweighting; every signal's own formula is unchanged.
  */
 
 export const RECOMMENDATION_WEIGHTS = {
-  skillNeed: 35,
+  skillNeed: 25,
+  taskNumberNeed: 20,
   errorRelevance: 15,
   difficultyFit: 15,
   targetRelevance: 10,
-  recency: 10,
-  examImportance: 10,
+  recency: 5,
+  examImportance: 5,
   similarityBonus: 5,
 } as const;
 
 export type RecommendationSignal = keyof typeof RECOMMENDATION_WEIGHTS;
 
 const RECENCY_FULL_DAYS = 14;
+
+/** 0..100, or `null` when the user has never attempted this exact task
+ * number in this subject (never fabricated as 0). `attemptRecords` is
+ * every attempt the user has made on ANY task sharing this
+ * `taskNumber` in this subject — reuses `calculateSkillMastery`
+ * completely unchanged; that formula is agnostic to what its grouping
+ * key represents (originally per-skill, here per-taskNumber), so the
+ * same recency-windowed accuracy + confidence shrink that makes
+ * `skillNeed` honestly track "weak AND recently relevant" applies
+ * identically: repeated recent wrong attempts raise this signal,
+ * subsequent real correct attempts lower it again — deterministic,
+ * never permanent. */
+export function calculateTaskNumberNeed(
+  attemptRecords: readonly SkillAttemptRecord[],
+): number | null {
+  if (attemptRecords.length === 0) return null;
+  const { mastery } = calculateSkillMastery(attemptRecords);
+  return Math.round(100 - mastery);
+}
 
 export type RelevantErrorAnswerType =
   'short_answer' | 'multiple_choice' | 'interval' | 'multi_part';
@@ -214,6 +256,7 @@ export function calculateSimilarityBonus(similarityScores: readonly number[]): n
 
 export interface RecommendationSignalScores {
   readonly skillNeed: number | null;
+  readonly taskNumberNeed: number | null;
   readonly errorRelevance: number | null;
   readonly difficultyFit: number | null;
   readonly targetRelevance: number | null;

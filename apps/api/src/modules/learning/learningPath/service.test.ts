@@ -133,6 +133,7 @@ describe('getLearningPath (ZUBRILKA LEARNING INTELLIGENCE Phase 8)', () => {
     for (const step of result!.steps) {
       expect(Object.keys(step.breakdown)).toEqual([
         'skillNeed',
+        'taskNumberNeed',
         'errorRelevance',
         'difficultyFit',
         'targetRelevance',

@@ -8,6 +8,7 @@ import {
   calculateSkillCoverageNeed,
   calculateTargetGap,
   calculateTargetRelevance,
+  calculateTaskNumberNeed,
   calculateTaskSimilarity,
   combineRecommendationSignals,
   compareLearningPathCandidates,
@@ -53,6 +54,7 @@ const RECENT_SOLVED_REFERENCE_LIMIT = 5;
 
 const STEP_SIGNAL_LABELS: Record<RecommendationSignal, string> = {
   skillNeed: 'укрепляем навык с низкой освоенностью',
+  taskNumberNeed: 'закрепляем номер задания, где вы часто ошибаетесь',
   errorRelevance: 'повторяем тип ошибки, который вы часто допускаете',
   difficultyFit: 'сложность соответствует вашему текущему уровню',
   targetRelevance: 'приближает к целевому баллу',
@@ -99,6 +101,7 @@ interface CandidateStaticData {
   readonly candidate: recommendationRepo.RecommendationCandidateTask;
   readonly comparableDifficulty: number;
   readonly errorRelevance: number | null;
+  readonly taskNumberNeed: number | null;
   readonly targetRelevance: number | null;
   readonly recency: number | null;
   readonly examImportance: number | null;
@@ -155,16 +158,33 @@ export async function getLearningPath(
       ? fallbackPool.filter((c) => !excludeTaskIdSet.has(c.taskId))
       : fallbackPool;
 
-  const [masteryRows, errorStats, subjectProfile, openMistakeTaskIds, recentlySolvedTaskIds] =
-    await Promise.all([
-      recommendationRepo.getUserSkillMasteryForSubject(db, userId, subjectId),
-      errorStatsRepo.getUserErrorStatistics(db, userId),
-      learningProfileRepo
-        .getSubjectProfiles(db, userId)
-        .then((profiles) => profiles.find((p) => p.subjectId === subjectId)),
-      recommendationRepo.getOpenMistakeTaskIdsForUserSubject(db, userId, subjectId),
-      repo.getRecentlyCorrectlySolvedTaskIds(db, userId, subjectId, RECENT_SOLVED_REFERENCE_LIMIT),
-    ]);
+  const [
+    masteryRows,
+    errorStats,
+    subjectProfile,
+    openMistakeTaskIds,
+    recentlySolvedTaskIds,
+    taskNumberAttempts,
+  ] = await Promise.all([
+    recommendationRepo.getUserSkillMasteryForSubject(db, userId, subjectId),
+    errorStatsRepo.getUserErrorStatistics(db, userId),
+    learningProfileRepo
+      .getSubjectProfiles(db, userId)
+      .then((profiles) => profiles.find((p) => p.subjectId === subjectId)),
+    recommendationRepo.getOpenMistakeTaskIdsForUserSubject(db, userId, subjectId),
+    repo.getRecentlyCorrectlySolvedTaskIds(db, userId, subjectId, RECENT_SOLVED_REFERENCE_LIMIT),
+    recommendationRepo.getUserAttemptRecordsBySubject(db, userId, subjectId),
+  ]);
+
+  // Same bulk-then-group pattern as Phase 7's own taskNumberNeed wiring
+  // — real "learning from wrong answers" evidence, usable even for
+  // candidates with no `task_skills` rows.
+  const attemptsByTaskNumber = new Map<number, { isCorrect: boolean; createdAt: Date }[]>();
+  for (const attempt of taskNumberAttempts) {
+    const list = attemptsByTaskNumber.get(attempt.taskNumber) ?? [];
+    list.push({ isCorrect: attempt.isCorrect, createdAt: attempt.createdAt });
+    attemptsByTaskNumber.set(attempt.taskNumber, list);
+  }
 
   const masteryBySkill = new Map(masteryRows.map((r) => [r.skillId, r.mastery] as const));
   const lastAttemptBySkill = new Map(masteryRows.map((r) => [r.skillId, r.lastAttemptAt] as const));
@@ -230,6 +250,9 @@ export async function getLearningPath(
             errorStats,
             toRelevantAnswerType(candidate.answerType),
           ),
+          taskNumberNeed: calculateTaskNumberNeed(
+            attemptsByTaskNumber.get(candidate.taskNumber) ?? [],
+          ),
           targetRelevance: calculateTargetRelevance(gap, comparableDifficulty),
           recency: calculateRecency(daysSinceEachSkillLastAttempted),
           examImportance: calculateExamImportance(skillFrequencyRatios),
@@ -273,6 +296,7 @@ export async function getLearningPath(
 
       const { total, breakdown } = combineRecommendationSignals({
         skillNeed: skillCoverageNeed,
+        taskNumberNeed: data.taskNumberNeed,
         errorRelevance: data.errorRelevance,
         difficultyFit,
         targetRelevance: data.targetRelevance,

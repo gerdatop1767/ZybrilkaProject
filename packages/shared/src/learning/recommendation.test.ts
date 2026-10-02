@@ -8,9 +8,14 @@ import {
   calculateSkillNeed,
   calculateTargetGap,
   calculateTargetRelevance,
+  calculateTaskNumberNeed,
   combineRecommendationSignals,
   RECOMMENDATION_WEIGHTS,
 } from './recommendation.js';
+
+function daysAgo(days: number): Date {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+}
 
 describe('RECOMMENDATION_WEIGHTS', () => {
   it('sums to 100', () => {
@@ -34,6 +39,66 @@ describe('calculateSkillNeed', () => {
 
   it('averages across multiple linked skills', () => {
     expect(calculateSkillNeed([0, 100])).toBe(50);
+  });
+});
+
+describe('calculateTaskNumberNeed', () => {
+  it('is null when the user has never attempted this task number', () => {
+    expect(calculateTaskNumberNeed([])).toBeNull();
+  });
+
+  it('one wrong attempt produces real pressure (> 0)', () => {
+    const need = calculateTaskNumberNeed([{ isCorrect: false, createdAt: daysAgo(0) }]);
+    expect(need).not.toBeNull();
+    expect(need!).toBeGreaterThan(0);
+  });
+
+  it('a worsening recent accuracy increases pressure, for the same attempt count', () => {
+    const oneRightTwoWrong = calculateTaskNumberNeed([
+      { isCorrect: true, createdAt: daysAgo(3) },
+      { isCorrect: false, createdAt: daysAgo(2) },
+      { isCorrect: false, createdAt: daysAgo(1) },
+    ]);
+    const allWrong = calculateTaskNumberNeed([
+      { isCorrect: false, createdAt: daysAgo(3) },
+      { isCorrect: false, createdAt: daysAgo(2) },
+      { isCorrect: false, createdAt: daysAgo(1) },
+    ]);
+    expect(allWrong!).toBeGreaterThan(oneRightTwoWrong!);
+  });
+
+  it('subsequent real correct attempts decrease pressure deterministically (not permanent)', () => {
+    const afterWrongOnly = calculateTaskNumberNeed([
+      { isCorrect: false, createdAt: daysAgo(3) },
+      { isCorrect: false, createdAt: daysAgo(2) },
+      { isCorrect: false, createdAt: daysAgo(1) },
+    ]);
+    const afterRecovering = calculateTaskNumberNeed([
+      { isCorrect: false, createdAt: daysAgo(3) },
+      { isCorrect: false, createdAt: daysAgo(2) },
+      { isCorrect: false, createdAt: daysAgo(1) },
+      { isCorrect: true, createdAt: daysAgo(0) },
+      { isCorrect: true, createdAt: daysAgo(0) },
+    ]);
+    expect(afterRecovering!).toBeLessThan(afterWrongOnly!);
+  });
+
+  it('is deterministic — same attempt history always produces the same need', () => {
+    const records = [
+      { isCorrect: false, createdAt: daysAgo(2) },
+      { isCorrect: true, createdAt: daysAgo(1) },
+    ];
+    expect(calculateTaskNumberNeed(records)).toBe(calculateTaskNumberNeed(records));
+  });
+
+  it('a wrong attempt on task number 5 never affects task number 7 (distinguishable per taskNumber)', () => {
+    // This is enforced by the CALLER grouping attempts per taskNumber
+    // before calling this function — verified here by showing two
+    // independent attempt histories produce independent results.
+    const five = calculateTaskNumberNeed([{ isCorrect: false, createdAt: daysAgo(0) }]);
+    const seven = calculateTaskNumberNeed([]);
+    expect(five).not.toBeNull();
+    expect(seven).toBeNull();
   });
 });
 
@@ -155,6 +220,7 @@ describe('combineRecommendationSignals', () => {
   it('is 0 when every signal is unavailable (honest floor, not a penalty)', () => {
     const result = combineRecommendationSignals({
       skillNeed: null,
+      taskNumberNeed: null,
       errorRelevance: null,
       difficultyFit: null,
       targetRelevance: null,
@@ -169,6 +235,7 @@ describe('combineRecommendationSignals', () => {
   it('is 100 when every available signal is maxed', () => {
     const result = combineRecommendationSignals({
       skillNeed: 100,
+      taskNumberNeed: 100,
       errorRelevance: 100,
       difficultyFit: 100,
       targetRelevance: 100,
@@ -180,10 +247,11 @@ describe('combineRecommendationSignals', () => {
   });
 
   it('renormalizes over only the available signals, never padding a missing one with 0', () => {
-    // Only skillNeed (35) and difficultyFit (15) available, both maxed:
+    // Only skillNeed (30) and difficultyFit (15) available, both maxed:
     // weighted average should still be 100, not diluted by the missing weight.
     const result = combineRecommendationSignals({
       skillNeed: 100,
+      taskNumberNeed: null,
       errorRelevance: null,
       difficultyFit: 100,
       targetRelevance: null,
@@ -193,12 +261,31 @@ describe('combineRecommendationSignals', () => {
     });
     expect(result.total).toBe(100);
     expect(result.breakdown.skillNeed.included).toBe(true);
-    expect(result.breakdown.errorRelevance.included).toBe(false);
+    expect(result.breakdown.taskNumberNeed.included).toBe(false);
+  });
+
+  it('taskNumberNeed alone (no skills, no other evidence) still produces an honest non-zero score', () => {
+    // The whole point of the extension: a task with NO linked skills
+    // must still be able to surface real "keeps failing this number"
+    // pressure, not fall back to the 0 floor.
+    const result = combineRecommendationSignals({
+      skillNeed: null,
+      taskNumberNeed: 80,
+      errorRelevance: null,
+      difficultyFit: null,
+      targetRelevance: null,
+      recency: null,
+      examImportance: null,
+      similarityBonus: null,
+    });
+    expect(result.total).toBe(80);
+    expect(result.breakdown.taskNumberNeed.included).toBe(true);
   });
 
   it('is deterministic — same input always produces the same output', () => {
     const input = {
       skillNeed: 72,
+      taskNumberNeed: 60,
       errorRelevance: 30,
       difficultyFit: 55,
       targetRelevance: null,

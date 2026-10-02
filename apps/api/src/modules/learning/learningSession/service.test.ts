@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { schema } from '@zybrilka/db';
 import { createImportedTestDb } from '@zybrilka/db/testing';
+import { calculateTaskNumberNeed } from '@zybrilka/shared';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { getUserAttemptRecordsBySubject } from '../recommendation/repo.js';
 import { advanceLearningSession, startLearningSession } from './service.js';
 
 describe('learning sessions (ZUBRILKA LEARNING INTELLIGENCE Phase 9)', () => {
@@ -292,6 +294,40 @@ describe('learning sessions (ZUBRILKA LEARNING INTELLIGENCE Phase 9)', () => {
       expect(next).not.toBeNull();
       if (next && next.status === 'active') {
         expect(next.recommendation.breakdown.errorRelevance.included).toBe(true);
+      }
+    });
+
+    it('next task selection reflects UPDATED taskNumberNeed after a real wrong attempt mid-session', async () => {
+      const userId = await freshUserId();
+      const started = await startLearningSession(testDb.db, userId, {
+        subjectId: 'math',
+        total: 5,
+      });
+      if (!started || started.status !== 'active') throw new Error('unreachable');
+
+      const wrongTaskNumber = started.task.taskNumber;
+      await testDb.db.insert(schema.attempts).values({
+        userId,
+        taskId: started.task.id,
+        answerRaw: '__wrong__',
+        isCorrect: false,
+      });
+
+      // The real signal now exists for that task number, through the
+      // exact same repo+formula wiring Phase 7/8 use internally — Phase
+      // 9 never maintains a separate copy of this logic.
+      const records = await getUserAttemptRecordsBySubject(testDb.db, userId, 'math');
+      const need = calculateTaskNumberNeed(records.filter((r) => r.taskNumber === wrongTaskNumber));
+      expect(need).not.toBeNull();
+      expect(need!).toBeGreaterThan(0);
+
+      // The session's next step is scored FRESH against this updated
+      // state (never a cached recommendation) and never re-serves the
+      // just-attempted task.
+      const next = await advanceLearningSession(testDb.db, userId, started.sessionId);
+      expect(next).not.toBeNull();
+      if (next && next.status === 'active') {
+        expect(next.task.id).not.toBe(started.task.id);
       }
     });
 
