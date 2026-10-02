@@ -1,29 +1,10 @@
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
+import { useTaskCountsBySubject } from '../../lib/useTaskCounts.js';
 import { BackRow } from '../../ui/BackRow/BackRow.js';
 import { Card } from '../../ui/Card/Card.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import styles from './SubjectCatalogDesktop.module.css';
-
-const totalTasks = subjects.reduce((sum, subject) => sum + subject.taskCount, 0);
-
-const stats = [
-  {
-    image: '/branding/v2/summary/subjects.png',
-    label: 'предметов',
-    value: `${subjects.length}`,
-  },
-  {
-    image: '/branding/v2/summary/tasks.png',
-    label: 'заданий',
-    value: `${totalTasks.toLocaleString('ru-RU')}+`,
-  },
-  {
-    image: '/branding/v2/summary/full-statistics.png',
-    label: 'статистика',
-    value: 'Полная',
-  },
-] as const;
 
 /**
  * Desktop "Предметы" (approved reference screenshot): a hero banner
@@ -33,6 +14,32 @@ const stats = [
  */
 export function SubjectCatalogDesktop() {
   const { navigate } = useNavigation();
+  // Real published-task counts (one request) — replaces the static
+  // `subject.taskCount` demo field, here and in the "N заданий"
+  // headline stat below. null until loaded; a subject absent from the
+  // response has 0 published tasks.
+  const taskCounts = useTaskCountsBySubject();
+  const totalTasks = taskCounts
+    ? Object.values(taskCounts).reduce((sum, count) => sum + count, 0)
+    : null;
+
+  const stats = [
+    {
+      image: '/branding/v2/summary/subjects.png',
+      label: 'предметов',
+      value: `${subjects.length}`,
+    },
+    {
+      image: '/branding/v2/summary/tasks.png',
+      label: 'заданий',
+      value: totalTasks !== null ? `${totalTasks.toLocaleString('ru-RU')}+` : '···',
+    },
+    {
+      image: '/branding/v2/summary/full-statistics.png',
+      label: 'статистика',
+      value: 'Полная',
+    },
+  ] as const;
 
   return (
     <div>
@@ -90,7 +97,9 @@ export function SubjectCatalogDesktop() {
                   {subject.shortName}
                 </p>
                 <p className="text-body-sm text-secondary">
-                  {subject.taskCount.toLocaleString('ru-RU')} заданий
+                  {taskCounts
+                    ? `${(taskCounts[subject.id] ?? 0).toLocaleString('ru-RU')} заданий`
+                    : '···'}
                 </p>
               </span>
               <span className={styles.subjectArrow} style={{ background: subject.color }}>

@@ -5,9 +5,9 @@ import { getSubjectContent } from '../../data/subjectContent.js';
 import {
   getProgressByTopic,
   getRandomTask,
-  getVariant,
   listCollections,
   startLearningSession,
+  startVariantSession,
 } from '../../lib/api.js';
 import type { CollectionListItem, ProgressByTopicResponse } from '@zybrilka/shared';
 import {
@@ -248,21 +248,15 @@ export function Training() {
           setStartError('Выбери вариант, чтобы начать.');
           return;
         }
-        const detail = await getVariant(resolved);
-        const first = detail.tasks.find((t) => t.position === 1) ?? detail.tasks[0];
-        if (!first) {
-          setStartError('В этом варианте пока нет заданий.');
-          return;
+        // A real VARIANT session (Statistics 2.0's "Статистика
+        // вариантов" + the shared LearningSession completion screen —
+        // same backend session lifecycle Smart Training uses, just
+        // over the variant's own real task order, never scored).
+        const response = await startVariantSession(resolved);
+        const outcome = applyLearningSessionResponse(response, setSession, navigate);
+        if (outcome === 'none') {
+          setStartError('Не удалось начать вариант — попробуй ещё раз.');
         }
-        navigate({
-          screen: 'task',
-          subjectId: first.task.subjectId,
-          taskNumber: first.task.taskNumber,
-          taskId: first.task.id,
-          collectionSlug: collectionSlug ?? undefined,
-          variantId: resolved,
-          returnTo: { screen: 'training' },
-        });
         return;
       }
 

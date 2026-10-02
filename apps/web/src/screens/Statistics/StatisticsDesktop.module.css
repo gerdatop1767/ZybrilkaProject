@@ -47,6 +47,12 @@
   gap: var(--space-4);
 }
 
+.variantGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+}
+
 .chartCard {
   display: flex;
   flex-direction: column;

@@ -17,8 +17,8 @@ import { buildApp } from '../../app.js';
 describe('GET /api/v1/progress/by-task-number', () => {
   let testDb: Awaited<ReturnType<typeof createImportedTestDb>>;
   let app: ReturnType<typeof buildApp>;
-  let seedTaskA: { id: string };
-  let seedTaskB: { id: string };
+  let seedTaskA: { id: string; correctAnswer: string };
+  let seedTaskB: { id: string; correctAnswer: string };
   let yashchenkoTaskNumber1: { id: string };
 
   beforeAll(async () => {
@@ -136,6 +136,29 @@ describe('GET /api/v1/progress/by-task-number', () => {
     const res = await byTaskNumber(randomUUID(), '?subject=math&collection=does-not-exist');
     expect(res.statusCode).toBe(200);
     expect(findNumber1(res.json().items)).toBeUndefined();
+  });
+
+  it('a brand-new user with no attempts has null accuracyPercent, not a fabricated 0', async () => {
+    const res = await byTaskNumber(randomUUID(), '?subject=math');
+    expect(findNumber1(res.json().items)).toMatchObject({
+      correct: 0,
+      incorrect: 0,
+      accuracyPercent: null,
+    });
+  });
+
+  it('real correct/incorrect attempts produce a real accuracyPercent, separate from completed', async () => {
+    const anonId = randomUUID();
+    await attempt(anonId, seedTaskA.id, '__definitely_wrong__');
+    await attempt(anonId, seedTaskA.id, seedTaskA.correctAnswer);
+    await attempt(anonId, seedTaskB.id, '__also_wrong__');
+    const row = findNumber1((await byTaskNumber(anonId, '?subject=math')).json().items);
+    // completed: 2 unique tasks attempted (seedTaskA + seedTaskB), out
+    // of 3 total — a completely different ratio from accuracy below,
+    // proving the two are never conflated.
+    expect(row).toMatchObject({ completed: 2, total: 3 });
+    // 3 attempts total, 1 correct (the retry on seedTaskA).
+    expect(row).toMatchObject({ correct: 1, incorrect: 2, accuracyPercent: 33 });
   });
 
   it('variant filter narrows the same way as collection', async () => {

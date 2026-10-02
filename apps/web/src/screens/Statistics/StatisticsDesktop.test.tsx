@@ -11,6 +11,7 @@ vi.mock('../../lib/api.js', () => ({
   getMistakes: vi.fn(),
   getProgressByTaskNumber: vi.fn(),
   getTaskNumberStatisticsDetail: vi.fn(),
+  getVariantProgress: vi.fn(() => Promise.resolve({ items: [] })),
 }));
 
 function renderStatistics() {
@@ -123,7 +124,7 @@ describe('StatisticsDesktop — real progress data', () => {
 describe('StatisticsDesktop — Statistics 2.0 ordering (additive, never replacing existing stats)', () => {
   it('places "По номерам" after the existing charts, never before them', () => {
     vi.mocked(api.getProgressByTaskNumber).mockResolvedValue({
-      items: [{ subjectId: 'math', taskNumber: 5, total: 4, completed: 3 }],
+      items: [{ subjectId: 'math', taskNumber: 5, total: 4, completed: 3, correct: 0, incorrect: 0, accuracyPercent: null }],
     });
     renderStatistics();
     const headings = screen
@@ -145,7 +146,7 @@ describe('StatisticsDesktop — Statistics 2.0 ordering (additive, never replaci
 describe('StatisticsDesktop — По номерам detail (Statistics 2.0)', () => {
   it('clicking a real task number opens its detail, with a working back button', async () => {
     vi.mocked(api.getProgressByTaskNumber).mockResolvedValue({
-      items: [{ subjectId: 'math', taskNumber: 5, total: 4, completed: 3 }],
+      items: [{ subjectId: 'math', taskNumber: 5, total: 4, completed: 3, correct: 0, incorrect: 0, accuracyPercent: null }],
     });
     vi.mocked(api.getTaskNumberStatisticsDetail).mockResolvedValue({
       subjectId: 'math',
@@ -183,7 +184,7 @@ describe('StatisticsDesktop — По номерам detail (Statistics 2.0)', ()
 
   it('shows an honest empty state when the selected number has no attempts yet', async () => {
     vi.mocked(api.getProgressByTaskNumber).mockResolvedValue({
-      items: [{ subjectId: 'math', taskNumber: 7, total: 2, completed: 0 }],
+      items: [{ subjectId: 'math', taskNumber: 7, total: 2, completed: 0, correct: 0, incorrect: 0, accuracyPercent: null }],
     });
     vi.mocked(api.getTaskNumberStatisticsDetail).mockResolvedValue({
       subjectId: 'math',
@@ -211,5 +212,50 @@ describe('StatisticsDesktop — По номерам detail (Statistics 2.0)', ()
     renderStatistics();
     await user.click(await screen.findByText('№7'));
     expect(await screen.findByText('Пока нет данных по №7.')).toBeInTheDocument();
+  });
+});
+
+describe('StatisticsDesktop — Статистика вариантов', () => {
+  it('shows an honest empty state when no variant has been started yet', async () => {
+    vi.mocked(api.getVariantProgress).mockResolvedValue({ items: [] });
+    renderStatistics();
+    expect(
+      await screen.findByText('Реши свой первый вариант в Тренировке — он появится здесь.'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows a real completed variant with real planned/solved/accuracy/time/errors', async () => {
+    vi.mocked(api.getVariantProgress).mockResolvedValue({
+      items: [
+        {
+          sessionId: 's1',
+          variantId: 'v1',
+          variantNumber: 1,
+          variantTitle: 'Вариант 1',
+          subjectId: 'math',
+          status: 'completed',
+          startedAt: '2026-10-02T10:00:00.000Z',
+          completedAt: '2026-10-02T11:42:00.000Z',
+          plannedCount: 24,
+          solvedCount: 24,
+          correctCount: 21,
+          incorrectCount: 3,
+          accuracyPercent: 87.5,
+          totalTimeMs: 6120000,
+          keyErrors: [
+            { signature: 'incorrect_answer', count: 2 },
+            { signature: 'blank_answer', count: 1 },
+          ],
+        },
+      ],
+    });
+    renderStatistics();
+
+    expect(await screen.findByText('24 / 24 заданий')).toBeInTheDocument();
+    expect(screen.getByText('21 правильных')).toBeInTheDocument();
+    expect(screen.getByText('87.5%')).toBeInTheDocument();
+    expect(screen.getByText('Время: 1 ч 42 мин')).toBeInTheDocument();
+    expect(screen.getByText('Неверный ответ — 2')).toBeInTheDocument();
+    expect(screen.getByText('Пустой ответ — 1')).toBeInTheDocument();
   });
 });

@@ -1,7 +1,15 @@
 import type { Database } from '@zybrilka/db';
-import type { LearningSessionResponse, LearningSessionSummary } from '@zybrilka/shared';
+import {
+  detectErrorSignatures,
+  type LearningSessionResponse,
+  type LearningSessionSummary,
+  type VariantProgressItem,
+  type VariantProgressResponse,
+} from '@zybrilka/shared';
 import { getLearningPath } from '../learningPath/service.js';
 import { resolveSubjectId } from '../recommendation/service.js';
+import { buildDetectionInput } from '../errorSignatures/service.js';
+import { getVariantDetail } from '../../variants/service.js';
 import * as tasksRepo from '../../tasks/repo.js';
 import { toPublicTask } from '../../tasks/service.js';
 import * as repo from './repo.js';
@@ -73,6 +81,52 @@ export async function startLearningSession(
   };
 }
 
+/**
+ * Training's "Вариант" mode — starts a VARIANT session over ONE real,
+ * published exam variant's own real task order (never a recommendation:
+ * `plannedTaskIds` is the variant's own `position` order, fixed for the
+ * session's lifetime). Reuses every bit of Phase 9's bookkeeping
+ * (consumedTaskIds/status/started-/completedAt, `next`/snapshot/
+ * completion) — the only thing that differs is where the next task
+ * comes from (see `advanceLearningSession` below), never a parallel
+ * entity or a second completion screen.
+ */
+export async function startVariantSession(
+  db: Database,
+  userId: string,
+  variantId: string,
+): Promise<LearningSessionResponse> {
+  const detail = await getVariantDetail(db, variantId);
+  if (!detail || detail.tasks.length === 0) return null;
+
+  const orderedTasks = [...detail.tasks].sort((a, b) => a.position - b.position);
+  const plannedTaskIds = orderedTasks.map((t) => t.task.id);
+  const firstTask = orderedTasks[0]!.task;
+
+  const session = await repo.createSession(db, {
+    userId,
+    subjectId: detail.collection.subjectId,
+    total: plannedTaskIds.length,
+    firstTaskId: firstTask.id,
+    variantId,
+    plannedTaskIds,
+  });
+
+  return {
+    sessionId: session.id,
+    subject: session.subjectId,
+    status: 'active',
+    position: 1,
+    total: session.total,
+    task: firstTask,
+    variant: {
+      variantId,
+      variantNumber: detail.variant.variantNumber,
+      variantTitle: detail.variant.title,
+    },
+  };
+}
+
 /** `null` means "no such session, or it does not belong to this user"
  * — both map to the same outer 404, never distinguishing between them,
  * so a session id can't be used to probe whether it exists for someone
@@ -94,6 +148,36 @@ export async function advanceLearningSession(
   if (session.consumedTaskIds.length >= session.total) {
     const completed = await repo.markCompleted(db, session.id);
     return buildCompletedResponse(db, completed);
+  }
+
+  // VARIANT session — the next task is the variant's own fixed real
+  // order (`plannedTaskIds[position]`), never a fresh `getLearningPath`
+  // scoring: there is nothing to recommend, the exam's order already
+  // is the order.
+  if (session.plannedTaskIds) {
+    const nextTaskId = session.plannedTaskIds[session.consumedTaskIds.length];
+    if (!nextTaskId) {
+      const completed = await repo.markCompleted(db, session.id);
+      return buildCompletedResponse(db, completed);
+    }
+    const row = await tasksRepo.getTaskById(db, nextTaskId);
+    if (!row) {
+      // The task was pulled back to draft/removed mid-session — an
+      // honest early completion rather than crashing or serving a gap.
+      const completed = await repo.markCompleted(db, session.id);
+      return buildCompletedResponse(db, completed);
+    }
+    const updated = await repo.appendConsumedTask(db, session.id, nextTaskId);
+    const variant = await variantInfoFor(db, session);
+    return {
+      sessionId: updated.id,
+      subject: updated.subjectId,
+      status: 'active',
+      position: updated.consumedTaskIds.length,
+      total: updated.total,
+      task: toPublicTask(row),
+      variant,
+    };
   }
 
   const path = await getLearningPath(db, userId, {
@@ -160,6 +244,8 @@ export async function getLearningSessionSnapshot(
   const row = await tasksRepo.getTaskById(db, currentTaskId);
   if (!row) return null;
 
+  const variant = await variantInfoFor(db, session);
+
   return {
     sessionId: session.id,
     subject: session.subjectId,
@@ -167,6 +253,21 @@ export async function getLearningSessionSnapshot(
     position: session.consumedTaskIds.length,
     total: session.total,
     task: toPublicTask(row),
+    variant,
+  };
+}
+
+async function variantInfoFor(
+  db: Database,
+  session: repo.LearningSessionRow,
+): Promise<{ variantId: string; variantNumber: number; variantTitle: string } | undefined> {
+  if (!session.variantId) return undefined;
+  const identity = await repo.getVariantIdentity(db, session.variantId);
+  if (!identity) return undefined;
+  return {
+    variantId: session.variantId,
+    variantNumber: identity.variantNumber,
+    variantTitle: identity.title,
   };
 }
 
@@ -174,7 +275,10 @@ async function buildCompletedResponse(
   db: Database,
   session: repo.LearningSessionRow,
 ): Promise<LearningSessionResponse> {
-  const summary = await computeSessionSummary(db, session);
+  const [summary, variant] = await Promise.all([
+    computeSessionSummary(db, session),
+    variantInfoFor(db, session),
+  ]);
   return {
     sessionId: session.id,
     subject: session.subjectId,
@@ -182,6 +286,7 @@ async function buildCompletedResponse(
     position: session.consumedTaskIds.length,
     total: session.total,
     summary,
+    variant,
   };
 }
 
@@ -223,4 +328,71 @@ async function computeSessionSummary(
   const skillsPracticed = new Set(skillIds).size;
 
   return { attempted, correct, incorrect, accuracy, skillsPracticed, mistakesCreated };
+}
+
+/**
+ * Statistics' "Статистика вариантов" — every variant session this user
+ * has ever started, ANY status. An abandoned (still `active`) one
+ * shows its real partial numbers too (never excluded, never faked as
+ * finished) — only the Variant Completion SCREEN cares about `status
+ * === 'completed'`; this history list is honest either way.
+ */
+export async function getVariantProgress(
+  db: Database,
+  userId: string,
+): Promise<VariantProgressResponse> {
+  const sessions = await repo.getVariantSessionsForUser(db, userId);
+  const items = await Promise.all(sessions.map((session) => toVariantProgressItem(db, session)));
+  return { items };
+}
+
+async function toVariantProgressItem(
+  db: Database,
+  session: repo.VariantSessionRow,
+): Promise<VariantProgressItem> {
+  const summary = await computeSessionSummary(db, session);
+
+  const attemptRows = await repo.getAttemptsForTaskIds(
+    db,
+    session.userId,
+    session.consumedTaskIds,
+    session.startedAt,
+  );
+
+  const timedRows = attemptRows.filter(
+    (r): r is typeof r & { timeSpentMs: number } => r.timeSpentMs !== null,
+  );
+  const totalTimeMs =
+    timedRows.length === 0 ? null : timedRows.reduce((sum, r) => sum + r.timeSpentMs, 0);
+
+  // Key errors — the exact same deterministic detector the global
+  // /me/learning/errors feed and task-number detail use, scoped to
+  // this session's own attempts.
+  const errorCounts = new Map<string, number>();
+  for (const row of attemptRows) {
+    for (const sig of detectErrorSignatures(buildDetectionInput(row))) {
+      errorCounts.set(sig.code, (errorCounts.get(sig.code) ?? 0) + 1);
+    }
+  }
+  const keyErrors = Array.from(errorCounts.entries())
+    .map(([signature, count]) => ({ signature, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    sessionId: session.id,
+    variantId: session.variantId,
+    variantNumber: session.variantNumber,
+    variantTitle: session.variantTitle,
+    subjectId: session.subjectId,
+    status: session.status,
+    startedAt: session.startedAt.toISOString(),
+    completedAt: session.completedAt?.toISOString() ?? null,
+    plannedCount: session.total,
+    solvedCount: summary.attempted,
+    correctCount: summary.correct,
+    incorrectCount: summary.incorrect,
+    accuracyPercent: summary.accuracy,
+    totalTimeMs,
+    keyErrors,
+  };
 }

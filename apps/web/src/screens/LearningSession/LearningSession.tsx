@@ -88,21 +88,33 @@ export function LearningSession({ sessionId }: LearningSessionProps) {
   }
 
   if (primed && primed.status === 'completed') {
-    const { summary } = primed;
-    const stats: readonly { label: string; value: string }[] = [
-      { label: 'Решено', value: String(summary.attempted) },
-      { label: 'Правильно', value: String(summary.correct) },
-      { label: 'Неправильно', value: String(summary.incorrect) },
-      {
-        label: 'Точность',
-        value: summary.accuracy !== null ? `${Math.round(summary.accuracy)}%` : '—',
-      },
-      { label: 'Навыков затронуто', value: String(summary.skillsPracticed) },
-      { label: 'Новых ошибок', value: String(summary.mistakesCreated) },
-    ];
+    const { summary, variant } = primed;
+    const stats: readonly { label: string; value: string }[] = variant
+      ? [
+          { label: 'Решено', value: `${summary.attempted} / ${primed.total}` },
+          { label: 'Правильно', value: String(summary.correct) },
+          { label: 'Неправильно', value: String(summary.incorrect) },
+          {
+            label: 'Точность',
+            value: summary.accuracy !== null ? `${Math.round(summary.accuracy)}%` : '—',
+          },
+        ]
+      : [
+          { label: 'Решено', value: String(summary.attempted) },
+          { label: 'Правильно', value: String(summary.correct) },
+          { label: 'Неправильно', value: String(summary.incorrect) },
+          {
+            label: 'Точность',
+            value: summary.accuracy !== null ? `${Math.round(summary.accuracy)}%` : '—',
+          },
+          { label: 'Навыков затронуто', value: String(summary.skillsPracticed) },
+          { label: 'Новых ошибок', value: String(summary.mistakesCreated) },
+        ];
     return (
       <SlideUp className={styles.page}>
-        <h1 className="text-h1">Тренировка завершена</h1>
+        <h1 className="text-h1">
+          {variant ? `Вариант ${variant.variantNumber} завершён` : 'Тренировка завершена'}
+        </h1>
         <Card className={styles.summaryGrid}>
           {stats.map((stat) => (
             <div key={stat.label} className={styles.summaryStat}>

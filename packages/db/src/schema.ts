@@ -590,6 +590,20 @@ export const learningSessions = pgTable(
     /** Smart Training's 🎲 "Случайное" — same persistence reason as
      * `unseenOnly` above. */
     randomizeTopTier: boolean('randomize_top_tier').notNull().default(false),
+    /** Non-null marks this a VARIANT session (Training's "Вариант"
+     * mode solving one real numbered exam variant start-to-finish),
+     * never a Smart Training session — the two modes share this one
+     * table's bookkeeping shape (consumedTaskIds/status/started-
+     * /completedAt) rather than a parallel entity, but never mix:
+     * `plannedTaskIds` is also non-null exactly when this is. */
+    variantId: uuid('variant_id').references(() => variants.id),
+    /** The variant's own real, published tasks in exam order — fixed
+     * for the life of the session. A variant session's `next` step
+     * serves `plannedTaskIds[consumedTaskIds.length]` directly (no
+     * `getLearningPath` scoring at all: the order is the real exam's
+     * own, not a recommendation) instead of Smart Training's scored
+     * selection. Null for every Smart Training session. */
+    plannedTaskIds: jsonb('planned_task_ids').$type<readonly string[]>(),
     status: text('status', { enum: learningSessionStatuses }).notNull().default('active'),
     startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
     /** Set once, the moment `status` flips to 'completed'. */

@@ -12,6 +12,23 @@ export function formatDuration(ms: number): string {
 }
 
 /**
+ * `6120000` -> "1 ч 42 мин" — Statistics' variant history cards show a
+ * real total solving time in hours/minutes, never the sub-10s-aware
+ * `formatDuration` above (built for one attempt's time, not a whole
+ * variant's). Minutes-only once under an hour, seconds-only once
+ * under a minute — never a fabricated "0 мин" for a fast variant.
+ */
+export function formatDurationLong(ms: number): string {
+  const totalSeconds = Math.round(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return `${hours} ч ${minutes} мин`;
+  if (minutes > 0) return `${minutes} мин`;
+  return `${seconds} с`;
+}
+
+/**
  * Human labels for the fixed error-signature set (packages/shared's
  * `errorSignatureTypes`) — never invents a new error type, just
  * translates the existing deterministic codes, including the

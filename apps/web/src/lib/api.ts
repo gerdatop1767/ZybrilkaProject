@@ -16,6 +16,7 @@ import type {
   TaskPublic,
   TaskWithSolution,
   VariantDetail,
+  VariantProgressResponse,
 } from '@zybrilka/shared';
 
 const ANON_ID_STORAGE_KEY = 'zybrilka_anon_id';
@@ -291,4 +292,28 @@ export function getLearningSessionNext(sessionId: string): Promise<LearningSessi
  * `/learning/session/:sessionId` (Phase 10 refresh-safety). */
 export function getLearningSession(sessionId: string): Promise<LearningSessionResponse> {
   return apiFetch(`/me/learning/sessions/${sessionId}`);
+}
+
+/**
+ * Training's "Вариант" mode — starts a real VARIANT session over one
+ * real published exam variant's own task order (never scored, never a
+ * recommendation). Returns the exact same `LearningSessionResponse`
+ * shape as `startLearningSession`, so it goes through the same
+ * `applyLearningSessionResponse`/`LearningSession` screen — Desktop and
+ * Mobile get the same completion flow for free.
+ */
+export function startVariantSession(variantId: string): Promise<LearningSessionResponse> {
+  return apiFetch('/me/learning/sessions/variant', {
+    method: 'POST',
+    body: JSON.stringify({ variantId }),
+  });
+}
+
+/**
+ * Statistics' "Статистика вариантов" — every real variant session the
+ * current user has ever started (any status, newest first). See
+ * `VariantProgressItem`'s doc comment for field semantics.
+ */
+export function getVariantProgress(): Promise<VariantProgressResponse> {
+  return apiFetch('/progress/variants');
 }

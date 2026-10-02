@@ -68,6 +68,14 @@ export const progressByTaskNumberResponseSchema = z.object({
       total: z.number().int().nonnegative(),
       /** Unique tasks (not attempts) the current user has answered at least once. */
       completed: z.number().int().nonnegative(),
+      /** Real correct/incorrect ATTEMPTS for this number — the same
+       * attempts-based convention as every other accuracy figure in the
+       * app, never conflated with `completed` (unique tasks) above. */
+      correct: z.number().int().nonnegative(),
+      incorrect: z.number().int().nonnegative(),
+      /** `null` when there are no attempts at all for this number yet —
+       * never a fabricated 0%. */
+      accuracyPercent: z.number().min(0).max(100).nullable(),
     }),
   ),
 });

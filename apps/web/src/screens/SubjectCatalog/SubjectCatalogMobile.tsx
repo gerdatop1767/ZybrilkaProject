@@ -1,28 +1,9 @@
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
+import { useTaskCountsBySubject } from '../../lib/useTaskCounts.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { FadeIn, SlideUp } from '../../ui/motion/motion.js';
 import styles from './SubjectCatalogMobile.module.css';
-
-const totalTasks = subjects.reduce((sum, subject) => sum + subject.taskCount, 0);
-
-const stats = [
-  {
-    image: '/branding/v2/summary/subjects.png',
-    label: 'предметов',
-    value: `${subjects.length}`,
-  },
-  {
-    image: '/branding/v2/summary/tasks.png',
-    label: 'заданий',
-    value: `${totalTasks.toLocaleString('ru-RU')}+`,
-  },
-  {
-    image: '/branding/v2/summary/full-statistics.png',
-    label: 'статистика',
-    value: 'Полная',
-  },
-] as const;
 
 /**
  * Mobile "Предметы" — the same 9 subjects, task counts and summary
@@ -33,6 +14,31 @@ const stats = [
  */
 export function SubjectCatalogMobile() {
   const { navigate, back } = useNavigation();
+  // Real published-task counts (one request) — replaces the static
+  // `subject.taskCount` demo field, here and in the "N заданий"
+  // headline stat below.
+  const taskCounts = useTaskCountsBySubject();
+  const totalTasks = taskCounts
+    ? Object.values(taskCounts).reduce((sum, count) => sum + count, 0)
+    : null;
+
+  const stats = [
+    {
+      image: '/branding/v2/summary/subjects.png',
+      label: 'предметов',
+      value: `${subjects.length}`,
+    },
+    {
+      image: '/branding/v2/summary/tasks.png',
+      label: 'заданий',
+      value: totalTasks !== null ? `${totalTasks.toLocaleString('ru-RU')}+` : '···',
+    },
+    {
+      image: '/branding/v2/summary/full-statistics.png',
+      label: 'статистика',
+      value: 'Полная',
+    },
+  ] as const;
 
   return (
     <SlideUp className={styles.stack}>
@@ -84,7 +90,9 @@ export function SubjectCatalogMobile() {
                   {subject.shortName}
                 </span>
                 <span className="text-body-sm text-secondary">
-                  {subject.taskCount.toLocaleString('ru-RU')} заданий
+                  {taskCounts
+                    ? `${(taskCounts[subject.id] ?? 0).toLocaleString('ru-RU')} заданий`
+                    : '···'}
                 </span>
               </span>
               <span className={styles.subjectArrow} style={{ background: subject.color }}>

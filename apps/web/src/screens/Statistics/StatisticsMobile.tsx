@@ -9,6 +9,7 @@ import {
   getProgressByTopic,
   getProgressSummary,
   getTaskNumberStatisticsDetail,
+  getVariantProgress,
 } from '../../lib/api.js';
 import { toSampleMistake } from '../../lib/mistakeAdapter.js';
 import { toTaskNumberProgress } from '../../lib/progressAdapter.js';
@@ -16,8 +17,10 @@ import type {
   ProgressByTopicResponse,
   ProgressSummary,
   TaskNumberStatisticsDetail,
+  VariantProgressItem,
 } from '@zybrilka/shared';
 import { Card } from '../../ui/Card/Card.js';
+import { VariantHistoryCard } from '../../ui/Statistics/VariantHistoryCard.js';
 import { Tabs } from '../../ui/Tabs/Tabs.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { BottomSheet } from '../../ui/BottomSheet/BottomSheet.js';
@@ -75,6 +78,7 @@ export function StatisticsMobile() {
   const [mistakes, setMistakes] = useState<readonly Mistake[]>([]);
   const [selectedTaskNumber, setSelectedTaskNumber] = useState<number | null>(null);
   const [detail, setDetail] = useState<TaskNumberStatisticsDetail | null | undefined>(undefined);
+  const [variantHistory, setVariantHistory] = useState<readonly VariantProgressItem[]>([]);
 
   // Not scoped to the selected subject — fetched once, filtered
   // client-side below, so switching subjects never re-requests either.
@@ -94,6 +98,17 @@ export function StatisticsMobile() {
       })
       .catch(() => {
         if (!cancelled) setMistakes([]);
+      });
+    // "Статистика вариантов" — every real variant session the user has
+    // ever started, across all subjects, never scoped to the selected
+    // subject (a variant run isn't filtered the way topic/task-number
+    // progress is).
+    void getVariantProgress()
+      .then((res) => {
+        if (!cancelled) setVariantHistory(res.items);
+      })
+      .catch(() => {
+        if (!cancelled) setVariantHistory([]);
       });
     return () => {
       cancelled = true;
@@ -461,6 +476,25 @@ export function StatisticsMobile() {
             <span className={styles.mistakesLinkLabel}>О проекте</span>
             <Icon name="chevronRight" size={18} />
           </button>
+
+          <div>
+            <div className={styles.cardHeaderRow}>
+              <p className="text-h3">Статистика вариантов</p>
+            </div>
+            {variantHistory.length === 0 ? (
+              <Card>
+                <p className="text-body-sm text-secondary">
+                  Реши свой первый вариант в Тренировке — он появится здесь.
+                </p>
+              </Card>
+            ) : (
+              <div className={styles.variantList}>
+                {variantHistory.map((item) => (
+                  <VariantHistoryCard key={item.sessionId} item={item} />
+                ))}
+              </div>
+            )}
+          </div>
         </>
       )}
     </SlideUp>

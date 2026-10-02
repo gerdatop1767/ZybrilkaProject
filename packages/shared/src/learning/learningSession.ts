@@ -21,6 +21,16 @@ export interface LearningSessionRecommendationInfo {
   readonly breakdown: RecommendationBreakdown;
 }
 
+/** Present only on a VARIANT session (Training's "Вариант" mode) —
+ * absent for every Smart Training session. Lets the generic
+ * `LearningSession` completion/active screen show "Вариант N" instead
+ * of the Smart Training heading, without a second completion system. */
+export interface LearningSessionVariantInfo {
+  readonly variantId: string;
+  readonly variantNumber: number;
+  readonly variantTitle: string;
+}
+
 /** `POST /me/learning/sessions`, `GET /me/learning/sessions/:id/next`,
  * and `GET /me/learning/sessions/:id` response while the session still
  * has steps left to serve. */
@@ -33,11 +43,13 @@ export interface LearningSessionActiveResponse {
   /** The originally requested session length — fixed for the session's lifetime. */
   readonly total: number;
   readonly task: TaskPublic;
-  /** Present for `start`/`next` (a fresh scoring just ran). Absent for
-   * a plain `GET .../:id` snapshot read (e.g. page-refresh recovery) —
-   * that call never re-runs scoring, so it honestly has no breakdown
-   * to show rather than fabricating or re-deriving a stale one. */
+  /** Present for `start`/`next` on a Smart Training session (a fresh
+   * scoring just ran). Absent for a plain `GET .../:id` snapshot read,
+   * AND absent for every variant-session step (its task order is the
+   * real exam's own, never scored) — never fabricating or re-deriving
+   * a stale one. */
   readonly recommendation?: LearningSessionRecommendationInfo;
+  readonly variant?: LearningSessionVariantInfo;
 }
 
 /**
@@ -71,6 +83,7 @@ export interface LearningSessionCompletedResponse {
   readonly position: number;
   readonly total: number;
   readonly summary: LearningSessionSummary;
+  readonly variant?: LearningSessionVariantInfo;
 }
 
 /** `null` means no session could be started (no resolvable subject, or
@@ -78,3 +91,40 @@ export interface LearningSessionCompletedResponse {
  * honesty as Phase 7/8. */
 export type LearningSessionResponse =
   LearningSessionActiveResponse | LearningSessionCompletedResponse | null;
+
+/**
+ * Statistics' "Статистика вариантов" — every variant session this user
+ * has ever started (ANY status — an abandoned/still-active one shows
+ * its real partial progress too, never hidden and never faked as
+ * finished; see `getVariantProgress`), newest first.
+ */
+export interface VariantProgressItem {
+  readonly sessionId: string;
+  readonly variantId: string;
+  readonly variantNumber: number;
+  readonly variantTitle: string;
+  readonly subjectId: string;
+  readonly status: LearningSessionStatus;
+  readonly startedAt: string;
+  readonly completedAt: string | null;
+  /** The variant's real total task count — fixed for the session's lifetime. */
+  readonly plannedCount: number;
+  /** Distinct consumed tasks with at least one real attempt — same
+   * "unique solved, not raw attempts" convention as every other real
+   * progress figure in the app. */
+  readonly solvedCount: number;
+  readonly correctCount: number;
+  readonly incorrectCount: number;
+  /** 0..100, or `null` when `solvedCount` is 0. */
+  readonly accuracyPercent: number | null;
+  /** Sum of `timeSpentMs` across timed attempts only — `null` when none
+   * of this session's attempts recorded a time. */
+  readonly totalTimeMs: number | null;
+  /** The same deterministic error-signature codes `GET /me/learning/errors`
+   * and the task-number detail view use — never an invented error type. */
+  readonly keyErrors: readonly { signature: string; count: number }[];
+}
+
+export interface VariantProgressResponse {
+  readonly items: readonly VariantProgressItem[];
+}

@@ -1,15 +1,23 @@
 import { randomUUID } from 'node:crypto';
+import { schema } from '@zybrilka/db';
 import { createImportedTestDb } from '@zybrilka/db/testing';
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../../../app.js';
 
 describe('learning session routes (ZUBRILKA LEARNING INTELLIGENCE Phase 9)', () => {
   let testDb: Awaited<ReturnType<typeof createImportedTestDb>>;
   let app: ReturnType<typeof buildApp>;
+  let variantId: string;
 
   beforeAll(async () => {
     testDb = await createImportedTestDb();
     app = buildApp({ version: 'test', db: testDb.db });
+    const [variant] = await testDb.db
+      .select()
+      .from(schema.variants)
+      .where(eq(schema.variants.variantNumber, 1));
+    variantId = variant!.id;
   });
 
   afterAll(async () => {
@@ -355,6 +363,139 @@ describe('learning session routes (ZUBRILKA LEARNING INTELLIGENCE Phase 9)', () 
       expect(snapshotRes.statusCode).toBe(200);
       expect(snapshotRes.json().status).toBe('completed');
       expect(snapshotRes.json().summary).toBeDefined();
+    });
+  });
+
+  describe('POST /me/learning/sessions/variant', () => {
+    it('requires an x-anon-id header', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/me/learning/sessions/variant',
+        payload: { variantId },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('400s for a malformed variantId', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/me/learning/sessions/variant',
+        headers: { 'x-anon-id': randomUUID() },
+        payload: { variantId: 'not-a-uuid' },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('404s for an unknown variantId', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/me/learning/sessions/variant',
+        headers: { 'x-anon-id': randomUUID() },
+        payload: { variantId: randomUUID() },
+      });
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('starts a real variant session with the variant own task order, never a scored recommendation', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/me/learning/sessions/variant',
+        headers: { 'x-anon-id': randomUUID() },
+        payload: { variantId },
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.status).toBe('active');
+      expect(body.position).toBe(1);
+      expect(body.recommendation).toBeUndefined();
+      expect(body.variant).toMatchObject({ variantId, variantNumber: 1 });
+      expect('correctAnswer' in body.task).toBe(false);
+    });
+
+    it('next advances through the real variant order via the same /next endpoint Smart Training uses', async () => {
+      const anonId = randomUUID();
+      const startRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/me/learning/sessions/variant',
+        headers: { 'x-anon-id': anonId },
+        payload: { variantId },
+      });
+      const started = startRes.json();
+
+      const nextRes = await app.inject({
+        method: 'GET',
+        url: `/api/v1/me/learning/sessions/${started.sessionId}/next`,
+        headers: { 'x-anon-id': anonId },
+      });
+      expect(nextRes.statusCode).toBe(200);
+      const next = nextRes.json();
+      expect(next.status).toBe('active');
+      expect(next.position).toBe(2);
+      expect(next.task.id).not.toBe(started.task.id);
+      expect(next.recommendation).toBeUndefined();
+      expect(next.variant).toMatchObject({ variantId, variantNumber: 1 });
+    });
+  });
+
+  describe('GET /progress/variants', () => {
+    it('requires an x-anon-id header', async () => {
+      const res = await app.inject({ method: 'GET', url: '/api/v1/progress/variants' });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('a brand-new user has no variant history', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/progress/variants',
+        headers: { 'x-anon-id': randomUUID() },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().items).toEqual([]);
+    });
+
+    it('a Smart Training session never appears in variant history', async () => {
+      const anonId = randomUUID();
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/me/learning/sessions',
+        headers: { 'x-anon-id': anonId },
+        payload: { subjectId: 'math' },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/progress/variants',
+        headers: { 'x-anon-id': anonId },
+      });
+      expect(res.json().items).toEqual([]);
+    });
+
+    it('shows a real started variant session, newest first', async () => {
+      const anonId = randomUUID();
+      const startRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/me/learning/sessions/variant',
+        headers: { 'x-anon-id': anonId },
+        payload: { variantId },
+      });
+      const started = startRes.json();
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/progress/variants',
+        headers: { 'x-anon-id': anonId },
+      });
+      expect(res.statusCode).toBe(200);
+      const items = res.json().items;
+      expect(items).toHaveLength(1);
+      expect(items[0]).toMatchObject({
+        sessionId: started.sessionId,
+        variantId,
+        variantNumber: 1,
+        status: 'active',
+        solvedCount: 0,
+      });
+      expect(items[0].plannedCount).toBeGreaterThan(0);
     });
   });
 });

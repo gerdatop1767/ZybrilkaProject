@@ -1,10 +1,15 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SubjectCatalogDesktop } from './SubjectCatalogDesktop.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
 import { pathForRoute } from '../../lib/routes.js';
 import { subjects } from '../../data/subjects.js';
+import * as api from '../../lib/api.js';
+
+vi.mock('../../lib/api.js', () => ({
+  getTaskCountsBySubject: vi.fn(() => Promise.resolve({ items: [] })),
+}));
 
 function OverlayMarker() {
   const { overlay } = useNavigation();
@@ -36,6 +41,21 @@ describe('SubjectCatalogDesktop', () => {
     for (const file of ['subjects.png', 'tasks.png', 'full-statistics.png']) {
       expect(document.querySelector(`img[src="/branding/v2/summary/${file}"]`)).toBeInTheDocument();
     }
+  });
+
+  it('shows real published-task counts per subject, not the static demo numbers', async () => {
+    vi.mocked(api.getTaskCountsBySubject).mockResolvedValue({
+      items: [
+        { subjectId: 'math', count: 7 },
+        { subjectId: 'russian', count: 3 },
+      ],
+    });
+    renderCatalog();
+    await waitFor(() => expect(screen.getByText('7 заданий')).toBeInTheDocument());
+    expect(screen.getByText('3 заданий')).toBeInTheDocument();
+    // A subject absent from the response has 0 published tasks — never
+    // a fabricated fallback number (e.g. the old static 1240/980/etc).
+    expect(screen.getAllByText('0 заданий').length).toBeGreaterThan(0);
   });
 
   it('opening a subject navigates to its correctly-slugged route', async () => {
