@@ -117,8 +117,13 @@ export function Training() {
   const [variantRandom, setVariantRandom] = useState(false);
   const [variantUnseen, setVariantUnseen] = useState(false);
 
-  // "Умная тренировка" — unchanged, its own bounded `limit`.
+  // "Умная тренировка" — its own bounded `limit`, plus the same
+  // independent 🎲/🔄 toggles "По теме" has (additive on the backend:
+  // see GetLearningPathContext's unseenOnly/randomizeTopTier — no
+  // scoring formula changes).
   const [smartQuantity, setSmartQuantity] = useState('5');
+  const [smartRandom, setSmartRandom] = useState(false);
+  const [smartUnseen, setSmartUnseen] = useState(false);
 
   // "По теме" — real topics, independent 🎲/🔄, optional numbers, amount.
   const [topics, setTopics] = useState<readonly TopicItem[]>([]);
@@ -221,6 +226,8 @@ export function Training() {
         const response = await startLearningSession({
           subjectId,
           limit: Number(smartQuantity),
+          unseenOnly: smartUnseen,
+          randomizeTopTier: smartRandom,
         });
         const outcome = applyLearningSessionResponse(response, setSession, navigate);
         if (outcome === 'none') {
@@ -511,20 +518,38 @@ export function Training() {
       )}
 
       {modeId === 'smart' && (
-        <div>
-          <SectionHeader title="Количество заданий" />
-          <div className={styles.chipRow}>
-            {smartQuantityOptions.map((option) => (
-              <Chip
-                key={option}
-                selected={option === smartQuantity}
-                onClick={() => setSmartQuantity(option)}
-              >
-                {option}
+        <>
+          <div>
+            <SectionHeader title="Режим выборки" />
+            <div className={styles.chipRow}>
+              <Chip icon="dice" selected={smartRandom} onClick={() => setSmartRandom((v) => !v)}>
+                Случайное
               </Chip>
-            ))}
+              <Chip
+                icon="retry"
+                selected={smartUnseen}
+                onClick={() => setSmartUnseen((v) => !v)}
+              >
+                Только нерешённые
+              </Chip>
+            </div>
           </div>
-        </div>
+
+          <div>
+            <SectionHeader title="Количество заданий" />
+            <div className={styles.chipRow}>
+              {smartQuantityOptions.map((option) => (
+                <Chip
+                  key={option}
+                  selected={option === smartQuantity}
+                  onClick={() => setSmartQuantity(option)}
+                >
+                  {option}
+                </Chip>
+              ))}
+            </div>
+          </div>
+        </>
       )}
 
       {startError && (

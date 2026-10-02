@@ -270,6 +270,10 @@ export function saveLearningProfile(
 export function startLearningSession(params: {
   subjectId?: string;
   limit?: number;
+  /** Smart Training's 🔄/🎲 — see the shared doc on
+   * GetLearningPathContext for what each one changes. */
+  unseenOnly?: boolean;
+  randomizeTopTier?: boolean;
 }): Promise<LearningSessionResponse> {
   return apiFetch('/me/learning/sessions', { method: 'POST', body: JSON.stringify(params) });
 }

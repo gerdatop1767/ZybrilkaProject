@@ -42,7 +42,27 @@ export interface GetLearningPathContext {
    * in the "everything else is solved" fallback case. Omitted (or
    * empty) leaves Phase 8's own behavior completely unchanged. */
   readonly excludeTaskIds?: readonly string[];
+  /** Additive, optional (Smart Training's 🔄 "Только нерешённые"):
+   * hard-excludes any task the user has EVER attempted (correct or
+   * not), not just the already-correctly-solved exclusion above.
+   * Omitted (or false) leaves the existing behavior unchanged — every
+   * scoring formula below is identical either way, this only narrows
+   * the candidate pool before scoring starts. */
+  readonly unseenOnly?: boolean;
+  /** Additive, optional (Smart Training's 🎲 "Случайное"): at each
+   * step, picks randomly among the top-scoring tier of candidates
+   * instead of always the strict top-1. Touches nothing about how
+   * candidates are scored — only which already-scored candidate is
+   * taken at the end of each step. Omitted (or false) leaves the
+   * existing strict top-1 selection unchanged. */
+  readonly randomizeTopTier?: boolean;
 }
+
+/** How many of the top-scored candidates `randomizeTopTier` picks
+ * randomly among, at each step — small enough that "random" still
+ * means "one of the genuinely best options", never an arbitrary pick
+ * from the whole remaining pool. */
+const RANDOMIZE_TOP_TIER_SIZE = 3;
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -149,14 +169,28 @@ export async function getLearningPath(
   // task in the subject has already been solved once.
   const fallbackPool = unsolved.length > 0 ? unsolved : allCandidates;
 
-  // Hard exclusion applied AFTER the correctly-attempted fallback — a
-  // Phase 9 session's already-consumed tasks must never reappear, even
-  // when everything else in the subject is also already solved.
+  // unseenOnly narrows the pool further to tasks with NO attempt at
+  // all (correct or not) — but only when that leaves something to
+  // recommend; an exhausted "every task already attempted" subject
+  // still falls back to fallbackPool rather than returning nothing,
+  // same spirit as the correctly-attempted fallback just above.
+  let pool = fallbackPool;
+  if (context.unseenOnly) {
+    const attempted = new Set(
+      await recommendationRepo.getAttemptedTaskIds(db, userId, subjectId),
+    );
+    const neverAttempted = fallbackPool.filter((c) => !attempted.has(c.taskId));
+    if (neverAttempted.length > 0) pool = neverAttempted;
+  }
+
+  // Hard exclusion applied AFTER the above fallbacks — a Phase 9
+  // session's already-consumed tasks must never reappear, even when
+  // everything else in the subject is also already solved/attempted.
   const excludeTaskIdSet = new Set(context.excludeTaskIds ?? []);
   const candidates =
     excludeTaskIdSet.size > 0
-      ? fallbackPool.filter((c) => !excludeTaskIdSet.has(c.taskId))
-      : fallbackPool;
+      ? pool.filter((c) => !excludeTaskIdSet.has(c.taskId))
+      : pool;
 
   const [
     masteryRows,
@@ -309,7 +343,9 @@ export async function getLearningPath(
     });
 
     scoredRemaining.sort(compareLearningPathCandidates);
-    const chosen = scoredRemaining[0]!;
+    const chosen = context.randomizeTopTier
+      ? scoredRemaining[Math.floor(Math.random() * Math.min(RANDOMIZE_TOP_TIER_SIZE, scoredRemaining.length))]!
+      : scoredRemaining[0]!;
     selectedSteps.push({
       position,
       data: chosen.data,

@@ -583,6 +583,13 @@ export const learningSessions = pgTable(
      * contains a task twice. Its length IS the session's current
      * position; no separate position column to keep in sync. */
     consumedTaskIds: jsonb('consumed_task_ids').$type<readonly string[]>().notNull().default([]),
+    /** Smart Training's 🔄 "Только нерешённые" — persisted so every
+     * `next` step (which re-calls `getLearningPath` fresh) applies the
+     * same filter the session was started with, not just its first task. */
+    unseenOnly: boolean('unseen_only').notNull().default(false),
+    /** Smart Training's 🎲 "Случайное" — same persistence reason as
+     * `unseenOnly` above. */
+    randomizeTopTier: boolean('randomize_top_tier').notNull().default(false),
     status: text('status', { enum: learningSessionStatuses }).notNull().default('active'),
     startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
     /** Set once, the moment `status` flips to 'completed'. */

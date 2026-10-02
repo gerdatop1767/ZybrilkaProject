@@ -128,6 +128,39 @@ describe('learning sessions (ZUBRILKA LEARNING INTELLIGENCE Phase 9)', () => {
       expect(result).toBeNull();
     });
 
+    it('persists unseenOnly across every `next` step — a task attempted before the session started never reappears', async () => {
+      const userId = await freshUserId();
+      const [attemptedTask] = await testDb.db
+        .select()
+        .from(schema.tasks)
+        .where(eq(schema.tasks.subjectId, 'math'));
+      await testDb.db.insert(schema.attempts).values({
+        userId,
+        taskId: attemptedTask!.id,
+        answerRaw: '__wrong__',
+        isCorrect: false,
+      });
+
+      const started = await startLearningSession(testDb.db, userId, {
+        subjectId: 'math',
+        total: 10,
+        unseenOnly: true,
+      });
+      if (!started || started.status !== 'active') throw new Error('unreachable');
+      expect(started.task.id).not.toBe(attemptedTask!.id);
+
+      let sessionId = started.sessionId;
+      for (let i = 0; i < 5; i++) {
+        const next = await advanceLearningSession(testDb.db, userId, sessionId);
+        if (!next || next.status !== 'active') break;
+        // The persisted unseenOnly flag must keep applying on every
+        // step, not just the first — re-calling getLearningPath fresh
+        // each time with the session's own stored flag.
+        expect(next.task.id).not.toBe(attemptedTask!.id);
+        sessionId = next.sessionId;
+      }
+    });
+
     it('never returns the same task twice across the session', async () => {
       const userId = await freshUserId();
       const started = await startLearningSession(testDb.db, userId, {

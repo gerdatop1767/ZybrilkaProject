@@ -294,4 +294,110 @@ describe('getLearningPath (ZUBRILKA LEARNING INTELLIGENCE Phase 8)', () => {
       expect(step.reason.length).toBeGreaterThan(0);
     }
   });
+
+  // Smart Training 🔄 "Только нерешённые" — unseenOnly
+  describe('unseenOnly', () => {
+    it('excludes a task the user has ANY attempt on, even a wrong one that leaves it unsolved', async () => {
+      const [task13] = await testDb.db
+        .select()
+        .from(schema.tasks)
+        .where(eq(schema.tasks.taskNumber, 13));
+      const userId = await freshUserId();
+      // Wrong attempt — the plain (non-unseenOnly) path still offers
+      // this task again (it's not "correctly solved"), but unseenOnly
+      // must exclude it as "already attempted" regardless.
+      await testDb.db.insert(schema.attempts).values({
+        userId,
+        taskId: task13!.id,
+        answerRaw: '__definitely_wrong__',
+        isCorrect: false,
+      });
+
+      const plain = await getLearningPath(testDb.db, userId, { subjectId: 'math', limit: 10 });
+      expect(plain!.steps.some((s) => s.task.id === task13!.id)).toBe(true);
+
+      const unseen = await getLearningPath(testDb.db, userId, {
+        subjectId: 'math',
+        limit: 10,
+        unseenOnly: true,
+      });
+      expect(unseen!.steps.some((s) => s.task.id === task13!.id)).toBe(false);
+    });
+
+    it('falls back to the full pool (never returns nothing) when every task has already been attempted', async () => {
+      const mathTasks = await testDb.db
+        .select()
+        .from(schema.tasks)
+        .where(eq(schema.tasks.subjectId, 'math'));
+      const userId = await freshUserId();
+      for (const task of mathTasks) {
+        await testDb.db.insert(schema.attempts).values({
+          userId,
+          taskId: task.id,
+          answerRaw: '__wrong__',
+          isCorrect: false,
+        });
+      }
+
+      const result = await getLearningPath(testDb.db, userId, {
+        subjectId: 'math',
+        limit: 3,
+        unseenOnly: true,
+      });
+      expect(result).not.toBeNull();
+      expect(result!.steps.length).toBeGreaterThan(0);
+    });
+
+    it('omitted (default) leaves the existing already-attempted-but-unsolved task eligible', async () => {
+      const [task13] = await testDb.db
+        .select()
+        .from(schema.tasks)
+        .where(eq(schema.tasks.taskNumber, 13));
+      const userId = await freshUserId();
+      await testDb.db.insert(schema.attempts).values({
+        userId,
+        taskId: task13!.id,
+        answerRaw: '__wrong__',
+        isCorrect: false,
+      });
+      const result = await getLearningPath(testDb.db, userId, { subjectId: 'math', limit: 10 });
+      expect(result!.steps.some((s) => s.task.id === task13!.id)).toBe(true);
+    });
+  });
+
+  // Smart Training 🎲 "Случайное" — randomizeTopTier
+  describe('randomizeTopTier', () => {
+    it('only ever picks among candidates that genuinely scored in the path (never an arbitrary task)', async () => {
+      const userId = await freshUserId();
+      const plain = await getLearningPath(testDb.db, userId, { subjectId: 'math', limit: 5 });
+      const randomized = await getLearningPath(testDb.db, userId, {
+        subjectId: 'math',
+        limit: 5,
+        randomizeTopTier: true,
+      });
+      expect(randomized!.steps.length).toBe(plain!.steps.length);
+      // Every randomized step is still a real, valid TaskPublic for this subject.
+      for (const step of randomized!.steps) {
+        expect(step.task.subjectId).toBe('math');
+      }
+    });
+
+    it('never selects the same task twice within one randomized path', async () => {
+      const result = await getLearningPath(testDb.db, await freshUserId(), {
+        subjectId: 'math',
+        limit: 10,
+        randomizeTopTier: true,
+      });
+      const ids = result!.steps.map((s) => s.task.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+
+    it('omitted (default) keeps the exact deterministic top-1 selection unchanged', async () => {
+      const userA = await freshUserId();
+      const userB = await freshUserId();
+      const resultA = await getLearningPath(testDb.db, userA, { subjectId: 'math', limit: 5 });
+      const resultB = await getLearningPath(testDb.db, userB, { subjectId: 'math', limit: 5 });
+      expect(resultA!.steps.map((s) => s.task.id)).toEqual(resultB!.steps.map((s) => s.task.id));
+    });
+  });
 });
