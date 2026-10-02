@@ -42,6 +42,13 @@ export const tasksRoutes: FastifyPluginAsync<TasksRoutesOptions> = async (app, {
     return service.listTasks(db, query.data);
   });
 
+  // Registered before "/tasks/:id" so "counts" is never parsed as a
+  // task id — real published-task counts for every subject in one
+  // request (Home's subject cards), see service.getCountsBySubject.
+  app.get('/tasks/counts', async (_request, _reply) => {
+    return service.getCountsBySubject(db);
+  });
+
   app.get('/tasks/:id', async (request, reply) => {
     const params = taskIdParamsSchema.safeParse(request.params);
     if (!params.success) return reply.code(400).send({ error: 'invalid_id' });

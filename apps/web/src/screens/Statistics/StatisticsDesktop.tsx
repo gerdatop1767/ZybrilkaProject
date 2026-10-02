@@ -330,7 +330,12 @@ export function StatisticsDesktop() {
               Пока нет опубликованных заданий по этому предмету.
             </p>
           ) : (
-            <TaskNumberGrid rows={taskNumberProgress} onSelect={setSelectedTaskNumber} compact />
+            <>
+              <p className="text-body-sm text-secondary" style={{ marginBottom: 'var(--space-2)' }}>
+                Нажми на номер задания, чтобы посмотреть подробную статистику
+              </p>
+              <TaskNumberGrid rows={taskNumberProgress} onSelect={setSelectedTaskNumber} compact />
+            </>
           )}
         </Card>
       )}

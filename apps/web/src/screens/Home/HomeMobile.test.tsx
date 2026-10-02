@@ -9,6 +9,7 @@ import * as api from '../../lib/api.js';
 vi.mock('../../lib/api.js', () => ({
   getRandomTask: vi.fn(),
   getProgressSummary: vi.fn(),
+  getTaskCountsBySubject: vi.fn(),
 }));
 
 const RANDOM_TASK = {
@@ -56,6 +57,7 @@ beforeEach(() => {
     byTopic: [],
     timeBySubject: [],
   });
+  vi.mocked(api.getTaskCountsBySubject).mockResolvedValue({ items: [] });
 });
 
 describe('HomeMobile', () => {
@@ -126,7 +128,7 @@ describe('HomeMobile', () => {
     vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
     const user = userEvent.setup();
     renderHome();
-    await user.click(screen.getByRole('button', { name: /Тренировка · 15 заданий/ }));
+    await user.click(screen.getByRole('button', { name: /Тренировка · случайные задания/ }));
     await waitFor(() => {
       expect(screen.getByTestId('overlay')).toHaveTextContent('task');
     });

@@ -11,6 +11,7 @@ import type {
   ProgressDailyResponse,
   ProgressSummary,
   SaveLearningProfileRequest,
+  TaskCountsBySubjectResponse,
   TaskNumberStatisticsDetail,
   TaskPublic,
   TaskWithSolution,
@@ -139,6 +140,15 @@ export function listTasksByNumber(subject: string, taskNumber: number): Promise<
   return apiFetch<{ items: TaskPublic[] }>(
     `/tasks?subject=${encodeURIComponent(subject)}&taskNumber=${taskNumber}`,
   ).then((r) => r.items);
+}
+
+/**
+ * Real published-task counts for every subject in one request — Home's
+ * subject cards use this instead of the static `taskCount` in
+ * subjects.ts. A subject with no rows here has 0 published tasks.
+ */
+export function getTaskCountsBySubject(): Promise<TaskCountsBySubjectResponse> {
+  return apiFetch('/tasks/counts');
 }
 
 export function submitAttempt(taskId: string, request: AttemptRequest): Promise<AttemptResult> {

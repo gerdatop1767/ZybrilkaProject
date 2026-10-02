@@ -7,6 +7,22 @@
   padding: var(--space-1);
 }
 
+/* More tabs than fit the viewport (e.g. Statistics mobile's 6
+   sub-tabs): scroll the strip itself instead of letting equal-width
+   flex items blow out the page's horizontal bounds. Scrollbar hidden
+   (a thumb-scrollable pill row, not a visible document scrollbar) —
+   same touch/trackpad scroll still works. */
+.scrollable {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollable::-webkit-scrollbar {
+  display: none;
+}
+
 .tab {
   position: relative;
   z-index: 1;
@@ -33,6 +49,12 @@
 .tab:disabled {
   color: var(--color-text-disabled);
   cursor: not-allowed;
+}
+
+/* Sized to its own label instead of stretching to an equal share of
+   the row — the row is meant to scroll, not cram every tab to fit. */
+.tabScrollable {
+  flex: 0 0 auto;
 }
 
 .indicator {

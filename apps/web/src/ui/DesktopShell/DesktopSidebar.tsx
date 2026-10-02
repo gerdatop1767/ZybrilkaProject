@@ -24,6 +24,7 @@ const sidebarItems: readonly SidebarItem[] = [
     icon: 'grid',
     route: { screen: 'subjectCatalog' },
   },
+  { id: 'training', label: 'Тренировка', icon: 'training', route: { screen: 'training' } },
   { id: 'statistics', label: 'Статистика', icon: 'progress', route: { screen: 'statistics' } },
   { id: 'mistakes', label: 'Мои ошибки', icon: 'warning', route: { screen: 'mistakes' } },
   {

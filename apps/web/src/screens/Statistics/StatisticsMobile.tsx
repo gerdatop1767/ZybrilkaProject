@@ -175,7 +175,13 @@ export function StatisticsMobile() {
         }
       />
 
-      <Tabs items={subTabs} activeId={subTab} onChange={setSubTab} aria-label="Раздел статистики" />
+      <Tabs
+        items={subTabs}
+        activeId={subTab}
+        onChange={setSubTab}
+        aria-label="Раздел статистики"
+        scrollable
+      />
 
       {subTab === 'byTask' && (
         <FadeIn className={styles.stack}>
@@ -196,6 +202,9 @@ export function StatisticsMobile() {
             <div className={styles.cardHeaderRow}>
               <p className="text-h3">Задания по номерам</p>
             </div>
+            <p className="text-body-sm text-secondary" style={{ marginTop: 'calc(var(--space-2) * -1)' }}>
+              Нажми на номер задания, чтобы посмотреть подробную статистику
+            </p>
             <TaskNumberGrid rows={taskNumberProgress} onSelect={openDetail} />
           </Card>
         </FadeIn>

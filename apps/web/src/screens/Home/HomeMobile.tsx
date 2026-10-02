@@ -5,7 +5,7 @@ import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import { StatRow } from '../../ui/StatRow/StatRow.js';
 import { startRealTask } from '../../lib/startTraining.js';
-import { getProgressSummary } from '../../lib/api.js';
+import { getProgressSummary, getTaskCountsBySubject } from '../../lib/api.js';
 import type { ProgressSummary } from '@zybrilka/shared';
 import { SlideUp } from '../../ui/motion/motion.js';
 import { clsx } from '../../lib/clsx.js';
@@ -26,6 +26,10 @@ export function HomeMobile() {
   const { navigate } = useNavigation();
   const popularSubjects = subjects.slice(0, 6);
   const [progress, setProgress] = useState<ProgressSummary | null>(null);
+  // Real published-task counts per subject (one request) — replaces the
+  // static `subject.taskCount` demo numbers. null until loaded; a
+  // subject absent from the response has 0 published tasks.
+  const [taskCounts, setTaskCounts] = useState<Record<string, number> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,6 +40,16 @@ export function HomeMobile() {
       .catch(() => {
         // No backend data yet (or the request failed) — stats stay at
         // their neutral zero state below.
+      });
+    void getTaskCountsBySubject()
+      .then((res) => {
+        if (cancelled) return;
+        const map: Record<string, number> = {};
+        for (const item of res.items) map[item.subjectId] = item.count;
+        setTaskCounts(map);
+      })
+      .catch(() => {
+        // Stays null — subject cards show a neutral placeholder below.
       });
     return () => {
       cancelled = true;
@@ -144,7 +158,9 @@ export function HomeMobile() {
               <span className={styles.subjectCardText}>
                 <span className="text-card-title">{subject.shortName}</span>
                 <span className={styles.subjectCardCount}>
-                  {subject.taskCount.toLocaleString('ru-RU')} заданий
+                  {taskCounts
+                    ? `${(taskCounts[subject.id] ?? 0).toLocaleString('ru-RU')} заданий`
+                    : '···'}
                 </span>
               </span>
               <Icon name="chevronRight" size={16} className={styles.subjectCardChevron} />
@@ -181,7 +197,7 @@ export function HomeMobile() {
             <span className="text-body" style={{ fontWeight: 600 }}>
               Математика
             </span>
-            <span className="text-body-sm text-secondary">Тренировка · 15 заданий</span>
+            <span className="text-body-sm text-secondary">Тренировка · случайные задания</span>
           </span>
           <span className={styles.continueCardArrow}>
             <Icon name="arrowRight" size={18} />
