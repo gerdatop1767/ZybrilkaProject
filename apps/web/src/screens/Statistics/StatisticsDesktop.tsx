@@ -221,19 +221,90 @@ export function StatisticsDesktop() {
         />
       </div>
 
-      <Card>
-        <div className={styles.cardHeaderRow}>
-          <p className="text-h3">По номерам</p>
-        </div>
-        {taskNumberProgress.length === 0 ? (
-          <p className="text-body-sm text-secondary">
-            Пока нет опубликованных заданий по этому предмету.
-          </p>
-        ) : (
-          <TaskNumberGrid rows={taskNumberProgress} onSelect={setSelectedTaskNumber} />
-        )}
-      </Card>
+      <div className={styles.chartsGrid}>
+        <Card className={styles.chartCard}>
+          <div className={styles.chartHeader}>
+            <div className={styles.chartHeaderText}>
+              <p className="text-h3">Активность по дням</p>
+              <p className="text-body-sm text-secondary">Количество решённых заданий</p>
+            </div>
+            <span className={styles.metricLabel}>Решённые задания</span>
+          </div>
+          <BarChart
+            points={points.map((p) => ({ label: p.label, value: p.solved }))}
+            labelEvery={showEvery}
+          />
+        </Card>
 
+        <Card className={styles.chartCard}>
+          <div className={styles.cardHeaderRow}>
+            <p className="text-h3">Распределение по темам</p>
+          </div>
+          {mistakesSummary.total === 0 ? (
+            <p className="text-body-sm text-secondary">Пока нет данных об ошибках.</p>
+          ) : (
+            <DonutChart
+              ariaLabel="Распределение ошибок по темам"
+              segments={mistakesSummary.topicBreakdown.map((s) => ({
+                label: s.topic,
+                value: s.count,
+                percent: s.percent,
+                color: s.color,
+              }))}
+              centerLabel={
+                <>
+                  <p className="text-h2">{mistakesSummary.total}</p>
+                  <p className="text-body-sm text-secondary">заданий</p>
+                </>
+              }
+            />
+          )}
+        </Card>
+
+        <Card className={styles.chartCard}>
+          <div className={styles.chartHeader}>
+            <div className={styles.chartHeaderText}>
+              <p className="text-h3">Динамика правильных ответов</p>
+            </div>
+            <span className={styles.metricLabel}>Процент правильных ответов</span>
+          </div>
+          <LineChart
+            points={points.map((p) => ({ label: p.label, value: p.accuracyPercent }))}
+            labelEvery={showEvery}
+          />
+        </Card>
+
+        <Card className={styles.chartCard}>
+          <div className={styles.cardHeaderRow}>
+            <div className={styles.chartHeaderText}>
+              <p className="text-h3">Сложные темы</p>
+              <p className="text-body-sm text-secondary">
+                Темы, в которых чаще всего бывают ошибки
+              </p>
+            </div>
+            <Button variant="secondary" onClick={() => navigate({ screen: 'mistakes' })}>
+              Показать все
+            </Button>
+          </div>
+          {difficultTopics.length === 0 ? (
+            <p className="text-body-sm text-secondary">Пока нет данных об ошибках.</p>
+          ) : (
+            <RankedBarList
+              items={difficultTopics.map((t) => ({
+                label: t.topic,
+                value: t.percent,
+                color: t.color,
+                displayValue: `${t.percent}%`,
+              }))}
+              maxValue={100}
+            />
+          )}
+        </Card>
+      </div>
+
+      {/* Statistics 2.0 — additive, placed after the existing stats/
+          charts above (never replacing them), compact so it reads as
+          one quick-scan block rather than a tall list. */}
       {selectedTaskNumber !== null ? (
         <Card>
           <div className={styles.cardHeaderRow}>
@@ -250,86 +321,18 @@ export function StatisticsDesktop() {
           <TaskNumberDetailPanel taskNumber={selectedTaskNumber} detail={displayedDetail} />
         </Card>
       ) : (
-        <div className={styles.chartsGrid}>
-          <Card className={styles.chartCard}>
-            <div className={styles.chartHeader}>
-              <div className={styles.chartHeaderText}>
-                <p className="text-h3">Активность по дням</p>
-                <p className="text-body-sm text-secondary">Количество решённых заданий</p>
-              </div>
-              <span className={styles.metricLabel}>Решённые задания</span>
-            </div>
-            <BarChart
-              points={points.map((p) => ({ label: p.label, value: p.solved }))}
-              labelEvery={showEvery}
-            />
-          </Card>
-
-          <Card className={styles.chartCard}>
-            <div className={styles.cardHeaderRow}>
-              <p className="text-h3">Распределение по темам</p>
-            </div>
-            {mistakesSummary.total === 0 ? (
-              <p className="text-body-sm text-secondary">Пока нет данных об ошибках.</p>
-            ) : (
-              <DonutChart
-                ariaLabel="Распределение ошибок по темам"
-                segments={mistakesSummary.topicBreakdown.map((s) => ({
-                  label: s.topic,
-                  value: s.count,
-                  percent: s.percent,
-                  color: s.color,
-                }))}
-                centerLabel={
-                  <>
-                    <p className="text-h2">{mistakesSummary.total}</p>
-                    <p className="text-body-sm text-secondary">заданий</p>
-                  </>
-                }
-              />
-            )}
-          </Card>
-
-          <Card className={styles.chartCard}>
-            <div className={styles.chartHeader}>
-              <div className={styles.chartHeaderText}>
-                <p className="text-h3">Динамика правильных ответов</p>
-              </div>
-              <span className={styles.metricLabel}>Процент правильных ответов</span>
-            </div>
-            <LineChart
-              points={points.map((p) => ({ label: p.label, value: p.accuracyPercent }))}
-              labelEvery={showEvery}
-            />
-          </Card>
-
-          <Card className={styles.chartCard}>
-            <div className={styles.cardHeaderRow}>
-              <div className={styles.chartHeaderText}>
-                <p className="text-h3">Сложные темы</p>
-                <p className="text-body-sm text-secondary">
-                  Темы, в которых чаще всего бывают ошибки
-                </p>
-              </div>
-              <Button variant="secondary" onClick={() => navigate({ screen: 'mistakes' })}>
-                Показать все
-              </Button>
-            </div>
-            {difficultTopics.length === 0 ? (
-              <p className="text-body-sm text-secondary">Пока нет данных об ошибках.</p>
-            ) : (
-              <RankedBarList
-                items={difficultTopics.map((t) => ({
-                  label: t.topic,
-                  value: t.percent,
-                  color: t.color,
-                  displayValue: `${t.percent}%`,
-                }))}
-                maxValue={100}
-              />
-            )}
-          </Card>
-        </div>
+        <Card>
+          <div className={styles.cardHeaderRow}>
+            <p className="text-h3">По номерам</p>
+          </div>
+          {taskNumberProgress.length === 0 ? (
+            <p className="text-body-sm text-secondary">
+              Пока нет опубликованных заданий по этому предмету.
+            </p>
+          ) : (
+            <TaskNumberGrid rows={taskNumberProgress} onSelect={setSelectedTaskNumber} compact />
+          )}
+        </Card>
       )}
     </FadeIn>
   );

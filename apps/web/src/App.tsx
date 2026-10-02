@@ -1,10 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getLearningProfile } from './lib/api.js';
 import { useNavigation } from './lib/navigation.js';
 import { useIsDesktop } from './lib/useIsDesktop.js';
 import { useToast } from './ui/Toast/ToastProvider.js';
 import { AppMobile } from './AppMobile.js';
 import { AppDesktop } from './AppDesktop.js';
+import { LandingDesktop } from './screens/Landing/LandingDesktop.js';
+import { LandingMobile } from './screens/Landing/LandingMobile.js';
 
 /**
  * App root (S1 Block 6, approved design): desktop and mobile are
@@ -12,7 +14,7 @@ import { AppDesktop } from './AppDesktop.js';
  * `AppMobile` / `AppDesktop` own everything else.
  */
 export function App() {
-  const { tab, overlay, navigate } = useNavigation();
+  const { tab, overlay } = useNavigation();
   const { clear } = useToast();
   const isDesktop = useIsDesktop();
 
@@ -23,26 +25,33 @@ export function App() {
     clear();
   }, [tab, overlay, clear]);
 
-  // First-login gate (DB is the source of truth, never localStorage —
-  // see apps/api's learningProfile module): only redirects when the
-  // user landed on a plain tab with no overlay/deep link already open,
-  // so a direct task/result link is never interrupted.
+  // Public landing gate (DB is the source of truth, never localStorage
+  // — see apps/api's learningProfile module). `null` (not yet known)
+  // renders the normal app immediately, same as before this existed —
+  // only once the check resolves `false` does a visitor still sitting
+  // on the plain `home` tab with no overlay/deep link open see the
+  // public landing instead; its own "Начать бесплатно" is what starts
+  // onboarding now, not an automatic redirect (Landing{Desktop,Mobile}).
+  // A deep link into any other screen/overlay is never interrupted,
+  // same guarantee the old redirect-based gate made.
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
   const checkedOnboarding = useRef(false);
   useEffect(() => {
-    if (checkedOnboarding.current || overlay !== null) return;
+    if (checkedOnboarding.current) return;
     checkedOnboarding.current = true;
     getLearningProfile()
-      .then((profile) => {
-        if (!profile.onboardingCompleted) {
-          navigate({ screen: 'onboarding' });
-        }
-      })
+      .then((profile) => setOnboardingCompleted(profile.onboardingCompleted))
       .catch(() => {
         // No DB / offline — fall through to the normal app rather than
         // blocking on a profile check that can't succeed.
+        setOnboardingCompleted(true);
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [overlay]);
+  }, []);
+
+  const showLanding = onboardingCompleted === false && tab === 'home' && overlay === null;
+  if (showLanding) {
+    return isDesktop ? <LandingDesktop /> : <LandingMobile />;
+  }
 
   return isDesktop ? <AppDesktop /> : <AppMobile />;
 }

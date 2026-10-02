@@ -75,6 +75,11 @@ export const taskNumberStatisticsDetailSchema = z.object({
    * untimed attempt is never silently treated as 0 seconds. */
   timedAttempts: z.number().int().nonnegative(),
   lastAttemptAt: z.string().nullable(),
+  /** Real task metadata (`tasks.topicId` -> `topics.name`), never
+   * inferred from user attempts/statistics — `null` when no published
+   * task of this number has a topic tagged yet (an honest empty state,
+   * never an invented label). */
+  taskType: z.string().nullable(),
   /** Deterministic error-signature counts, scoped to just this task
    * number (unlike the global `/me/learning/errors`). */
   errorBreakdown: z.array(errorBreakdownItemSchema),

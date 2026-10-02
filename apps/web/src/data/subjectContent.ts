@@ -11,7 +11,7 @@
  * `hashString`) — demo content, not real user progress.
  */
 
-export type SubjectModeId = 'topics' | 'variants' | 'random' | 'favorites';
+export type SubjectModeId = 'topics' | 'variants' | 'favorites';
 
 export interface SubjectTopic {
   id: string;

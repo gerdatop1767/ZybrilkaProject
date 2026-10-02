@@ -100,6 +100,15 @@ export function TaskNumberDetailPanel({ taskNumber, detail }: TaskNumberDetailPa
         />
       </div>
 
+      <Card>
+        <div className={styles.cardHeaderRow}>
+          <p className="text-h3">Тип задания</p>
+        </div>
+        <p className="text-body-sm text-secondary">
+          {detail.taskType ?? 'Тип задания для этого номера пока не определён.'}
+        </p>
+      </Card>
+
       {detail.recentAccuracy !== null && detail.previousAccuracy !== null && (
         <Card>
           <div className={styles.cardHeaderRow}>
@@ -150,24 +159,7 @@ export function TaskNumberDetailPanel({ taskNumber, detail }: TaskNumberDetailPa
 
       <Card>
         <div className={styles.cardHeaderRow}>
-          <p className="text-h3">Частые ошибки</p>
-        </div>
-        {detail.errorBreakdown.length === 0 ? (
-          <p className="text-body-sm text-secondary">Пока нет ошибок по этому номеру.</p>
-        ) : (
-          <RankedBarList
-            items={detail.errorBreakdown.map((e, i) => ({
-              label: errorSignatureLabel(e.signature),
-              value: e.count,
-              color: CHART_COLORS[i % CHART_COLORS.length]!,
-            }))}
-          />
-        )}
-      </Card>
-
-      <Card>
-        <div className={styles.cardHeaderRow}>
-          <p className="text-h3">Навыки</p>
+          <p className="text-h3">Какие навыки проверяет №{taskNumber}</p>
         </div>
         {detail.skillBreakdown.length === 0 ? (
           <p className="text-body-sm text-secondary">
@@ -182,6 +174,26 @@ export function TaskNumberDetailPanel({ taskNumber, detail }: TaskNumberDetailPa
               displayValue: `${s.mastery}%`,
             }))}
             maxValue={100}
+          />
+        )}
+      </Card>
+
+      {/* Secondary/additional stat (Step 7) — "Тип задания" above is now
+          the main informational block; this stays real error-signature
+          data, just no longer the headline. */}
+      <Card>
+        <div className={styles.cardHeaderRow}>
+          <p className="text-h3">Ошибки в ответах</p>
+        </div>
+        {detail.errorBreakdown.length === 0 ? (
+          <p className="text-body-sm text-secondary">Пока нет ошибок по этому номеру.</p>
+        ) : (
+          <RankedBarList
+            items={detail.errorBreakdown.map((e, i) => ({
+              label: errorSignatureLabel(e.signature),
+              value: e.count,
+              color: CHART_COLORS[i % CHART_COLORS.length]!,
+            }))}
           />
         )}
       </Card>

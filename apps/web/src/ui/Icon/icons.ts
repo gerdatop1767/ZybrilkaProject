@@ -97,6 +97,7 @@ import {
   Share2,
   Pencil,
   Pause,
+  Shuffle,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -181,6 +182,8 @@ export const icons = {
   friends: UserPlus,
   keyboard: Keyboard,
   retry: RefreshCw,
+  shuffle: Shuffle,
+  dice: Dices,
   analysis: ClipboardCheck,
   question: MessageCircleQuestion,
   palette: Palette,
