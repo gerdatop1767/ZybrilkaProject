@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
-import { getRandomTask, getVariant, listCollections, startLearningSession } from '../../lib/api.js';
+import { getSubjectContent } from '../../data/subjectContent.js';
+import {
+  ApiError,
+  getRandomTask,
+  getVariant,
+  listCollections,
+  startLearningSession,
+} from '../../lib/api.js';
 import type { CollectionListItem } from '@zybrilka/shared';
 import {
   applyLearningSessionResponse,
@@ -49,6 +56,13 @@ const trainingModes: readonly TrainingMode[] = [
     label: 'Повторение',
     description: 'Закрепи то, что уже решал',
     accent: 'var(--color-warning)',
+  },
+  {
+    id: 'byNumber',
+    icon: 'checklist',
+    label: 'По номерам',
+    description: 'Выбери номер задания и как его подобрать',
+    accent: 'var(--chart-6)',
   },
   {
     id: 'smart',
@@ -103,6 +117,9 @@ export function Training() {
   const [collectionSlug, setCollectionSlug] = useState<string | null>(null);
   const [variantId, setVariantId] = useState<string | null>(null);
   const [taskNumberInput, setTaskNumberInput] = useState('');
+  const [byNumberNumber, setByNumberNumber] = useState<number | null>(null);
+  const [randomTask, setRandomTask] = useState(false);
+  const [unseenOnly, setUnseenOnly] = useState(false);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
 
@@ -145,6 +162,44 @@ export function Training() {
         const outcome = applyLearningSessionResponse(response, setSession, navigate);
         if (outcome === 'none') {
           setStartError('Не нашлось подходящих заданий для умной тренировки.');
+        }
+        return;
+      }
+
+      if (modeId === 'byNumber') {
+        if (byNumberNumber === null) {
+          setStartError('Выбери номер задания.');
+          return;
+        }
+        try {
+          const task = await getRandomTask({
+            subject: subjectId ?? undefined,
+            taskNumber: byNumberNumber,
+            // "Рандом" explicitly draws from the whole published pool
+            // for this number, not just the currently selected
+            // "Сборник" — "Обычные" keeps today's scoped behavior.
+            collection: randomTask ? undefined : (collectionSlug ?? undefined),
+            unseen: unseenOnly || undefined,
+          });
+          navigate({
+            screen: 'task',
+            subjectId: task.subjectId,
+            taskNumber: task.taskNumber,
+            taskId: task.id,
+            collectionSlug: randomTask ? undefined : (collectionSlug ?? undefined),
+            returnTo: { screen: 'training' },
+          });
+        } catch (error) {
+          if (
+            error instanceof ApiError &&
+            (error.body as { error?: string })?.error === 'no_unseen_tasks'
+          ) {
+            setStartError(
+              'Все задания этого номера уже встречались. Можно отключить «Не встречавшиеся».',
+            );
+          } else {
+            setStartError('Не нашлось подходящих заданий — попробуй другие фильтры.');
+          }
         }
         return;
       }
@@ -270,7 +325,7 @@ export function Training() {
         </div>
       )}
 
-      {modeId !== 'variant' && modeId !== 'mistakes' && (
+      {modeId !== 'variant' && modeId !== 'mistakes' && modeId !== 'byNumber' && (
         <Input
           label="Номер задания"
           placeholder="Например, 5 — необязательно"
@@ -278,6 +333,40 @@ export function Training() {
           value={taskNumberInput}
           onChange={(e) => setTaskNumberInput(e.target.value.replace(/\D/g, ''))}
         />
+      )}
+
+      {modeId === 'byNumber' && (
+        <>
+          <div>
+            <SectionHeader title="Номер задания" />
+            <div className={styles.chipRow}>
+              {Array.from(
+                { length: getSubjectContent(subjectId ?? 'math').taskNumberCount },
+                (_, i) => i + 1,
+              ).map((number) => (
+                <Chip
+                  key={number}
+                  selected={number === byNumberNumber}
+                  onClick={() => setByNumberNumber(number)}
+                >
+                  №{number}
+                </Chip>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <SectionHeader title="Как подобрать задачу" />
+            <div className={styles.chipRow}>
+              <Chip icon="smart" selected={randomTask} onClick={() => setRandomTask((v) => !v)}>
+                Рандом
+              </Chip>
+              <Chip icon="retry" selected={unseenOnly} onClick={() => setUnseenOnly((v) => !v)}>
+                Не встречавшиеся
+              </Chip>
+            </div>
+          </div>
+        </>
       )}
 
       <div>

@@ -44,7 +44,7 @@ export type OverlayRoute =
        * pattern subjectId/taskNumber/taskId already use to cross a
        * screen unmount, never a value a component would lose. */
       collectionSlug?: string;
-      /** Opens the Subject page straight into this mode (e.g. `'byNumber'`
+      /** Opens the Subject page straight into this mode (e.g. `'topics'`
        * when returning from Result's "К списку заданий") instead of the
        * default "Темы" tab — absent means "let the page pick its own
        * default", same as before this existed. */
@@ -102,6 +102,11 @@ export type OverlayRoute =
       /** Same purpose as `task.returnTo` above — Result's back arrow
        * needs the same parent-overlay context Task had. */
       returnTo?: Route;
+      /** The real elapsed solving time already submitted with this
+       * attempt (see `useSolvingTimer`) — absent when the timer was
+       * never started. Carried the same way `userAnswer` is, purely for
+       * Result's own display; never re-sent to the backend. */
+      timeSpentMs?: number;
     }
   | { screen: 'mistakes' }
   /**

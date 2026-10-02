@@ -271,7 +271,7 @@ describe('ResultDesktop — multi_part task', () => {
 });
 
 describe('ResultDesktop — "К списку заданий"', () => {
-  it('goes to the Subject screen in "По номерам" mode, not Home, preserving the source', async () => {
+  it('goes to the Subject screen in "Темы" mode, not Home, preserving the source', async () => {
     const user = userEvent.setup();
     vi.mocked(api.getVariantForTask).mockResolvedValue({
       variant: {
@@ -308,7 +308,7 @@ describe('ResultDesktop — "К списку заданий"', () => {
     await screen.findByText(EXPLANATION);
     await user.click(screen.getByRole('button', { name: 'К списку заданий' }));
     expect(screen.getByTestId('overlay')).toHaveTextContent(
-      `subject:${baseTask.subjectId}:ege-2026-yashchenko:byNumber`,
+      `subject:${baseTask.subjectId}:ege-2026-yashchenko:topics`,
     );
   });
 
@@ -434,5 +434,41 @@ describe('ResultDesktop — learning session integration (Phase 10)', () => {
     );
     await screen.findByText(EXPLANATION);
     expect(await screen.findByText(/Завершить тренировку/)).toBeInTheDocument();
+  });
+});
+
+describe('ResultDesktop — real solving time display (replaces the old static "00:12:34")', () => {
+  it('shows the real submitted timeSpentMs, formatted as mm:ss', async () => {
+    render(
+      <NavigationProvider>
+        <ResultDesktop
+          subjectId={baseTask.subjectId}
+          taskNumber={baseTask.taskNumber}
+          taskId={TASK_ID}
+          correct
+          userAnswer={CORRECT_ANSWER}
+          timeSpentMs={84000}
+        />
+      </NavigationProvider>,
+    );
+    await screen.findByText(EXPLANATION);
+    expect(screen.getByText('01:24')).toBeInTheDocument();
+    expect(screen.queryByText('00:12:34')).not.toBeInTheDocument();
+  });
+
+  it('shows no time at all when the task was never timed (never fabricates one)', async () => {
+    render(
+      <NavigationProvider>
+        <ResultDesktop
+          subjectId={baseTask.subjectId}
+          taskNumber={baseTask.taskNumber}
+          taskId={TASK_ID}
+          correct
+          userAnswer={CORRECT_ANSWER}
+        />
+      </NavigationProvider>,
+    );
+    await screen.findByText(EXPLANATION);
+    expect(screen.queryByText('00:12:34')).not.toBeInTheDocument();
   });
 });

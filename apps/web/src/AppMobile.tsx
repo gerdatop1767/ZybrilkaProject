@@ -95,6 +95,7 @@ export function AppMobile() {
             variantId={contentOverlay.variantId}
             customOrderedTasks={contentOverlay.customOrderedTasks}
             returnTo={contentOverlay.returnTo}
+            timeSpentMs={contentOverlay.timeSpentMs}
           />
         )}
         {contentOverlay.screen === 'learningSession' && (

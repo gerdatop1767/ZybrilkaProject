@@ -96,6 +96,7 @@ import {
   Copy,
   Share2,
   Pencil,
+  Pause,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -207,6 +208,7 @@ export const icons = {
   copy: Copy,
   share: Share2,
   edit: Pencil,
+  pause: Pause,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof icons;

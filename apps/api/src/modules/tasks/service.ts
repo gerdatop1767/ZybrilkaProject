@@ -93,8 +93,9 @@ export async function getTask(
 export async function getRandomTask(
   db: Database,
   query: RandomTaskQuery,
+  userId?: string | null,
 ): Promise<TaskPublic | undefined> {
-  const row = await repo.getRandomTask(db, query);
+  const row = await repo.getRandomTask(db, query, userId);
   return row && toPublicTask(row);
 }
 

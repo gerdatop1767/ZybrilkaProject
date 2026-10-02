@@ -18,8 +18,19 @@ export const tasksRoutes: FastifyPluginAsync<TasksRoutesOptions> = async (app, {
     if (!query.success) {
       return reply.code(400).send({ error: 'invalid_query', issues: query.error.issues });
     }
-    const task = await service.getRandomTask(db, query.data);
-    if (!task) return reply.code(404).send({ error: 'no_tasks_available' });
+    if (query.data.unseen && !request.userId) {
+      return reply.code(400).send({ error: 'missing_anon_id' });
+    }
+    const task = await service.getRandomTask(db, query.data, request.userId);
+    if (!task) {
+      // A distinct code when "unseen" was requested — the pool existing
+      // but being fully seen is a different, controlled state from no
+      // tasks matching at all (see Training's "Не встречавшиеся" toggle),
+      // never silently falling back to an already-seen task.
+      return reply
+        .code(404)
+        .send({ error: query.data.unseen ? 'no_unseen_tasks' : 'no_tasks_available' });
+    }
     return task;
   });
 

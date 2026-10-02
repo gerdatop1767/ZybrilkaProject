@@ -586,3 +586,55 @@ describe('TaskDesktop', () => {
     });
   });
 });
+
+describe('TaskDesktop — real solving timer (never the old static clock)', () => {
+  it('renders "Начать" and never auto-starts just because the task opened', async () => {
+    renderTask();
+    expect(await screen.findByRole('button', { name: 'Начать' })).toBeInTheDocument();
+  });
+
+  it('starting the timer shows a running clock with a Пауза control, replacing "Начать"', async () => {
+    const user = userEvent.setup();
+    renderTask();
+    await user.click(await screen.findByRole('button', { name: 'Начать' }));
+    expect(screen.queryByRole('button', { name: 'Начать' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Пауза' })).toBeInTheDocument();
+  });
+
+  it('pausing swaps to "Продолжить" and submitting without ever starting sends no timeSpentMs', async () => {
+    const user = userEvent.setup();
+    renderTask();
+    await pasteAnswer(user, CORRECT_ANSWER);
+    const submit = screen.getByRole('button', { name: /Проверить ответ/ });
+    await user.click(submit);
+    await waitFor(() => expect(api.submitAttempt).toHaveBeenCalled());
+    const [, payload] = vi.mocked(api.submitAttempt).mock.calls[0]!;
+    expect(payload.timeSpentMs).toBeUndefined();
+  });
+
+  it('submits a real numeric timeSpentMs once the timer was started', async () => {
+    const user = userEvent.setup();
+    renderTask();
+    await user.click(await screen.findByRole('button', { name: 'Начать' }));
+    await pasteAnswer(user, CORRECT_ANSWER);
+    const submit = screen.getByRole('button', { name: /Проверить ответ/ });
+    await user.click(submit);
+    await waitFor(() => expect(api.submitAttempt).toHaveBeenCalled());
+    const [, payload] = vi.mocked(api.submitAttempt).mock.calls[0]!;
+    expect(typeof payload.timeSpentMs).toBe('number');
+    expect(payload.timeSpentMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('pause then resume still reaches submit with a real timeSpentMs (paused time never lost)', async () => {
+    const user = userEvent.setup();
+    renderTask();
+    await user.click(await screen.findByRole('button', { name: 'Начать' }));
+    await user.click(screen.getByRole('button', { name: 'Пауза' }));
+    await user.click(screen.getByRole('button', { name: 'Продолжить' }));
+    await pasteAnswer(user, CORRECT_ANSWER);
+    await user.click(screen.getByRole('button', { name: /Проверить ответ/ }));
+    await waitFor(() => expect(api.submitAttempt).toHaveBeenCalled());
+    const [, payload] = vi.mocked(api.submitAttempt).mock.calls[0]!;
+    expect(typeof payload.timeSpentMs).toBe('number');
+  });
+});

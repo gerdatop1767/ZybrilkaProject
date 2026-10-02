@@ -1,13 +1,7 @@
 import type { MainTabId, OverlayRoute, Route } from './navigation.js';
 import type { SubjectModeId } from '../data/subjectContent.js';
 
-const subjectModeIds: readonly SubjectModeId[] = [
-  'topics',
-  'byNumber',
-  'variants',
-  'random',
-  'favorites',
-];
+const subjectModeIds: readonly SubjectModeId[] = ['topics', 'variants', 'random', 'favorites'];
 
 /**
  * URL <-> Route mapping. The URL is the single source of truth for

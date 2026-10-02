@@ -92,6 +92,102 @@ describe('tasks routes', () => {
     expect(res.statusCode).toBe(404);
   });
 
+  describe('GET /api/v1/tasks/random?unseen=true (Training "Не встречавшиеся")', () => {
+    it('requires x-anon-id', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/tasks/random?subject=math&taskNumber=1&unseen=true',
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toEqual({ error: 'missing_anon_id' });
+    });
+
+    it('never returns a task the user already has an attempt on, across repeated calls', async () => {
+      const anonId = randomUUID();
+      const seen = new Set<string>();
+      // The seed has exactly 2 published tasks under subject=math,
+      // taskNumber=1 — draining the unseen pool one real attempt at a
+      // time proves this is a real server-side filter, not luck.
+      for (let i = 0; i < 2; i += 1) {
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/tasks/random?subject=math&taskNumber=1&unseen=true',
+          headers: { 'x-anon-id': anonId },
+        });
+        expect(res.statusCode).toBe(200);
+        const task = res.json();
+        expect(seen.has(task.id)).toBe(false); // no duplicates
+        seen.add(task.id);
+        await app.inject({
+          method: 'POST',
+          url: `/api/v1/tasks/${task.id}/attempt`,
+          headers: { 'x-anon-id': anonId },
+          payload: { answer: 'definitely wrong' },
+        });
+      }
+      expect(seen.size).toBe(2);
+    });
+
+    it('returns a controlled 404 "no_unseen_tasks" once every task of that number is attempted — never a fallback to a seen one', async () => {
+      const anonId = randomUUID();
+      for (let i = 0; i < 2; i += 1) {
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/tasks/random?subject=math&taskNumber=1&unseen=true',
+          headers: { 'x-anon-id': anonId },
+        });
+        const task = res.json();
+        await app.inject({
+          method: 'POST',
+          url: `/api/v1/tasks/${task.id}/attempt`,
+          headers: { 'x-anon-id': anonId },
+          payload: { answer: 'definitely wrong' },
+        });
+      }
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/tasks/random?subject=math&taskNumber=1&unseen=true',
+        headers: { 'x-anon-id': anonId },
+      });
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toEqual({ error: 'no_unseen_tasks' });
+    });
+
+    it('works generically for an arbitrary taskNumber, never hardcoded to one number', async () => {
+      const anonId = randomUUID();
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/tasks/random?subject=math&taskNumber=4&unseen=true',
+        headers: { 'x-anon-id': anonId },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().taskNumber).toBe(4);
+    });
+
+    it('without unseen, an already-attempted task can still be returned (default/"Обычные" behavior unchanged)', async () => {
+      const anonId = randomUUID();
+      const [task] = await testDb.db
+        .select()
+        .from(schema.tasks)
+        .where(eq(schema.tasks.taskNumber, 3));
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/tasks/${task!.id}/attempt`,
+        headers: { 'x-anon-id': anonId },
+        payload: { answer: 'definitely wrong' },
+      });
+      // No `unseen` param — repeated random picks may legitimately
+      // include the already-attempted task, so this only asserts the
+      // request itself isn't rejected/filtered.
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/tasks/random?subject=math&taskNumber=3',
+        headers: { 'x-anon-id': anonId },
+      });
+      expect(res.statusCode).toBe(200);
+    });
+  });
+
   describe('POST /api/v1/tasks/:id/attempt', () => {
     it('requires an x-anon-id header', async () => {
       const [task] = await testDb.db.select().from(schema.tasks).limit(1);

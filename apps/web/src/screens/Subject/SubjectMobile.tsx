@@ -3,7 +3,7 @@ import type { CollectionListItem, ProgressByTopicResponse, TaskPublic } from '@z
 import { useNavigation, type Route } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
 import { startCustomVariant, startRealTask } from '../../lib/startTraining.js';
-import { getProgressByTaskNumber, getProgressByTopic, listCollections } from '../../lib/api.js';
+import { getProgressByTopic, listCollections } from '../../lib/api.js';
 import { getSubjectContent, type SubjectModeId } from '../../data/subjectContent.js';
 import { Card } from '../../ui/Card/Card.js';
 import { Button } from '../../ui/Button/Button.js';
@@ -30,7 +30,6 @@ function sourceSelectOptions(collections: readonly CollectionListItem[]) {
 
 const modes: readonly { id: SubjectModeId; label: string; icon: IconName }[] = [
   { id: 'topics', label: 'Темы', icon: 'reference' },
-  { id: 'byNumber', label: 'По номерам', icon: 'checklist' },
   { id: 'variants', label: 'Варианты', icon: 'variant' },
   { id: 'random', label: 'Случайные', icon: 'smart' },
   { id: 'favorites', label: 'Избранное', icon: 'favorite' },
@@ -44,12 +43,6 @@ export interface SubjectMobileProps {
   /** Opens straight into this mode tab (e.g. Result's "К списку
    * заданий" wants "По номерам") instead of the default "Темы". */
   initialMode?: SubjectModeId;
-}
-
-interface TaskNumberSummary {
-  number: number;
-  solved: number;
-  total: number;
 }
 
 type TopicProgressItem = ProgressByTopicResponse['items'][number];
@@ -71,19 +64,10 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
 
   const [mode, setMode] = useState<SubjectModeId>(initialMode ?? 'topics');
   const [selectedTopic, setSelectedTopic] = useState<TopicProgressItem | null>(null);
-  const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
   const [collections, setCollections] = useState<readonly CollectionListItem[]>([]);
   const [collectionsLoaded, setCollectionsLoaded] = useState(false);
-  const [byNumberSlug, setByNumberSlug] = useState<string | null>(collectionSlug ?? null);
   const [randomSlug, setRandomSlug] = useState<string | null>(collectionSlug ?? null);
   const [topicsSlug, setTopicsSlug] = useState<string | null>(collectionSlug ?? null);
-  const [taskNumbers, setTaskNumbers] = useState<readonly TaskNumberSummary[]>(() =>
-    Array.from({ length: content.taskNumberCount }, (_, i) => ({
-      number: i + 1,
-      solved: 0,
-      total: 0,
-    })),
-  );
   const [topics, setTopics] = useState<readonly TopicProgressItem[]>([]);
 
   const solved = Math.round((subject.taskCount * subject.mastery) / 100);
@@ -106,45 +90,10 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
 
   // Derived, not synced via an effect — see SubjectDesktop.tsx for why.
   const knownSlugs = new Set(collections.map((item) => item.collection.slug));
-  const effectiveByNumberSlug =
-    collectionsLoaded && byNumberSlug && !knownSlugs.has(byNumberSlug) ? null : byNumberSlug;
   const effectiveRandomSlug =
     collectionsLoaded && randomSlug && !knownSlugs.has(randomSlug) ? null : randomSlug;
   const effectiveTopicsSlug =
     collectionsLoaded && topicsSlug && !knownSlugs.has(topicsSlug) ? null : topicsSlug;
-
-  useEffect(() => {
-    let cancelled = false;
-    void getProgressByTaskNumber({
-      subject: subject.id,
-      collection: effectiveByNumberSlug ?? undefined,
-    })
-      .then((res) => {
-        if (cancelled) return;
-        const byNumber = new Map(res.items.map((item) => [item.taskNumber, item]));
-        setTaskNumbers(
-          Array.from({ length: content.taskNumberCount }, (_, i) => {
-            const number = i + 1;
-            const row = byNumber.get(number);
-            return { number, solved: row?.completed ?? 0, total: row?.total ?? 0 };
-          }),
-        );
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setTaskNumbers(
-            Array.from({ length: content.taskNumberCount }, (_, i) => ({
-              number: i + 1,
-              solved: 0,
-              total: 0,
-            })),
-          );
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [subject.id, effectiveByNumberSlug, content.taskNumberCount]);
 
   // Real topics (Block D) — see SubjectDesktop.tsx for why the static
   // per-subject content topics can't be reused here.
@@ -170,13 +119,11 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
   // → Back lands back here instead of falling through to Home.
   function currentReturnTo(): Route {
     const slug =
-      mode === 'byNumber'
-        ? (effectiveByNumberSlug ?? undefined)
-        : mode === 'random'
-          ? (effectiveRandomSlug ?? undefined)
-          : mode === 'topics'
-            ? (effectiveTopicsSlug ?? undefined)
-            : (collectionSlug ?? undefined);
+      mode === 'random'
+        ? (effectiveRandomSlug ?? undefined)
+        : mode === 'topics'
+          ? (effectiveTopicsSlug ?? undefined)
+          : (collectionSlug ?? undefined);
     return { screen: 'subject', subjectId: subject.id, collectionSlug: slug, initialMode: mode };
   }
 
@@ -220,7 +167,6 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
   function selectMode(id: SubjectModeId) {
     setMode(id);
     setSelectedTopic(null);
-    setSelectedNumber(null);
   }
 
   function handleBack() {
@@ -228,18 +174,10 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
       setSelectedTopic(null);
       return;
     }
-    if (selectedNumber !== null) {
-      setSelectedNumber(null);
-      return;
-    }
     back();
   }
 
-  const headerTitle = selectedTopic
-    ? selectedTopic.topicName
-    : selectedNumber !== null
-      ? `Задание №${selectedNumber}`
-      : subject.shortName;
+  const headerTitle = selectedTopic ? selectedTopic.topicName : subject.shortName;
 
   return (
     <SlideUp className={styles.stack}>
@@ -252,7 +190,7 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
         </p>
       </div>
 
-      {!selectedTopic && selectedNumber === null && (
+      {!selectedTopic && (
         <>
           <Card className={styles.hero} style={{ ['--subject-accent' as string]: subject.color }}>
             <span className={styles.heroThumb}>
@@ -308,25 +246,6 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
           onStart={() => startTopicTraining(selectedTopic)}
         />
       )}
-      {mode === 'byNumber' && selectedNumber === null && (
-        <TaskNumberGridMobile
-          numbers={taskNumbers}
-          collections={collections}
-          selectedSlug={effectiveByNumberSlug}
-          onSourceChange={setByNumberSlug}
-          onSelect={setSelectedNumber}
-        />
-      )}
-      {mode === 'byNumber' && selectedNumber !== null && (
-        <TaskNumberDetail
-          subjectName={subject.shortName}
-          number={selectedNumber}
-          collections={collections}
-          selectedSlug={effectiveByNumberSlug}
-          summary={taskNumbers.find((n) => n.number === selectedNumber)!}
-          onStart={() => startTraining(selectedNumber, effectiveByNumberSlug ?? undefined)}
-        />
-      )}
       {mode === 'variants' && (
         <VariantBuilder
           taskNumberCount={content.taskNumberCount}
@@ -351,7 +270,7 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
         </Card>
       )}
 
-      {!selectedTopic && selectedNumber === null && (
+      {!selectedTopic && (
         <>
           <Card>
             <p className="text-h3">Твой прогресс</p>
@@ -507,99 +426,6 @@ function TopicDetail({
         style={{ marginTop: 'var(--space-4)' }}
       >
         Начать тренировку <Icon name="arrowRight" size={16} />
-      </Button>
-    </Card>
-  );
-}
-
-function TaskNumberGridMobile({
-  numbers,
-  collections,
-  selectedSlug,
-  onSourceChange,
-  onSelect,
-}: {
-  numbers: readonly TaskNumberSummary[];
-  collections: readonly CollectionListItem[];
-  selectedSlug: string | null;
-  onSourceChange: (slug: string | null) => void;
-  onSelect: (number: number) => void;
-}) {
-  return (
-    <Card>
-      <p className="text-h3">Задания по номерам</p>
-      <p className="text-body-sm text-secondary">Выбери номер задания ЕГЭ</p>
-      <div className={styles.sourceSelect}>
-        <span className="text-body-sm text-secondary">Источник:</span>
-        <Select
-          options={sourceSelectOptions(collections)}
-          value={selectedSlug ?? ALL_SOURCES_VALUE}
-          onChange={(value) => onSourceChange(value === ALL_SOURCES_VALUE ? null : value)}
-          sheetTitle="Источник"
-        />
-      </div>
-      <div className={styles.numberGrid}>
-        {numbers.map((item) => (
-          <button
-            key={item.number}
-            type="button"
-            className={styles.numberTile}
-            disabled={item.total === 0}
-            onClick={() => {
-              if (item.total > 0) onSelect(item.number);
-            }}
-          >
-            <span className={styles.numberValue}>№{item.number}</span>
-            <span className="text-label text-secondary">
-              {item.total > 0 ? `${item.solved}/${item.total}` : 'Нет заданий'}
-            </span>
-          </button>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
-function TaskNumberDetail({
-  subjectName,
-  number,
-  collections,
-  selectedSlug,
-  summary,
-  onStart,
-}: {
-  subjectName: string;
-  number: number;
-  collections: readonly CollectionListItem[];
-  selectedSlug: string | null;
-  summary: TaskNumberSummary;
-  onStart: () => void;
-}) {
-  const sourceLabel =
-    collections.find((c) => c.collection.slug === selectedSlug)?.collection.title ?? 'Общий банк';
-  const percent = summary.total > 0 ? (summary.solved / summary.total) * 100 : 0;
-  return (
-    <Card>
-      <p className="text-h3">Задание №{number}</p>
-      <p className="text-body-sm text-secondary" style={{ marginTop: 'var(--space-1)' }}>
-        {subjectName} · источник: {sourceLabel} · доступно: {summary.total}
-      </p>
-      <div className={styles.topicDetailStats}>
-        <span className="text-body-sm text-secondary">
-          {summary.total > 0
-            ? `${summary.solved} / ${summary.total} решено`
-            : 'Нет доступных заданий в этом источнике'}
-        </span>
-        <ProgressBar value={percent} />
-      </div>
-      <Button
-        variant="primary"
-        fullWidth
-        onClick={onStart}
-        disabled={summary.total === 0}
-        style={{ marginTop: 'var(--space-4)' }}
-      >
-        Начать тренировку по №{number} <Icon name="arrowRight" size={16} />
       </Button>
     </Card>
   );

@@ -96,6 +96,11 @@ export function getRandomTask(params: {
   variant?: string;
   /** A specific topic's id — restricts the random pick to that topic. */
   topic?: string;
+  /** Excludes any task the current user already has an attempt on —
+   * see Training's "Не встречавшиеся" toggle. A 404 `no_unseen_tasks`
+   * (distinct from the generic `no_tasks_available`) means the pool
+   * exists but every task in it was already seen. */
+  unseen?: boolean;
 }): Promise<TaskPublic> {
   const query = new URLSearchParams();
   if (params.subject) query.set('subject', params.subject);
@@ -103,6 +108,7 @@ export function getRandomTask(params: {
   if (params.collection) query.set('collection', params.collection);
   if (params.variant) query.set('variant', params.variant);
   if (params.topic) query.set('topic', params.topic);
+  if (params.unseen) query.set('unseen', 'true');
   const qs = query.toString();
   return apiFetch(`/tasks/random${qs ? `?${qs}` : ''}`);
 }

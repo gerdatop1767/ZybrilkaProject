@@ -122,6 +122,10 @@ export const randomTaskQuerySchema = z.object({
   variant: z.uuid().optional(),
   /** A specific topic's id — restrict the random pick to that topic. */
   topic: z.uuid().optional(),
+  /** Excludes any task the requesting user already has an attempt on
+   * (see Training's "Не встречавшиеся" toggle) — requires `x-anon-id`,
+   * never a client-trusted user id. */
+  unseen: z.coerce.boolean().optional(),
 });
 export type RandomTaskQuery = z.infer<typeof randomTaskQuerySchema>;
 

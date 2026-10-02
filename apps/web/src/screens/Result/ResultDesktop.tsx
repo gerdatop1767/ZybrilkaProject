@@ -9,6 +9,7 @@ import {
 } from '../../lib/taskAdapter.js';
 import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
 import { useActiveLearningSessionForTask } from '../../lib/learningSessionContext.js';
+import { formatElapsed } from '../../lib/formatElapsed.js';
 import { LearningSessionBadge } from '../../ui/LearningSession/LearningSessionBadge.js';
 import { LearningSessionResultAction } from '../../ui/LearningSession/LearningSessionResultAction.js';
 import type { SampleTask } from '../../data/sampleTask.js';
@@ -45,6 +46,10 @@ export interface ResultDesktopProps {
   /** Where the back arrow returns to — see `returnTo` on the `result`
    * route in navigation.tsx (audit Block 3). */
   returnTo?: Route;
+  /** The real elapsed solving time submitted with this attempt (see
+   * `useSolvingTimer`) — absent when the timer was never started, in
+   * which case no time is shown at all rather than a fabricated one. */
+  timeSpentMs?: number;
 }
 
 const XP_REWARD = 20;
@@ -67,6 +72,7 @@ export function ResultDesktop({
   variantId,
   customOrderedTasks,
   returnTo,
+  timeSpentMs,
 }: ResultDesktopProps) {
   const { navigate, back } = useNavigation();
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]!;
@@ -157,7 +163,7 @@ export function ResultDesktop({
       screen: 'subject',
       subjectId: task.subjectId,
       collectionSlug,
-      initialMode: 'byNumber',
+      initialMode: 'topics',
     });
   }
 
@@ -191,9 +197,11 @@ export function ResultDesktop({
               </span>
               <ProgressBar value={progressPercent} label="Прогресс тренировки" />
             </div>
-            <span className={styles.timer}>
-              <Icon name="time" size={16} /> 00:12:34
-            </span>
+            {timeSpentMs !== undefined && (
+              <span className={styles.timer}>
+                <Icon name="time" size={16} /> {formatElapsed(timeSpentMs)}
+              </span>
+            )}
             <button
               type="button"
               className={styles.roundButton}
