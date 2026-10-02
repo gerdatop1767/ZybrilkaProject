@@ -72,6 +72,11 @@ function isUnaddressable(route: Route): boolean {
   return route.screen === 'menu' || route.screen === 'task' || route.screen === 'result';
 }
 
+/** `/learning/session/:sessionId` prefix — see navigation.tsx's
+ * `learningSession` route for why this one (unlike `task`/`result`)
+ * must be addressable and refresh-safe. */
+const learningSessionPathPrefix = '/learning/session/';
+
 export function pathForRoute(route: Route): string | null {
   if (isUnaddressable(route)) return null;
 
@@ -90,6 +95,10 @@ export function pathForRoute(route: Route): string | null {
 
   if (route.screen === 'profile') {
     return '/profile';
+  }
+
+  if (route.screen === 'learningSession') {
+    return `${learningSessionPathPrefix}${route.sessionId}`;
   }
 
   if (route.screen === 'friendProfile') {
@@ -131,6 +140,11 @@ export function routeFromPath(pathname: string): Route {
 
   if (path === '/profile') return { screen: 'profile' };
 
+  if (path.startsWith(learningSessionPathPrefix)) {
+    const sessionId = path.slice(learningSessionPathPrefix.length);
+    if (sessionId) return { screen: 'learningSession', sessionId };
+  }
+
   const friendMatch = path.match(/^\/friends\/([a-zA-Z0-9_-]+)$/);
   if (friendMatch) {
     return { screen: 'friendProfile', friendId: friendMatch[1]! };
@@ -149,6 +163,7 @@ export function isAddressableScreen(screen: string): boolean {
     screen === 'subject' ||
     screen === 'profile' ||
     screen === 'friendProfile' ||
+    screen === 'learningSession' ||
     simpleOverlayScreens.has(screen)
   );
 }

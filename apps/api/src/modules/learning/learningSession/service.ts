@@ -2,6 +2,8 @@ import type { Database } from '@zybrilka/db';
 import type { LearningSessionResponse, LearningSessionSummary } from '@zybrilka/shared';
 import { getLearningPath } from '../learningPath/service.js';
 import { resolveSubjectId } from '../recommendation/service.js';
+import * as tasksRepo from '../../tasks/repo.js';
+import { toPublicTask } from '../../tasks/service.js';
 import * as repo from './repo.js';
 
 export interface StartLearningSessionContext {
@@ -106,6 +108,51 @@ export async function advanceLearningSession(
     total: updated.total,
     task: step.task,
     recommendation: { score: step.score, reason: step.reason, breakdown: step.breakdown },
+  };
+}
+
+/**
+ * ZUBRILKA LEARNING INTELLIGENCE, Phase 10 — read-only session
+ * recovery (page refresh / direct link to `/learning/session/:id`).
+ * Unlike `advanceLearningSession`, this NEVER consumes a new task slot
+ * and NEVER re-runs scoring — it just reports the CURRENT state: the
+ * last task this session already served (or, once completed, the same
+ * real summary `advanceLearningSession` would return). This is the
+ * smallest safe backend addition for frontend refresh-safety: without
+ * it, a page reload on an active session would have no way to recover
+ * "which task was I on" without either inventing client-only state
+ * (which could desync from the server) or wrongly calling `/next`
+ * (which WOULD consume another task slot just because the user
+ * reloaded, violating Phase 9's "next only after a real submission"
+ * rule). `recommendation` is intentionally omitted here (see the DTO) —
+ * recovering it would require re-scoring, which this endpoint must
+ * never do.
+ */
+export async function getLearningSessionSnapshot(
+  db: Database,
+  userId: string,
+  sessionId: string,
+): Promise<LearningSessionResponse> {
+  const session = await repo.getSessionById(db, sessionId);
+  if (!session || session.userId !== userId) return null;
+
+  if (session.status === 'completed') {
+    return buildCompletedResponse(db, session);
+  }
+
+  const currentTaskId = session.consumedTaskIds[session.consumedTaskIds.length - 1];
+  if (!currentTaskId) return null;
+
+  const row = await tasksRepo.getTaskById(db, currentTaskId);
+  if (!row) return null;
+
+  return {
+    sessionId: session.id,
+    subject: session.subjectId,
+    status: 'active',
+    position: session.consumedTaskIds.length,
+    total: session.total,
+    task: toPublicTask(row),
   };
 }
 

@@ -3,12 +3,17 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Training } from './Training.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
+import {
+  LearningSessionProvider,
+  useLearningSessionContext,
+} from '../../lib/learningSessionContext.js';
 import * as api from '../../lib/api.js';
 
 vi.mock('../../lib/api.js', () => ({
   listCollections: vi.fn(),
   getRandomTask: vi.fn(),
   getVariant: vi.fn(),
+  startLearningSession: vi.fn(),
 }));
 
 const COLLECTION = {
@@ -52,11 +57,19 @@ function OverlayMarker() {
   return <p data-testid="overlay">{overlay?.screen ?? 'none'}</p>;
 }
 
+function SessionMarker() {
+  const { session } = useLearningSessionContext();
+  return <p data-testid="session">{session ? `${session.status}:${session.sessionId}` : 'none'}</p>;
+}
+
 function renderTraining() {
   return render(
     <NavigationProvider>
-      <Training />
-      <OverlayMarker />
+      <LearningSessionProvider>
+        <Training />
+        <OverlayMarker />
+        <SessionMarker />
+      </LearningSessionProvider>
     </NavigationProvider>,
   );
 }
@@ -177,5 +190,78 @@ describe('Training', () => {
     renderTraining();
     await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
     expect(await screen.findByText(/Не нашлось подходящих заданий/)).toBeInTheDocument();
+  });
+});
+
+describe('Training — "Умная тренировка" (Phase 10: real backend learning session)', () => {
+  it('starts a real session via the API and stores the real sessionId, never a fake one', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.startLearningSession).mockResolvedValue({
+      sessionId: 'session-42',
+      subject: 'math',
+      status: 'active',
+      position: 1,
+      total: 10,
+      task: RANDOM_TASK,
+    });
+    renderTraining();
+
+    await user.click(screen.getByRole('button', { name: /Умная тренировка/ }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+
+    await waitFor(() => {
+      expect(api.startLearningSession).toHaveBeenCalledWith(
+        expect.objectContaining({ subjectId: 'math', limit: 10 }),
+      );
+    });
+    // Navigates straight into the EXISTING task overlay with the real
+    // task the backend picked — never a second task-solving screen.
+    await waitFor(() => {
+      expect(screen.getByTestId('overlay')).toHaveTextContent('task:5');
+    });
+    expect(screen.getByTestId('session')).toHaveTextContent('active:session-42');
+  });
+
+  it('shows an error and never fakes a session when the backend can find no candidate task', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.startLearningSession).mockResolvedValue(null);
+    renderTraining();
+
+    await user.click(screen.getByRole('button', { name: /Умная тренировка/ }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+
+    expect(
+      await screen.findByText(/Не нашлось подходящих заданий для умной тренировки/),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('session')).toHaveTextContent('none');
+    expect(screen.getByTestId('overlay')).not.toHaveTextContent('task');
+  });
+
+  it('routes an immediately-completed session (no candidates at all) to the summary screen, not a fake task', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.startLearningSession).mockResolvedValue({
+      sessionId: 'session-empty',
+      subject: 'math',
+      status: 'completed',
+      position: 0,
+      total: 10,
+      summary: {
+        attempted: 0,
+        correct: 0,
+        incorrect: 0,
+        accuracy: null,
+        skillsPracticed: 0,
+        mistakesCreated: 0,
+      },
+    });
+    renderTraining();
+
+    await user.click(screen.getByRole('button', { name: /Умная тренировка/ }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('overlay')).toHaveTextContent('learningSession');
+    });
+    expect(screen.getByTestId('session')).toHaveTextContent('completed:session-empty');
   });
 });

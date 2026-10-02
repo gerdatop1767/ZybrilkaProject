@@ -4,6 +4,8 @@ import { serializeMultiPartUserAnswer } from '@zybrilka/shared';
 import { getTask, listTasksByNumber, submitAttempt } from '../../lib/api.js';
 import { toSampleTask } from '../../lib/taskAdapter.js';
 import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
+import { useActiveLearningSessionForTask } from '../../lib/learningSessionContext.js';
+import { LearningSessionBadge } from '../../ui/LearningSession/LearningSessionBadge.js';
 import type { TaskVariant } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
@@ -62,6 +64,7 @@ export function TaskMobile({
     returnTo,
   });
   const goBack = returnTo ? () => navigate(returnTo) : back;
+  const learningSession = useActiveLearningSessionForTask(taskId);
 
   // The router remounts this component (key={taskId}) on every task
   // change, so state starts fresh here — no manual reset-on-taskId-change
@@ -173,6 +176,7 @@ export function TaskMobile({
 
       <div className={styles.card}>
         <div className={styles.metaRow}>
+          {learningSession && <LearningSessionBadge session={learningSession} />}
           <DifficultyTag label={task.difficultyLabel} />
           <span className={styles.metaChip}>
             <Icon name="reference" size={12} /> {task.source}

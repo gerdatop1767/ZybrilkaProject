@@ -19,7 +19,8 @@ import { SubjectCatalogMobile } from './screens/SubjectCatalog/SubjectCatalogMob
 import { SubjectMobile } from './screens/Subject/SubjectMobile.js';
 import { Onboarding } from './screens/Onboarding/Onboarding.js';
 import { Profile } from './screens/Profile/Profile.js';
-import { startRealTask } from './lib/startTraining.js';
+import { Training } from './screens/Training/Training.js';
+import { LearningSession } from './screens/LearningSession/LearningSession.js';
 
 /**
  * Mobile app tree (S1 Block 6, approved design). Screens not yet
@@ -39,14 +40,6 @@ export function AppMobile() {
   const contentOverlay = isMenuOpen ? null : overlay;
 
   function selectTab(id: string) {
-    // The approved screenshots have no idle "Тренировка" tab screen —
-    // tapping it jumps straight into a real training task (S3.2: a
-    // live random task from the API, not the hardcoded design-mock
-    // task this used to open).
-    if (id === 'training') {
-      startRealTask(navigate, { subject: 'math' });
-      return;
-    }
     // The bottom nav's second slot is "Мои ошибки" (audit Block 2) — a
     // real overlay screen, not a MainTabId, so it needs its own
     // navigate() rather than falling through to the tab branch below.
@@ -104,6 +97,9 @@ export function AppMobile() {
             returnTo={contentOverlay.returnTo}
           />
         )}
+        {contentOverlay.screen === 'learningSession' && (
+          <LearningSession key={contentOverlay.sessionId} sessionId={contentOverlay.sessionId} />
+        )}
         {contentOverlay.screen === 'mistakes' && <MistakesMobile />}
         {contentOverlay.screen === 'trainingTopic' && (
           <WipPlaceholder title="Тренировка по теме" note="Экран в разработке — следующий блок." />
@@ -152,9 +148,7 @@ export function AppMobile() {
         nav={<BottomNav items={defaultBottomNavItems} activeId={tab} onSelect={selectTab} />}
       >
         {tab === 'home' && <HomeMobile />}
-        {tab === 'training' && (
-          <WipPlaceholder title="Тренировка" note="Экран в разработке — следующий блок." />
-        )}
+        {tab === 'training' && <Training />}
         {tab === 'statistics' && <StatisticsMobile />}
         {tab === 'achievements' && <AchievementsMobile />}
       </MobileShell>

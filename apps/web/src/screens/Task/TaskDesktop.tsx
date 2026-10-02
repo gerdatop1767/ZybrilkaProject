@@ -6,6 +6,8 @@ import { getTask, listTasksByNumber, submitAttempt } from '../../lib/api.js';
 import { toSampleTask } from '../../lib/taskAdapter.js';
 import { useFavorite } from '../../lib/useFavorite.js';
 import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
+import { useActiveLearningSessionForTask } from '../../lib/learningSessionContext.js';
+import { LearningSessionBadge } from '../../ui/LearningSession/LearningSessionBadge.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Calculator } from '../../ui/Calculator/Calculator.js';
@@ -66,6 +68,7 @@ export function TaskDesktop({
   });
   const goBack = returnTo ? () => navigate(returnTo) : back;
   const favorite = useFavorite(taskId);
+  const learningSession = useActiveLearningSessionForTask(taskId);
 
   // The router remounts this component (key={taskId}) on every task
   // change, so state starts fresh here — no manual reset-on-taskId-change
@@ -210,6 +213,7 @@ export function TaskDesktop({
 
           <div className={styles.card}>
             <div className={styles.metaRow}>
+              {learningSession && <LearningSessionBadge session={learningSession} />}
               <span className={styles.currentChip}>Задание {task.indexInSession}</span>
               <span className={styles.metaChip}>{task.topic}</span>
               <span className={styles.metaChip}>Показательные уравнения</span>

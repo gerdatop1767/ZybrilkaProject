@@ -14,27 +14,12 @@ vi.mock('./lib/api.js', () => ({
   listFavoriteTaskIds: vi.fn(() => Promise.resolve({ taskIds: [] })),
   addFavorite: vi.fn(() => Promise.resolve()),
   removeFavorite: vi.fn(() => Promise.resolve()),
+  listCollections: vi.fn(() => Promise.resolve([])),
+  getVariant: vi.fn(),
+  startLearningSession: vi.fn(),
+  getLearningSessionNext: vi.fn(),
+  getLearningSession: vi.fn(),
 }));
-
-const RANDOM_TASK = {
-  id: 'task-1',
-  subjectId: 'math',
-  taskNumber: 7,
-  topicId: null,
-  topicName: null,
-  difficulty: 2 as const,
-  conditionMd: 'Условие',
-  imageUrl: null,
-  hintMd: null,
-  answerType: 'short_answer' as const,
-  answerOptions: null,
-  answerParts: null,
-  source: 'ФИПИ',
-  sourceUrl: null,
-  sourceYear: 2026,
-  tags: [],
-  status: 'published' as const,
-};
 
 function OverlayMarker() {
   const { overlay } = useNavigation();
@@ -62,15 +47,12 @@ describe('AppMobile — bottom nav "Мои ошибки" slot', () => {
 });
 
 describe('AppMobile — menu "Тренировка" item', () => {
-  it('fetches a real random task and opens it, instead of the hardcoded design-mock task', async () => {
+  it('opens the real Training setup screen, not a WIP placeholder (Phase 10: reachable on mobile)', async () => {
     const user = userEvent.setup();
-    vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
-    vi.mocked(api.getTask).mockResolvedValue(RANDOM_TASK);
-    vi.mocked(api.listTasksByNumber).mockResolvedValue([RANDOM_TASK]);
+    vi.mocked(api.listCollections).mockResolvedValue([]);
     render(
       <NavigationProvider>
         <AppMobile />
-        <OverlayMarker />
       </NavigationProvider>,
     );
 
@@ -80,8 +62,7 @@ describe('AppMobile — menu "Тренировка" item', () => {
     await user.click(screen.getByRole('button', { name: 'Профиль' }));
     await user.click(screen.getByRole('button', { name: 'Тренировка' }));
     await waitFor(() => {
-      expect(screen.getByTestId('overlay')).toHaveTextContent('task:7');
+      expect(screen.getByRole('button', { name: /Начать тренировку/ })).toBeInTheDocument();
     });
-    expect(api.getRandomTask).toHaveBeenCalled();
   });
 });

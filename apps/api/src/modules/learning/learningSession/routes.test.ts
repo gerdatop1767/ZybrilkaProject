@@ -251,4 +251,110 @@ describe('learning session routes (ZUBRILKA LEARNING INTELLIGENCE Phase 9)', () 
       expect(res.statusCode).toBe(404);
     });
   });
+
+  describe('GET /me/learning/sessions/:sessionId (Phase 10 — refresh recovery)', () => {
+    it('requires an x-anon-id header', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/me/learning/sessions/${randomUUID()}`,
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('400s for a malformed sessionId', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/me/learning/sessions/not-a-uuid',
+        headers: { 'x-anon-id': randomUUID() },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('404s for an unknown sessionId', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/me/learning/sessions/${randomUUID()}`,
+        headers: { 'x-anon-id': randomUUID() },
+      });
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('404s when the session belongs to a different anon user', async () => {
+      const owner = randomUUID();
+      const attacker = randomUUID();
+      const startRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/me/learning/sessions',
+        headers: { 'x-anon-id': owner },
+        payload: { subjectId: 'math' },
+      });
+      const sessionId = startRes.json().sessionId;
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/me/learning/sessions/${sessionId}`,
+        headers: { 'x-anon-id': attacker },
+      });
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('recovers the current task without advancing the session (refresh-safe)', async () => {
+      const anonId = randomUUID();
+      const startRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/me/learning/sessions',
+        headers: { 'x-anon-id': anonId },
+        payload: { subjectId: 'math', limit: 5 },
+      });
+      const started = startRes.json();
+
+      const snapshotRes = await app.inject({
+        method: 'GET',
+        url: `/api/v1/me/learning/sessions/${started.sessionId}`,
+        headers: { 'x-anon-id': anonId },
+      });
+      expect(snapshotRes.statusCode).toBe(200);
+      const snapshot = snapshotRes.json();
+      expect(snapshot.status).toBe('active');
+      expect(snapshot.position).toBe(1);
+      expect(snapshot.task.id).toBe(started.task.id);
+      // Never re-runs scoring on a plain recovery read.
+      expect(snapshot.recommendation).toBeUndefined();
+
+      // A second recovery read must still show the SAME position —
+      // this endpoint must never consume a task slot on its own.
+      const snapshotAgainRes = await app.inject({
+        method: 'GET',
+        url: `/api/v1/me/learning/sessions/${started.sessionId}`,
+        headers: { 'x-anon-id': anonId },
+      });
+      expect(snapshotAgainRes.json().position).toBe(1);
+    });
+
+    it('returns the real completed summary once the session has finished', async () => {
+      const anonId = randomUUID();
+      const startRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/me/learning/sessions',
+        headers: { 'x-anon-id': anonId },
+        payload: { subjectId: 'math', limit: 1 },
+      });
+      const started = startRes.json();
+
+      await app.inject({
+        method: 'GET',
+        url: `/api/v1/me/learning/sessions/${started.sessionId}/next`,
+        headers: { 'x-anon-id': anonId },
+      });
+
+      const snapshotRes = await app.inject({
+        method: 'GET',
+        url: `/api/v1/me/learning/sessions/${started.sessionId}`,
+        headers: { 'x-anon-id': anonId },
+      });
+      expect(snapshotRes.statusCode).toBe(200);
+      expect(snapshotRes.json().status).toBe('completed');
+      expect(snapshotRes.json().summary).toBeDefined();
+    });
+  });
 });

@@ -104,6 +104,19 @@ export type OverlayRoute =
       returnTo?: Route;
     }
   | { screen: 'mistakes' }
+  /**
+   * ZUBRILKA LEARNING INTELLIGENCE, Phase 10 — the one addressable
+   * entry point for a real backend learning session
+   * (`apps/api/.../learningSession`). Deliberately addressable (unlike
+   * `task`/`result`, see their comment below): a page refresh here
+   * must recover the session from the server via
+   * `GET /me/learning/sessions/:sessionId`, never silently create a
+   * new one or lose the server-authoritative position. Once resolved,
+   * this screen hands off into the normal `task`/`result` overlays
+   * (via `LearningSessionProvider`, not a new route field on them) for
+   * the actual solving UI — see `lib/learningSessionContext.tsx`.
+   */
+  | { screen: 'learningSession'; sessionId: string }
   /** Addressable placeholders for training modes not yet built as
    * their own screens — routing needs a real page for each one so
    * refresh/direct-link/Back-Forward work, even though the mode
@@ -140,6 +153,7 @@ const routeLabels: Partial<Record<Route['screen'], string>> = {
   statistics: 'Статистика',
   achievements: 'Достижения',
   learningCenter: 'Учебный центр',
+  learningSession: 'Тренировка',
   subjectCatalog: 'Предметы',
   mistakes: 'Мои ошибки',
   rating: 'Рейтинг',

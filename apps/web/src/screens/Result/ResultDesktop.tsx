@@ -8,6 +8,9 @@ import {
   toSampleTask,
 } from '../../lib/taskAdapter.js';
 import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
+import { useActiveLearningSessionForTask } from '../../lib/learningSessionContext.js';
+import { LearningSessionBadge } from '../../ui/LearningSession/LearningSessionBadge.js';
+import { LearningSessionResultAction } from '../../ui/LearningSession/LearningSessionResultAction.js';
 import type { SampleTask } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { Button } from '../../ui/Button/Button.js';
@@ -76,6 +79,7 @@ export function ResultDesktop({
     returnTo,
   });
   const goBack = returnTo ? () => navigate(returnTo) : back;
+  const learningSession = useActiveLearningSessionForTask(taskId);
   function retryTask() {
     navigate({
       screen: 'task',
@@ -202,6 +206,7 @@ export function ResultDesktop({
           </div>
 
           <div className={styles.card}>
+            {learningSession && <LearningSessionBadge session={learningSession} />}
             {!correct && <span className={styles.topicChip}>{task.topic}</span>}
             <p className="text-h3">Условие</p>
             <div className={clsx('text-task', styles.condition)}>
@@ -383,6 +388,12 @@ export function ResultDesktop({
                 Следующее задание <Icon name="arrowRight" size={18} />
               </Button>
             </div>
+
+            {learningSession && (
+              <div className={styles.actions}>
+                <LearningSessionResultAction session={learningSession} />
+              </div>
+            )}
           </div>
         </div>
 

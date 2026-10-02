@@ -18,9 +18,10 @@ import { FriendsDesktop } from './screens/Friends/FriendsDesktop.js';
 import { FriendProfileDesktop } from './screens/Friends/FriendProfileDesktop.js';
 import { Training } from './screens/Training/Training.js';
 import { Onboarding } from './screens/Onboarding/Onboarding.js';
+import { LearningSession } from './screens/LearningSession/LearningSession.js';
 
 /** Screens whose approved desktop composition has no left sidebar. */
-const noSidebarScreens = new Set(['home', 'task', 'result', 'onboarding']);
+const noSidebarScreens = new Set(['home', 'task', 'result', 'onboarding', 'learningSession']);
 
 /**
  * Desktop app tree (S1 Block 6, approved design) — its own composition,
@@ -69,6 +70,9 @@ export function AppDesktop() {
             customOrderedTasks={overlay.customOrderedTasks}
             returnTo={overlay.returnTo}
           />
+        )}
+        {overlay.screen === 'learningSession' && (
+          <LearningSession key={overlay.sessionId} sessionId={overlay.sessionId} />
         )}
         {overlay.screen === 'mistakes' && <MistakesDesktop />}
         {overlay.screen === 'trainingTopic' && (

@@ -21,8 +21,9 @@ export interface LearningSessionRecommendationInfo {
   readonly breakdown: RecommendationBreakdown;
 }
 
-/** `POST /me/learning/sessions` and `GET /me/learning/sessions/:id/next`
- * response while the session still has steps left to serve. */
+/** `POST /me/learning/sessions`, `GET /me/learning/sessions/:id/next`,
+ * and `GET /me/learning/sessions/:id` response while the session still
+ * has steps left to serve. */
 export interface LearningSessionActiveResponse {
   readonly sessionId: string;
   readonly subject: string;
@@ -32,7 +33,11 @@ export interface LearningSessionActiveResponse {
   /** The originally requested session length — fixed for the session's lifetime. */
   readonly total: number;
   readonly task: TaskPublic;
-  readonly recommendation: LearningSessionRecommendationInfo;
+  /** Present for `start`/`next` (a fresh scoring just ran). Absent for
+   * a plain `GET .../:id` snapshot read (e.g. page-refresh recovery) —
+   * that call never re-runs scoring, so it honestly has no breakdown
+   * to show rather than fabricating or re-deriving a stale one. */
+  readonly recommendation?: LearningSessionRecommendationInfo;
 }
 
 /**

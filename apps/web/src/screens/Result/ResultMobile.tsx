@@ -8,6 +8,9 @@ import {
   toSampleTask,
 } from '../../lib/taskAdapter.js';
 import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
+import { useActiveLearningSessionForTask } from '../../lib/learningSessionContext.js';
+import { LearningSessionBadge } from '../../ui/LearningSession/LearningSessionBadge.js';
+import { LearningSessionResultAction } from '../../ui/LearningSession/LearningSessionResultAction.js';
 import type { SampleTask, TaskVariant } from '../../data/sampleTask.js';
 import { subjects } from '../../data/subjects.js';
 import { getProgressSummary } from '../../lib/api.js';
@@ -76,6 +79,7 @@ export function ResultMobile({
     returnTo,
   });
   const goBack = returnTo ? () => navigate(returnTo) : back;
+  const learningSession = useActiveLearningSessionForTask(taskId);
   // The router remounts this component (key={taskId}) whenever the task
   // or its correctness changes, so state starts fresh here.
   const [task, setTask] = useState<SampleTask | null>(null);
@@ -194,6 +198,11 @@ export function ResultMobile({
           correct ? styles.feedbackCorrect : styles.feedbackWrong,
         )}
       >
+        {learningSession && (
+          <div className={styles.statRow}>
+            <LearningSessionBadge session={learningSession} />
+          </div>
+        )}
         {/* QA v3 Block 2: the task itself — same renderer/order as
          * TaskMobile and ResultDesktop's "Условие" card — so the user
          * sees "вот какое было задание" before the result below it,
@@ -332,6 +341,12 @@ export function ResultMobile({
             <Icon name="grid" size={16} /> К списку заданий
           </Button>
         </div>
+
+        {learningSession && (
+          <div className={styles.actions}>
+            <LearningSessionResultAction session={learningSession} />
+          </div>
+        )}
       </div>
 
       <ToolsPanelMobile

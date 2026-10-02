@@ -5,7 +5,11 @@ import { calculateTaskNumberNeed } from '@zybrilka/shared';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getUserAttemptRecordsBySubject } from '../recommendation/repo.js';
-import { advanceLearningSession, startLearningSession } from './service.js';
+import {
+  advanceLearningSession,
+  getLearningSessionSnapshot,
+  startLearningSession,
+} from './service.js';
 
 describe('learning sessions (ZUBRILKA LEARNING INTELLIGENCE Phase 9)', () => {
   let testDb: Awaited<ReturnType<typeof createImportedTestDb>>;
@@ -51,8 +55,8 @@ describe('learning sessions (ZUBRILKA LEARNING INTELLIGENCE Phase 9)', () => {
       expect(result.subject).toBe('math');
       expect(result.sessionId).toBeTruthy();
       expect(result.task.id).toBeTruthy();
-      expect(result.recommendation.score).toBeGreaterThanOrEqual(0);
-      expect(result.recommendation.score).toBeLessThanOrEqual(100);
+      expect(result.recommendation?.score).toBeGreaterThanOrEqual(0);
+      expect(result.recommendation?.score).toBeLessThanOrEqual(100);
     });
 
     it('respects minimum total (1)', async () => {
@@ -293,7 +297,7 @@ describe('learning sessions (ZUBRILKA LEARNING INTELLIGENCE Phase 9)', () => {
       const next = await advanceLearningSession(testDb.db, userId, started.sessionId);
       expect(next).not.toBeNull();
       if (next && next.status === 'active') {
-        expect(next.recommendation.breakdown.errorRelevance.included).toBe(true);
+        expect(next.recommendation?.breakdown.errorRelevance.included).toBe(true);
       }
     });
 
@@ -488,6 +492,79 @@ describe('learning sessions (ZUBRILKA LEARNING INTELLIGENCE Phase 9)', () => {
       expect(completed.summary.incorrect).toBe(1);
       expect(completed.summary.accuracy).toBe(0);
       expect(completed.summary.mistakesCreated).toBe(0);
+    });
+  });
+
+  describe('getLearningSessionSnapshot (ZUBRILKA LEARNING INTELLIGENCE Phase 10 — refresh recovery)', () => {
+    it('returns null for an unknown sessionId', async () => {
+      const result = await getLearningSessionSnapshot(testDb.db, await freshUserId(), randomUUID());
+      expect(result).toBeNull();
+    });
+
+    it('returns null when the session belongs to a different user', async () => {
+      const owner = await freshUserId();
+      const attacker = await freshUserId();
+      const started = await startLearningSession(testDb.db, owner, { subjectId: 'math', total: 5 });
+      if (!started || started.status !== 'active') throw new Error('unreachable');
+
+      const result = await getLearningSessionSnapshot(testDb.db, attacker, started.sessionId);
+      expect(result).toBeNull();
+    });
+
+    it('reflects the CURRENT task without consuming a new slot (never advances)', async () => {
+      const userId = await freshUserId();
+      const started = await startLearningSession(testDb.db, userId, {
+        subjectId: 'math',
+        total: 5,
+      });
+      if (!started || started.status !== 'active') throw new Error('unreachable');
+
+      const snapshotOnce = await getLearningSessionSnapshot(testDb.db, userId, started.sessionId);
+      const snapshotTwice = await getLearningSessionSnapshot(testDb.db, userId, started.sessionId);
+
+      expect(snapshotOnce).toEqual(snapshotTwice);
+      if (!snapshotOnce || snapshotOnce.status !== 'active') throw new Error('unreachable');
+      expect(snapshotOnce.task.id).toBe(started.task.id);
+      expect(snapshotOnce.position).toBe(1);
+      expect(snapshotOnce.total).toBe(5);
+      // Never re-runs scoring — honestly has no breakdown to show.
+      expect(snapshotOnce.recommendation).toBeUndefined();
+    });
+
+    it('reflects the CURRENT task after advancing, still without consuming a new slot', async () => {
+      const userId = await freshUserId();
+      const started = await startLearningSession(testDb.db, userId, {
+        subjectId: 'math',
+        total: 5,
+      });
+      if (!started || started.status !== 'active') throw new Error('unreachable');
+
+      const next = await advanceLearningSession(testDb.db, userId, started.sessionId);
+      if (!next || next.status !== 'active') throw new Error('unreachable');
+
+      const snapshot = await getLearningSessionSnapshot(testDb.db, userId, started.sessionId);
+      if (!snapshot || snapshot.status !== 'active') throw new Error('unreachable');
+      expect(snapshot.task.id).toBe(next.task.id);
+      expect(snapshot.position).toBe(2);
+
+      // Confirm the snapshot call itself did not advance anything further.
+      const snapshotAgain = await getLearningSessionSnapshot(testDb.db, userId, started.sessionId);
+      expect(snapshotAgain).toEqual(snapshot);
+    });
+
+    it('returns the real completed summary once the session has finished', async () => {
+      const userId = await freshUserId();
+      const started = await startLearningSession(testDb.db, userId, {
+        subjectId: 'math',
+        total: 1,
+      });
+      if (!started || started.status !== 'active') throw new Error('unreachable');
+
+      const completed = await advanceLearningSession(testDb.db, userId, started.sessionId);
+      if (!completed || completed.status !== 'completed') throw new Error('unreachable');
+
+      const snapshot = await getLearningSessionSnapshot(testDb.db, userId, started.sessionId);
+      expect(snapshot).toEqual(completed);
     });
   });
 });

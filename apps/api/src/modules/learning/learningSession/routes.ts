@@ -1,7 +1,11 @@
 import type { Database } from '@zybrilka/db';
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { advanceLearningSession, startLearningSession } from './service.js';
+import {
+  advanceLearningSession,
+  getLearningSessionSnapshot,
+  startLearningSession,
+} from './service.js';
 
 export interface LearningSessionRoutesOptions {
   db: Database;
@@ -19,12 +23,13 @@ const startSessionBodySchema = z.object({
 const sessionParamsSchema = z.object({ sessionId: z.uuid() });
 
 /**
- * ZUBRILKA LEARNING INTELLIGENCE, Phase 9. Two endpoints only — the
- * smallest surface that supports the real lifecycle (start, then
- * repeatedly advance). A bare `GET /sessions/:id` "peek without
- * advancing" endpoint was deliberately left out: nothing in the
- * described flow needs it, and `start`/`next` already return the full
- * current state every time.
+ * ZUBRILKA LEARNING INTELLIGENCE, Phase 9/10. Three endpoints: start,
+ * advance ("next"), and — added in Phase 10 for frontend refresh-safety
+ * — a read-only snapshot. The snapshot was deliberately left out of
+ * Phase 9 (nothing in the backend-only lifecycle needed it), but the
+ * frontend integration genuinely requires a way to recover "which task
+ * was I on" after a page reload WITHOUT calling `/next` (which would
+ * wrongly consume another task slot just because the page reloaded).
  */
 export const learningSessionRoutes: FastifyPluginAsync<LearningSessionRoutesOptions> = async (
   app,
@@ -53,6 +58,17 @@ export const learningSessionRoutes: FastifyPluginAsync<LearningSessionRoutesOpti
     if (!params.success) return reply.code(400).send({ error: 'invalid_id' });
 
     const result = await advanceLearningSession(db, request.userId, params.data.sessionId);
+    if (!result) return reply.code(404).send({ error: 'session_not_found' });
+    return result;
+  });
+
+  app.get('/me/learning/sessions/:sessionId', async (request, reply) => {
+    if (!request.userId) return reply.code(400).send({ error: 'missing_anon_id' });
+
+    const params = sessionParamsSchema.safeParse(request.params);
+    if (!params.success) return reply.code(400).send({ error: 'invalid_id' });
+
+    const result = await getLearningSessionSnapshot(db, request.userId, params.data.sessionId);
     if (!result) return reply.code(404).send({ error: 'session_not_found' });
     return result;
   });

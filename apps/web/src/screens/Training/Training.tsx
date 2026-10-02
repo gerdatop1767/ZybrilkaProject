@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
-import { getRandomTask, getVariant, listCollections } from '../../lib/api.js';
+import { getRandomTask, getVariant, listCollections, startLearningSession } from '../../lib/api.js';
 import type { CollectionListItem } from '@zybrilka/shared';
+import {
+  applyLearningSessionResponse,
+  useLearningSessionContext,
+} from '../../lib/learningSessionContext.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Card } from '../../ui/Card/Card.js';
 import { Chip } from '../../ui/Chip/Chip.js';
@@ -90,6 +94,7 @@ const subjectSelectOptions = subjects.map((subject) => ({
  */
 export function Training() {
   const { navigate } = useNavigation();
+  const { setSession } = useLearningSessionContext();
   const [subjectId, setSubjectId] = useState<string | null>('math');
   const [modeId, setModeId] = useState('topic');
   const [difficulty, setDifficulty] = useState('2');
@@ -132,6 +137,18 @@ export function Training() {
 
     setStarting(true);
     try {
+      if (modeId === 'smart') {
+        const response = await startLearningSession({
+          subjectId: subjectId ?? undefined,
+          limit: Number(quantity),
+        });
+        const outcome = applyLearningSessionResponse(response, setSession, navigate);
+        if (outcome === 'none') {
+          setStartError('Не нашлось подходящих заданий для умной тренировки.');
+        }
+        return;
+      }
+
       if (modeId === 'variant') {
         if (!variantId) {
           setStartError('Выбери вариант, чтобы начать.');

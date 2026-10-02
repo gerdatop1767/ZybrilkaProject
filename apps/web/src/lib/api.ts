@@ -4,6 +4,7 @@ import type {
   CollectionListItem,
   FavoritesListResponse,
   LearningProfileResponse,
+  LearningSessionResponse,
   Mistake,
   ProgressByTaskNumberResponse,
   ProgressByTopicResponse,
@@ -224,4 +225,33 @@ export function saveLearningProfile(
   request: SaveLearningProfileRequest,
 ): Promise<LearningProfileResponse> {
   return apiFetch('/me/learning-profile', { method: 'PUT', body: JSON.stringify(request) });
+}
+
+/**
+ * ZUBRILKA LEARNING INTELLIGENCE, Phase 10 — thin, typed wrappers over
+ * the real backend session lifecycle (Phase 9). No scoring/selection
+ * logic lives here or anywhere in the frontend: these just forward to
+ * the authoritative endpoints and return their real response shape
+ * from `@zybrilka/shared`, unmodified.
+ */
+export function startLearningSession(params: {
+  subjectId?: string;
+  limit?: number;
+}): Promise<LearningSessionResponse> {
+  return apiFetch('/me/learning/sessions', { method: 'POST', body: JSON.stringify(params) });
+}
+
+/** Must only be called after the user has actually submitted an
+ * attempt on the current task — calling it any earlier would make the
+ * backend recompute and consume a task slot the user never answered
+ * (see Phase 9/10's "next only after a real submission" rule). */
+export function getLearningSessionNext(sessionId: string): Promise<LearningSessionResponse> {
+  return apiFetch(`/me/learning/sessions/${sessionId}/next`);
+}
+
+/** Read-only — never advances the session. Used only to recover "which
+ * task was I on" after a page reload or direct link to
+ * `/learning/session/:sessionId` (Phase 10 refresh-safety). */
+export function getLearningSession(sessionId: string): Promise<LearningSessionResponse> {
+  return apiFetch(`/me/learning/sessions/${sessionId}`);
 }
