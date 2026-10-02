@@ -89,10 +89,19 @@ describe('App — mobile', () => {
     );
   });
 
-  it('opens the Menu drawer from the bottom navigation "Профиль" slot', async () => {
+  it('opens the real Профиль screen from the bottom navigation "Профиль" slot, keeping the tab bar visible', async () => {
     const user = userEvent.setup();
     renderApp();
     await user.click(screen.getByRole('button', { name: /Профиль/ }));
+    expect(screen.getByText('Имя не задано')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Профиль' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it("opens the Menu drawer from Профиль's header button", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getByRole('button', { name: /Профиль/ }));
+    await user.click(screen.getByRole('button', { name: 'Меню' }));
     expect(screen.getByRole('dialog', { name: 'Меню' })).toBeInTheDocument();
     expect(screen.getByText('Зубрилка')).toBeInTheDocument();
   });

@@ -12,6 +12,7 @@ import { Icon } from '../../ui/Icon/Icon.js';
 import { DonutChart } from '../../ui/Charts/DonutChart.js';
 import { RankedBarList } from '../../ui/Charts/RankedBarList.js';
 import { MistakeCardDesktop } from '../../ui/Mistakes/MistakeCardDesktop.js';
+import { MistakeNumberGroup } from '../../ui/Mistakes/MistakeNumberGroup.js';
 import { FeedbackState } from '../../ui/FeedbackState/FeedbackState.js';
 import { FadeIn } from '../../ui/motion/motion.js';
 import { BackRow } from '../../ui/BackRow/BackRow.js';
@@ -118,24 +119,36 @@ export function MistakesDesktop() {
               description="Все ошибки в этом фильтре уже разобраны."
             />
           )}
-          {groups.map((group) => (
-            <div key={group.label}>
-              {group.label && <p className={`text-h3 ${styles.groupLabel}`}>{group.label}</p>}
-              <div className={styles.list}>
-                {group.items.map((m) => (
-                  <MistakeCardDesktop
-                    key={m.id}
-                    mistake={m}
-                    selected={selected.has(m.id)}
-                    onToggleSelect={() => toggleSelect(m.id)}
-                    onReview={() => openMistake(m)}
-                    onToggleFavorite={() => toggleFavorite(m.id)}
-                    favorited={favorited.has(m.id)}
-                  />
-                ))}
+          {groups.map((group) => {
+            const cards = group.items.map((m) => (
+              <MistakeCardDesktop
+                key={m.id}
+                mistake={m}
+                selected={selected.has(m.id)}
+                onToggleSelect={() => toggleSelect(m.id)}
+                onReview={() => openMistake(m)}
+                onToggleFavorite={() => toggleFavorite(m.id)}
+                favorited={favorited.has(m.id)}
+              />
+            ));
+            if (group.taskNumber !== null) {
+              return (
+                <MistakeNumberGroup
+                  key={group.taskNumber}
+                  taskNumber={group.taskNumber}
+                  count={group.items.length}
+                >
+                  {cards}
+                </MistakeNumberGroup>
+              );
+            }
+            return (
+              <div key={group.label}>
+                {group.label && <p className={`text-h3 ${styles.groupLabel}`}>{group.label}</p>}
+                <div className={styles.list}>{cards}</div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className={styles.sidebar}>
@@ -198,6 +211,7 @@ function toggleInSet(set: ReadonlySet<string>, id: string): ReadonlySet<string> 
 
 interface MistakeGroup {
   label: string | null;
+  taskNumber: number | null;
   items: readonly Mistake[];
 }
 
@@ -211,7 +225,7 @@ function buildGroups(items: readonly Mistake[], filter: FilterId): readonly Mist
     }
     return [...byTopic.entries()]
       .sort((a, b) => b[1].length - a[1].length)
-      .map(([topic, group]) => ({ label: topic, items: group }));
+      .map(([topic, group]) => ({ label: topic, taskNumber: null, items: group }));
   }
 
   if (filter === 'byDate') {
@@ -220,10 +234,23 @@ function buildGroups(items: readonly Mistake[], filter: FilterId): readonly Mist
       const label = formatDateShort(m.date).split(' ').slice(1).join(' ');
       (byMonth.get(label) ?? byMonth.set(label, []).get(label)!).push(m);
     }
-    return [...byMonth.entries()].map(([label, group]) => ({ label, items: group }));
+    return [...byMonth.entries()].map(([label, group]) => ({
+      label,
+      taskNumber: null,
+      items: group,
+    }));
   }
 
-  return [{ label: null, items: source }];
+  // "Все ошибки" / "Неразобранные" group the real list by task number
+  // instead of one long flat feed — the number is the primary visual
+  // element (MistakeNumberGroup), expandable per group.
+  const byTask = new Map<number, Mistake[]>();
+  for (const m of source) {
+    (byTask.get(m.taskNumber) ?? byTask.set(m.taskNumber, []).get(m.taskNumber)!).push(m);
+  }
+  return [...byTask.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([number, group]) => ({ label: null, taskNumber: number, items: group }));
 }
 
 function buildRecommendations(

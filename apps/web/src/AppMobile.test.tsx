@@ -10,7 +10,11 @@ vi.mock('./lib/api.js', () => ({
   getTask: vi.fn(),
   listTasksByNumber: vi.fn(),
   getProgressSummary: vi.fn(() => new Promise(() => {})),
+  getProgressByTaskNumber: vi.fn(() => new Promise(() => {})),
+  getProgressByTopic: vi.fn(() => new Promise(() => {})),
+  getTaskNumberStatisticsDetail: vi.fn(() => new Promise(() => {})),
   getMistakes: vi.fn(() => new Promise(() => {})),
+  getLearningProfile: vi.fn(() => new Promise(() => {})),
   listFavoriteTaskIds: vi.fn(() => Promise.resolve({ taskIds: [] })),
   addFavorite: vi.fn(() => Promise.resolve()),
   removeFavorite: vi.fn(() => Promise.resolve()),
@@ -29,37 +33,76 @@ function OverlayMarker() {
   return <p data-testid="overlay">{overlay?.screen ?? 'none'}</p>;
 }
 
-describe('AppMobile — bottom nav "Мои ошибки" slot', () => {
-  it('opens the real Mistakes screen, not a WIP training tab', async () => {
-    const user = userEvent.setup();
-    render(
-      <NavigationProvider>
-        <AppMobile />
-        <OverlayMarker />
-      </NavigationProvider>,
-    );
+function renderApp() {
+  return render(
+    <NavigationProvider>
+      <AppMobile />
+      <OverlayMarker />
+    </NavigationProvider>,
+  );
+}
 
-    await user.click(screen.getByRole('button', { name: 'Мои ошибки' }));
+describe('AppMobile — bottom nav (matches profile_mobile_target.jpeg: Главная/Задания/Статистика/Достижения/Профиль)', () => {
+  it('renders all five real nav slots', () => {
+    renderApp();
+    expect(screen.getByRole('button', { name: 'Главная' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Задания' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Статистика' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Достижения' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Профиль' })).toBeInTheDocument();
+  });
+
+  it('"Задания" opens the real Training setup screen directly, not a WIP placeholder', async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getByRole('button', { name: 'Задания' }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Начать тренировку/ })).toBeInTheDocument();
+    });
+  });
+
+  it('"Профиль" opens the real Profile screen while keeping the bottom nav visible, Профиль highlighted', async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getByRole('button', { name: 'Профиль' }));
+    expect(screen.getByTestId('overlay')).toHaveTextContent('profile');
+    const profileTab = screen.getByRole('button', { name: 'Профиль' });
+    expect(profileTab).toHaveAttribute('aria-current', 'page');
+    // The rest of the nav stays usable from inside Профиль — unlike
+    // every other overlay, this one isn't a chrome-less takeover.
+    expect(screen.getByRole('button', { name: 'Главная' })).toBeInTheDocument();
+  });
+
+  it('"Мои ошибки" stays reachable (Statistics\' own link), even though it is no longer a bottom-nav slot', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getProgressSummary).mockResolvedValue({
+      solvedTotal: 0,
+      correctTotal: 0,
+      incorrectTotal: 0,
+      accuracyPercent: 0,
+      bySubject: [],
+      byTaskNumber: [],
+      byTopic: [],
+      timeBySubject: [],
+    });
+    renderApp();
+    await user.click(screen.getByRole('button', { name: 'Статистика' }));
+    const mistakesLink = await screen.findByRole('button', { name: /Анализ ошибок|Мои ошибки/ });
+    await user.click(mistakesLink);
     await waitFor(() => {
       expect(screen.getByTestId('overlay')).toHaveTextContent('mistakes');
     });
   });
 });
 
-describe('AppMobile — menu "Тренировка" item', () => {
-  it('opens the real Training setup screen, not a WIP placeholder (Phase 10: reachable on mobile)', async () => {
+describe("AppMobile — menu (opened from Профиль's header button)", () => {
+  it('opens the real Training setup screen from the menu, not a WIP placeholder', async () => {
     const user = userEvent.setup();
     vi.mocked(api.listCollections).mockResolvedValue([]);
-    render(
-      <NavigationProvider>
-        <AppMobile />
-      </NavigationProvider>,
-    );
+    renderApp();
 
-    // Training no longer has a bottom-nav shortcut (that slot is now
-    // "Мои ошибки" — audit Block 2), but it stays reachable from the
-    // menu, opened via the bottom nav's "Профиль" slot.
     await user.click(screen.getByRole('button', { name: 'Профиль' }));
+    await user.click(screen.getByRole('button', { name: 'Меню' }));
     await user.click(screen.getByRole('button', { name: 'Тренировка' }));
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Начать тренировку/ })).toBeInTheDocument();

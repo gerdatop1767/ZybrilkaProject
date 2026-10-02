@@ -74,4 +74,25 @@ describe('MistakesDesktop', () => {
     await user.click(screen.getAllByRole('button', { name: /Разобрать/ })[0]!);
     expect(screen.getByTestId('overlay')).toHaveTextContent('task');
   });
+
+  it('groups mistakes by task number, with the number as the group header', async () => {
+    renderScreen();
+    await screen.findByText(apiMistakes[0]!.conditionMd);
+    expect(screen.getByRole('button', { name: /№15/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /№11/ })).toBeInTheDocument();
+    expect(screen.getAllByText('1 ошибка')).toHaveLength(2);
+  });
+
+  it('collapses and re-expands a task-number group without losing the real mistake', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await screen.findByText(apiMistakes[0]!.conditionMd);
+    const group15Header = screen.getByRole('button', { name: /№15/ });
+    expect(group15Header).toHaveAttribute('aria-expanded', 'true');
+    await user.click(group15Header);
+    expect(group15Header).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText(apiMistakes[0]!.conditionMd)).not.toBeInTheDocument();
+    await user.click(group15Header);
+    expect(await screen.findByText(apiMistakes[0]!.conditionMd)).toBeInTheDocument();
+  });
 });

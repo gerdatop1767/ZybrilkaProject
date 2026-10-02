@@ -20,6 +20,7 @@ import { SubjectMobile } from './screens/Subject/SubjectMobile.js';
 import { Onboarding } from './screens/Onboarding/Onboarding.js';
 import { Profile } from './screens/Profile/Profile.js';
 import { Training } from './screens/Training/Training.js';
+import { TrainingByNumber } from './screens/Training/TrainingByNumber.js';
 import { LearningSession } from './screens/LearningSession/LearningSession.js';
 
 /**
@@ -40,24 +41,38 @@ export function AppMobile() {
   const contentOverlay = isMenuOpen ? null : overlay;
 
   function selectTab(id: string) {
-    // The bottom nav's second slot is "Мои ошибки" (audit Block 2) — a
-    // real overlay screen, not a MainTabId, so it needs its own
-    // navigate() rather than falling through to the tab branch below.
-    if (id === 'mistakes') {
-      navigate({ screen: 'mistakes' });
-      return;
-    }
-    // No approved "Профиль" screen exists yet, and the approved Menu
-    // screenshot already doubles as the profile/account hub — so the
-    // bottom nav's profile slot opens it rather than a dead WIP tab.
+    // Профиль is a real overlay screen (see navigation.tsx's doc comment
+    // on `profile`), not a MainTabId, so it needs its own navigate()
+    // carrying `from` — unlike every other overlay entry, the bottom
+    // nav stays visible over it (see the dedicated branch below), so
+    // `from` only matters for BackRow if the user later drills further in.
     if (id === 'profile') {
-      navigate({ screen: 'menu' });
+      navigate({ screen: 'profile', from: { screen: tab } });
       return;
     }
     navigate({ screen: id as MainTabId });
   }
 
   const menu = <MobileMenu open={isMenuOpen} onClose={back} activeTab={tab} />;
+
+  // Профиль is the one overlay that keeps the bottom nav visible (with
+  // "Профиль" highlighted) — every other overlay below is a chrome-less
+  // full-screen takeover. See navigation.tsx: `profile` deliberately
+  // stays an OverlayRoute (not a MainTabId) so Desktop's `from`-based
+  // BackRow keeps working untouched; this is a mobile-only rendering
+  // choice, not a routing change.
+  if (contentOverlay && contentOverlay.screen === 'profile') {
+    return (
+      <>
+        <MobileShell
+          nav={<BottomNav items={defaultBottomNavItems} activeId="profile" onSelect={selectTab} />}
+        >
+          <Profile />
+        </MobileShell>
+        {menu}
+      </>
+    );
+  }
 
   if (contentOverlay) {
     return (
@@ -111,6 +126,7 @@ export function AppMobile() {
         {contentOverlay.screen === 'trainingVariants' && (
           <WipPlaceholder title="Варианты" note="Экран в разработке — следующий блок." />
         )}
+        {contentOverlay.screen === 'trainingByNumber' && <TrainingByNumber />}
         {contentOverlay.screen === 'rating' && <RatingMobile />}
         {contentOverlay.screen === 'about' && <AboutMobile />}
         {contentOverlay.screen === 'learningCenter' && (
@@ -137,7 +153,6 @@ export function AppMobile() {
           <WipPlaceholder title="Настройки" note="Экран в разработке — следующий блок." />
         )}
         {contentOverlay.screen === 'help' && <HelpMobile />}
-        {contentOverlay.screen === 'profile' && <Profile />}
         {menu}
       </MobileShell>
     );
