@@ -77,6 +77,22 @@ export async function getCorrectlyAttemptedTaskIds(
   return rows.map((r) => r.taskId);
 }
 
+/** Task ids the user has ANY attempt on (correct or not) — the broader
+ * "unseen" filter Training's 🔄 toggle uses elsewhere in the app
+ * (never-attempted, not just never-solved-correctly). */
+export async function getAttemptedTaskIds(
+  db: Database,
+  userId: string,
+  subjectId: string,
+): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ taskId: schema.attempts.taskId })
+    .from(schema.attempts)
+    .innerJoin(schema.tasks, eq(schema.tasks.id, schema.attempts.taskId))
+    .where(and(eq(schema.attempts.userId, userId), eq(schema.tasks.subjectId, subjectId)));
+  return rows.map((r) => r.taskId);
+}
+
 /** Used only to exclude subjects with literally no published tasks
  * when auto-resolving a subject (never recommend into an empty pool). */
 export async function subjectHasPublishedTasks(db: Database, subjectId: string): Promise<boolean> {

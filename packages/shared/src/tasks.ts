@@ -113,6 +113,18 @@ export const taskListResponseSchema = z.object({
 });
 export type TaskListResponse = z.infer<typeof taskListResponseSchema>;
 
+/**
+ * Real published-task counts per subject, one request instead of a
+ * separate `/tasks?subject=X` round trip per subject card (e.g. Home's
+ * subject grid). A subject with zero published tasks simply doesn't
+ * appear — callers treat an absent subject as 0, never fabricating a
+ * row for it.
+ */
+export const taskCountsBySubjectResponseSchema = z.object({
+  items: z.array(z.object({ subjectId: z.string(), count: z.number().int().nonnegative() })),
+});
+export type TaskCountsBySubjectResponse = z.infer<typeof taskCountsBySubjectResponseSchema>;
+
 export const randomTaskQuerySchema = z.object({
   subject: z.string().optional(),
   taskNumber: z.coerce.number().int().positive().optional(),

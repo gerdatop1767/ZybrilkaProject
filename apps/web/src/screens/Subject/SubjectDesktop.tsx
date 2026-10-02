@@ -3,7 +3,12 @@ import type { CollectionListItem, ProgressByTopicResponse, TaskPublic } from '@z
 import { useNavigation, type Route } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
 import { startCustomVariant, startRealTask } from '../../lib/startTraining.js';
-import { getProgressByTopic, listCollections } from '../../lib/api.js';
+import {
+  getProgressByTopic,
+  getProgressSummary,
+  getTaskCountsBySubject,
+  listCollections,
+} from '../../lib/api.js';
 import { getSubjectContent, type SubjectModeId } from '../../data/subjectContent.js';
 import { BackRow, type BackRowProps } from '../../ui/BackRow/BackRow.js';
 import { Card } from '../../ui/Card/Card.js';
@@ -15,6 +20,7 @@ import { ProgressBar } from '../../ui/Progress/ProgressBar.js';
 import { CircularProgress } from '../../ui/Progress/CircularProgress.js';
 import { FavoritesList } from '../../ui/Favorites/FavoritesList.js';
 import { clsx } from '../../lib/clsx.js';
+import { FadeIn } from '../../ui/motion/motion.js';
 import styles from './SubjectDesktop.module.css';
 
 /** Sentinel Select value for "Общий банк" (no collection filter) — Select's
@@ -86,8 +92,41 @@ export function SubjectDesktop({
   const [collectionsLoaded, setCollectionsLoaded] = useState(false);
   const [topicsSlug, setTopicsSlug] = useState<string | null>(collectionSlug ?? null);
   const [topics, setTopics] = useState<readonly TopicProgressItem[]>([]);
+  // Real solved count + accuracy for this subject/user (Block D's
+  // `bySubject`), and real published-task count — replaces the static
+  // `subject.taskCount`/`mastery` demo fields. null until loaded.
+  const [solved, setSolved] = useState(0);
+  const [accuracyPercent, setAccuracyPercent] = useState(0);
+  const [totalTasks, setTotalTasks] = useState<number | null>(null);
 
-  const solved = Math.round((subject.taskCount * subject.mastery) / 100);
+  useEffect(() => {
+    let cancelled = false;
+    void getProgressSummary()
+      .then((data) => {
+        if (cancelled) return;
+        const entry = data.bySubject.find((s) => s.subjectId === subject.id);
+        setSolved(entry?.solved ?? 0);
+        setAccuracyPercent(entry ? Math.round(entry.accuracyPercent) : 0);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSolved(0);
+          setAccuracyPercent(0);
+        }
+      });
+    void getTaskCountsBySubject()
+      .then((res) => {
+        if (cancelled) return;
+        const entry = res.items.find((i) => i.subjectId === subject.id);
+        setTotalTasks(entry?.count ?? 0);
+      })
+      .catch(() => {
+        if (!cancelled) setTotalTasks(0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [subject.id]);
 
   // Real collections for this subject — "Источник" always offers "Общий
   // банк" plus whatever collections/variants exist, generically, never a
@@ -191,7 +230,7 @@ export function SubjectDesktop({
     : { to: { screen: parentScreen }, label: parentLabel };
 
   return (
-    <div>
+    <FadeIn>
       <BackRow {...backProps} />
 
       <div className={styles.hero}>
@@ -216,7 +255,7 @@ export function SubjectDesktop({
             </span>
             <span className={styles.heroStat}>
               <Icon name="progress" size={16} />
-              <strong>{subject.mastery}%</strong> средняя точность
+              <strong>{accuracyPercent}%</strong> средняя точность
             </span>
           </div>
         </div>
@@ -290,12 +329,12 @@ export function SubjectDesktop({
           <Card>
             <p className="text-h3">Твой прогресс</p>
             <div className={styles.progressRing}>
-              <CircularProgress value={subject.mastery} size={110} strokeWidth={10}>
-                <span className="text-h2">{subject.mastery}%</span>
+              <CircularProgress value={accuracyPercent} size={110} strokeWidth={10}>
+                <span className="text-h2">{accuracyPercent}%</span>
               </CircularProgress>
             </div>
             <p className="text-body-sm text-secondary" style={{ textAlign: 'center' }}>
-              {solved} из {subject.taskCount} заданий решено
+              {solved} из {totalTasks ?? '—'} заданий решено
             </p>
           </Card>
 
@@ -354,7 +393,7 @@ export function SubjectDesktop({
           </Card>
         </div>
       </div>
-    </div>
+    </FadeIn>
   );
 }
 

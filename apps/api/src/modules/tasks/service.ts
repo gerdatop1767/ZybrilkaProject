@@ -8,6 +8,7 @@ import {
   type AttemptRequest,
   type AttemptResult,
   type RandomTaskQuery,
+  type TaskCountsBySubjectResponse,
   type TaskListQuery,
   type TaskListResponse,
   type TaskPublic,
@@ -72,6 +73,11 @@ function toTaskWithSolution(row: repo.TaskWithTopic): TaskWithSolution {
 export async function listTasks(db: Database, query: TaskListQuery): Promise<TaskListResponse> {
   const { items, nextCursor } = await repo.listTasks(db, query);
   return { items: items.map(toPublicTask), nextCursor };
+}
+
+export async function getCountsBySubject(db: Database): Promise<TaskCountsBySubjectResponse> {
+  const items = await repo.getCountsBySubject(db);
+  return { items };
 }
 
 /**

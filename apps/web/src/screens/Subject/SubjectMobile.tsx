@@ -3,7 +3,12 @@ import type { CollectionListItem, ProgressByTopicResponse, TaskPublic } from '@z
 import { useNavigation, type Route } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
 import { startCustomVariant, startRealTask } from '../../lib/startTraining.js';
-import { getProgressByTopic, listCollections } from '../../lib/api.js';
+import {
+  getProgressByTopic,
+  getProgressSummary,
+  getTaskCountsBySubject,
+  listCollections,
+} from '../../lib/api.js';
 import { getSubjectContent, type SubjectModeId } from '../../data/subjectContent.js';
 import { Card } from '../../ui/Card/Card.js';
 import { Button } from '../../ui/Button/Button.js';
@@ -68,8 +73,41 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
   const [collectionsLoaded, setCollectionsLoaded] = useState(false);
   const [topicsSlug, setTopicsSlug] = useState<string | null>(collectionSlug ?? null);
   const [topics, setTopics] = useState<readonly TopicProgressItem[]>([]);
+  // Real solved count + accuracy for this subject/user (Block D's
+  // `bySubject`), and real published-task count — replaces the static
+  // `subject.taskCount`/`mastery` demo fields. null until loaded.
+  const [solved, setSolved] = useState(0);
+  const [accuracyPercent, setAccuracyPercent] = useState(0);
+  const [totalTasks, setTotalTasks] = useState<number | null>(null);
 
-  const solved = Math.round((subject.taskCount * subject.mastery) / 100);
+  useEffect(() => {
+    let cancelled = false;
+    void getProgressSummary()
+      .then((data) => {
+        if (cancelled) return;
+        const entry = data.bySubject.find((s) => s.subjectId === subject.id);
+        setSolved(entry?.solved ?? 0);
+        setAccuracyPercent(entry ? Math.round(entry.accuracyPercent) : 0);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSolved(0);
+          setAccuracyPercent(0);
+        }
+      });
+    void getTaskCountsBySubject()
+      .then((res) => {
+        if (cancelled) return;
+        const entry = res.items.find((i) => i.subjectId === subject.id);
+        setTotalTasks(entry?.count ?? 0);
+      })
+      .catch(() => {
+        if (!cancelled) setTotalTasks(0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [subject.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -212,7 +250,7 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
               </span>
               <span className={styles.heroStat}>
                 <Icon name="progress" size={14} />
-                <strong>{subject.mastery}%</strong> точность
+                <strong>{accuracyPercent}%</strong> точность
               </span>
             </div>
           </Card>
@@ -269,12 +307,12 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
           <Card>
             <p className="text-h3">Твой прогресс</p>
             <div className={styles.progressRing}>
-              <CircularProgress value={subject.mastery} size={96} strokeWidth={9}>
-                <span className="text-h2">{subject.mastery}%</span>
+              <CircularProgress value={accuracyPercent} size={96} strokeWidth={9}>
+                <span className="text-h2">{accuracyPercent}%</span>
               </CircularProgress>
             </div>
             <p className="text-body-sm text-secondary" style={{ textAlign: 'center' }}>
-              {solved} из {subject.taskCount} заданий решено
+              {solved} из {totalTasks ?? '—'} заданий решено
             </p>
           </Card>
 

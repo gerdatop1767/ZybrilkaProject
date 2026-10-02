@@ -18,6 +18,11 @@ const MAX_TOTAL = 10;
 const startSessionBodySchema = z.object({
   subjectId: z.string().min(1).optional(),
   limit: z.coerce.number().int().min(MIN_TOTAL).max(MAX_TOTAL).optional().default(DEFAULT_TOTAL),
+  /** Smart Training's 🔄 "Только нерешённые" / 🎲 "Случайное" —
+   * see learningPath/service.ts's GetLearningPathContext for what
+   * each one changes. */
+  unseenOnly: z.boolean().optional(),
+  randomizeTopTier: z.boolean().optional(),
 });
 
 const sessionParamsSchema = z.object({ sessionId: z.uuid() });
@@ -46,6 +51,8 @@ export const learningSessionRoutes: FastifyPluginAsync<LearningSessionRoutesOpti
     const session = await startLearningSession(db, request.userId, {
       subjectId: body.data.subjectId,
       total: body.data.limit,
+      unseenOnly: body.data.unseenOnly,
+      randomizeTopTier: body.data.randomizeTopTier,
     });
     if (!session) return reply.code(404).send({ error: 'no_candidate_subject' });
     return session;

@@ -39,6 +39,22 @@ describe('tasks routes', () => {
     }
   });
 
+  it('GET /api/v1/tasks/counts returns real published-task counts per subject, "counts" not swallowed by /tasks/:id', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/v1/tasks/counts' });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(Array.isArray(body.items)).toBe(true);
+    const math = body.items.find((item: { subjectId: string }) => item.subjectId === 'math');
+    expect(math).toBeDefined();
+    expect(math.count).toBeGreaterThan(0);
+    const mathTasks = await testDb.db
+      .select()
+      .from(schema.tasks)
+      .where(eq(schema.tasks.subjectId, 'math'));
+    const publishedMathCount = mathTasks.filter((t) => t.status === 'published').length;
+    expect(math.count).toBe(publishedMathCount);
+  });
+
   it('GET /api/v1/tasks/:id returns 404 for an unknown id', async () => {
     const res = await app.inject({ method: 'GET', url: `/api/v1/tasks/${randomUUID()}` });
     expect(res.statusCode).toBe(404);

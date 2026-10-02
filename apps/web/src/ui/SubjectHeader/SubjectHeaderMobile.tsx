@@ -9,6 +9,10 @@ export interface SubjectHeaderMobileProps {
   title: string;
   onBack?: () => void;
   trailing?: ReactNode;
+  /** When given, the subject name + chevron becomes a real picker
+   * trigger (Statistics' subject filter) — other callers (Мои ошибки)
+   * that don't pass it keep today's purely decorative row. */
+  onSelectSubject?: () => void;
 }
 
 /**
@@ -24,7 +28,17 @@ export function SubjectHeaderMobile({
   title,
   onBack,
   trailing,
+  onSelectSubject,
 }: SubjectHeaderMobileProps) {
+  const subjectRow = (
+    <span className={styles.subjectRow}>
+      <p className="text-body" style={{ fontWeight: 700 }}>
+        {subject.shortName}
+      </p>
+      <Icon name="chevronDown" size={16} />
+    </span>
+  );
+
   return (
     <div className={styles.header}>
       {onBack && (
@@ -39,12 +53,18 @@ export function SubjectHeaderMobile({
       )}
       <SubjectTile glyph={subject.glyph} color={subject.color} size={40} />
       <div className={styles.headerText}>
-        <span className={styles.subjectRow}>
-          <p className="text-body" style={{ fontWeight: 700 }}>
-            {subject.shortName}
-          </p>
-          <Icon name="chevronDown" size={16} />
-        </span>
+        {onSelectSubject ? (
+          <button
+            type="button"
+            className={styles.subjectRowButton}
+            onClick={onSelectSubject}
+            aria-haspopup="listbox"
+          >
+            {subjectRow}
+          </button>
+        ) : (
+          subjectRow
+        )}
         <p className="text-body-sm text-secondary">{title}</p>
       </div>
       {trailing}

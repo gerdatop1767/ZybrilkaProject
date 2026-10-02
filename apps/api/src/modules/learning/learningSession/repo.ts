@@ -9,6 +9,8 @@ export interface LearningSessionRow {
   readonly subjectId: string;
   readonly total: number;
   readonly consumedTaskIds: readonly string[];
+  readonly unseenOnly: boolean;
+  readonly randomizeTopTier: boolean;
   readonly status: LearningSessionStatus;
   readonly startedAt: Date;
   readonly completedAt: Date | null;
@@ -21,6 +23,8 @@ function toRow(row: typeof schema.learningSessions.$inferSelect): LearningSessio
     subjectId: row.subjectId,
     total: row.total,
     consumedTaskIds: row.consumedTaskIds,
+    unseenOnly: row.unseenOnly,
+    randomizeTopTier: row.randomizeTopTier,
     status: row.status as LearningSessionStatus,
     startedAt: row.startedAt,
     completedAt: row.completedAt,
@@ -32,7 +36,14 @@ function toRow(row: typeof schema.learningSessions.$inferSelect): LearningSessio
  * with zero consumed tasks. */
 export async function createSession(
   db: Database,
-  input: { userId: string; subjectId: string; total: number; firstTaskId: string },
+  input: {
+    userId: string;
+    subjectId: string;
+    total: number;
+    firstTaskId: string;
+    unseenOnly?: boolean;
+    randomizeTopTier?: boolean;
+  },
 ): Promise<LearningSessionRow> {
   const [row] = await db
     .insert(schema.learningSessions)
@@ -41,6 +52,8 @@ export async function createSession(
       subjectId: input.subjectId,
       total: input.total,
       consumedTaskIds: [input.firstTaskId],
+      unseenOnly: input.unseenOnly ?? false,
+      randomizeTopTier: input.randomizeTopTier ?? false,
     })
     .returning();
   return toRow(row!);

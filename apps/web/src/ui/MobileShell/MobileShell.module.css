@@ -13,6 +13,10 @@
   max-width: var(--layout-max-width);
   margin: 0 auto;
   background: var(--color-bg-base);
+  /* A defensive clamp, not a fix for any one screen — no child's own
+     layout bug (an unbounded flex row, a wide table, ...) should ever
+     be able to push the whole page sideways. */
+  overflow-x: hidden;
 }
 
 /* Persistent header: logo + streak/level chips, matching the approved

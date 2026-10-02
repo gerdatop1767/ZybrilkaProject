@@ -131,7 +131,7 @@ export function StatisticsDesktop() {
   const days = periodDays[period];
   useEffect(() => {
     let cancelled = false;
-    void getProgressDaily({ days })
+    void getProgressDaily({ days, subject: subjectId })
       .then((res) => {
         if (!cancelled) setDailyItems(res.items);
       })
@@ -141,7 +141,7 @@ export function StatisticsDesktop() {
     return () => {
       cancelled = true;
     };
-  }, [days]);
+  }, [days, subjectId]);
 
   // Headline tiles scope to the selected subject (Statistics 2.0 Step
   // 2) using the real per-subject rows `/progress/summary` already
@@ -157,7 +157,11 @@ export function StatisticsDesktop() {
     [taskNumberItems],
   );
 
-  const mistakesSummary = useMemo(() => computeMistakesSummary(mistakes), [mistakes]);
+  const subjectMistakes = useMemo(
+    () => mistakes.filter((m) => m.subjectId === subjectId),
+    [mistakes, subjectId],
+  );
+  const mistakesSummary = useMemo(() => computeMistakesSummary(subjectMistakes), [subjectMistakes]);
   const difficultTopics = useMemo(
     () => mistakesSummary.topicBreakdown.filter((row) => row.topic !== 'Остальные'),
     [mistakesSummary],
@@ -330,7 +334,12 @@ export function StatisticsDesktop() {
               Пока нет опубликованных заданий по этому предмету.
             </p>
           ) : (
-            <TaskNumberGrid rows={taskNumberProgress} onSelect={setSelectedTaskNumber} compact />
+            <>
+              <p className="text-body-sm text-secondary" style={{ marginBottom: 'var(--space-2)' }}>
+                Нажми на номер задания, чтобы посмотреть подробную статистику
+              </p>
+              <TaskNumberGrid rows={taskNumberProgress} onSelect={setSelectedTaskNumber} compact />
+            </>
           )}
         </Card>
       )}

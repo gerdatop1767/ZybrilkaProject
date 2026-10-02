@@ -54,7 +54,7 @@ describe('StatisticsDesktop — period switching', () => {
 
     const line = screen.getByRole('img', { name: 'График динамики правильных ответов' });
     expect(line.querySelectorAll('circle')).toHaveLength(90);
-    expect(api.getProgressDaily).toHaveBeenLastCalledWith({ days: 90 });
+    expect(api.getProgressDaily).toHaveBeenLastCalledWith({ days: 90, subject: 'math' });
   });
 
   it('switching between periods refetches with the matching days and changes the rendered point count', async () => {
@@ -63,7 +63,7 @@ describe('StatisticsDesktop — period switching', () => {
 
     await user.click(screen.getByRole('tab', { name: '7 дней' }));
     expect(screen.getByRole('img', { name: 'График активности по дням' }).children).toHaveLength(7);
-    expect(api.getProgressDaily).toHaveBeenLastCalledWith({ days: 7 });
+    expect(api.getProgressDaily).toHaveBeenLastCalledWith({ days: 7, subject: 'math' });
 
     await user.click(screen.getByRole('tab', { name: '30 дней' }));
     expect(screen.getByRole('img', { name: 'График активности по дням' }).children).toHaveLength(

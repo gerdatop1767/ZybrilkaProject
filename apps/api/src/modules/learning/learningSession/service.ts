@@ -10,6 +10,11 @@ export interface StartLearningSessionContext {
   readonly subjectId?: string;
   /** Already validated at the route layer (1..10). */
   readonly total: number;
+  /** Smart Training's 🔄/🎲 — persisted on the session (see the DB
+   * schema's doc comment) so every `next` step applies the same
+   * filter/selection the session was started with. */
+  readonly unseenOnly?: boolean;
+  readonly randomizeTopTier?: boolean;
 }
 
 /**
@@ -35,7 +40,12 @@ export async function startLearningSession(
   const subjectId = await resolveSubjectId(db, userId, { subjectId: context.subjectId });
   if (!subjectId) return null;
 
-  const path = await getLearningPath(db, userId, { subjectId, limit: 1 });
+  const path = await getLearningPath(db, userId, {
+    subjectId,
+    limit: 1,
+    unseenOnly: context.unseenOnly,
+    randomizeTopTier: context.randomizeTopTier,
+  });
   if (!path || path.steps.length === 0) return null;
 
   const firstStep = path.steps[0]!;
@@ -44,6 +54,8 @@ export async function startLearningSession(
     subjectId,
     total: context.total,
     firstTaskId: firstStep.task.id,
+    unseenOnly: context.unseenOnly,
+    randomizeTopTier: context.randomizeTopTier,
   });
 
   return {
@@ -88,6 +100,8 @@ export async function advanceLearningSession(
     subjectId: session.subjectId,
     limit: 1,
     excludeTaskIds: session.consumedTaskIds,
+    unseenOnly: session.unseenOnly,
+    randomizeTopTier: session.randomizeTopTier,
   });
 
   if (!path || path.steps.length === 0) {

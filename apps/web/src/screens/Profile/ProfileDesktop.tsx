@@ -9,6 +9,7 @@ import { Card } from '../../ui/Card/Card.js';
 import { Button } from '../../ui/Button/Button.js';
 import { Icon } from '../../ui/Icon/Icon.js';
 import type { IconName } from '../../ui/Icon/icons.js';
+import { FadeIn } from '../../ui/motion/motion.js';
 import styles from './ProfileDesktop.module.css';
 
 function subjectShortName(subjectId: string): string {
@@ -126,7 +127,7 @@ export function ProfileDesktop({ from }: ProfileDesktopProps) {
   ];
 
   return (
-    <div>
+    <FadeIn>
       <BackRow to={from} label={from && getRouteLabel(from)} />
 
       <div className={styles.headRow}>
@@ -204,7 +205,7 @@ export function ProfileDesktop({ from }: ProfileDesktopProps) {
           </button>
         </div>
       </div>
-    </div>
+    </FadeIn>
   );
 }
 

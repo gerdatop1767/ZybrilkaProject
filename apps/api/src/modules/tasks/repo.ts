@@ -72,6 +72,22 @@ export function taskIdsForCollectionOrVariant(
   return null;
 }
 
+/**
+ * Real published-task counts, one query for every subject at once —
+ * the Home "Математика — N заданий" cards need exactly this, and
+ * fetching it once here beats a separate `/tasks?subject=X` round trip
+ * per subject card.
+ */
+export async function getCountsBySubject(
+  db: Database,
+): Promise<{ subjectId: string; count: number }[]> {
+  return db
+    .select({ subjectId: schema.tasks.subjectId, count: count() })
+    .from(schema.tasks)
+    .where(eq(schema.tasks.status, 'published'))
+    .groupBy(schema.tasks.subjectId);
+}
+
 export async function listTasks(
   db: Database,
   filters: TaskListQuery,

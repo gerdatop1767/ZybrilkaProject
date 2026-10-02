@@ -11,6 +11,7 @@ import type {
   ProgressDailyResponse,
   ProgressSummary,
   SaveLearningProfileRequest,
+  TaskCountsBySubjectResponse,
   TaskNumberStatisticsDetail,
   TaskPublic,
   TaskWithSolution,
@@ -141,6 +142,15 @@ export function listTasksByNumber(subject: string, taskNumber: number): Promise<
   ).then((r) => r.items);
 }
 
+/**
+ * Real published-task counts for every subject in one request — Home's
+ * subject cards use this instead of the static `taskCount` in
+ * subjects.ts. A subject with no rows here has 0 published tasks.
+ */
+export function getTaskCountsBySubject(): Promise<TaskCountsBySubjectResponse> {
+  return apiFetch('/tasks/counts');
+}
+
 export function submitAttempt(taskId: string, request: AttemptRequest): Promise<AttemptResult> {
   return apiFetch(`/tasks/${taskId}/attempt`, {
     method: 'POST',
@@ -213,9 +223,12 @@ export function getTaskNumberStatisticsDetail(
  * bucketing/dedup rules. Only days with at least one attempt come
  * back; callers zero-fill the requested range themselves.
  */
-export function getProgressDaily(params: { days?: number } = {}): Promise<ProgressDailyResponse> {
+export function getProgressDaily(
+  params: { days?: number; subject?: string } = {},
+): Promise<ProgressDailyResponse> {
   const query = new URLSearchParams();
   if (params.days) query.set('days', String(params.days));
+  if (params.subject) query.set('subject', params.subject);
   const qs = query.toString();
   return apiFetch(`/progress/daily${qs ? `?${qs}` : ''}`);
 }
@@ -257,6 +270,10 @@ export function saveLearningProfile(
 export function startLearningSession(params: {
   subjectId?: string;
   limit?: number;
+  /** Smart Training's 🔄/🎲 — see the shared doc on
+   * GetLearningPathContext for what each one changes. */
+  unseenOnly?: boolean;
+  randomizeTopTier?: boolean;
 }): Promise<LearningSessionResponse> {
   return apiFetch('/me/learning/sessions', { method: 'POST', body: JSON.stringify(params) });
 }

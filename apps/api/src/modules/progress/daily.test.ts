@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { schema } from '@zybrilka/db';
 import { createSeededTestDb } from '@zybrilka/db/testing';
+import { ne } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../../app.js';
 
@@ -18,8 +19,8 @@ import { buildApp } from '../../app.js';
 describe('GET /api/v1/progress/daily', () => {
   let testDb: Awaited<ReturnType<typeof createSeededTestDb>>;
   let app: ReturnType<typeof buildApp>;
-  let taskA: { id: string };
-  let taskB: { id: string };
+  let taskA: { id: string; subjectId: string };
+  let taskB: { id: string; subjectId: string };
 
   beforeAll(async () => {
     testDb = await createSeededTestDb();
@@ -183,6 +184,36 @@ describe('GET /api/v1/progress/daily', () => {
     expect(res.statusCode).toBe(400);
     const res2 = await daily(randomUUID(), '?days=91');
     expect(res2.statusCode).toBe(400);
+  });
+
+  it('a subject filter scopes the daily activity to that subject only', async () => {
+    const otherSubjectTask = (
+      await testDb.db
+        .select()
+        .from(schema.tasks)
+        .where(ne(schema.tasks.subjectId, taskA.subjectId))
+        .limit(1)
+    )[0];
+    if (!otherSubjectTask) return; // seed has only one subject — nothing to assert
+    const anonId = randomUUID();
+    await insertAttempt({
+      userId: anonId,
+      taskId: taskA.id,
+      isCorrect: true,
+      createdAt: daysAgo(0),
+    });
+    await insertAttempt({
+      userId: anonId,
+      taskId: otherSubjectTask.id,
+      isCorrect: true,
+      createdAt: daysAgo(0),
+    });
+
+    const aggregate = await daily(anonId, '?days=7');
+    expect(aggregate.json().items[0]).toMatchObject({ solved: 2 });
+
+    const scoped = await daily(anonId, `?days=7&subject=${taskA.subjectId}`);
+    expect(scoped.json().items[0]).toMatchObject({ solved: 1 });
   });
 
   it('defaults to a sensible window when days is omitted', async () => {

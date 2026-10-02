@@ -189,14 +189,24 @@ export async function getByTopicWithTotals(
  * at least one correct attempt that same day. Only days with at least
  * one attempt are returned — callers zero-fill the requested range.
  */
-export async function getDaily(db: Database, userId: string, days: number) {
+export async function getDaily(
+  db: Database,
+  userId: string,
+  days: number,
+  /** Scopes the activity to one subject's tasks — omitted means every
+   * subject, same "no filter = aggregate" convention as the rest of
+   * this module. */
+  subjectId?: string,
+) {
   const since = new Date();
   since.setUTCDate(since.getUTCDate() - (days - 1));
   since.setUTCHours(0, 0, 0, 0);
 
   const day = sql<string>`to_char(${schema.attempts.createdAt} at time zone 'UTC', 'YYYY-MM-DD')`;
+  const conditions = [eq(schema.attempts.userId, userId), gte(schema.attempts.createdAt, since)];
+  if (subjectId) conditions.push(eq(schema.tasks.subjectId, subjectId));
 
-  return db
+  const query = db
     .select({
       date: day,
       solved: countDistinct(schema.attempts.taskId),
@@ -204,8 +214,16 @@ export async function getDaily(db: Database, userId: string, days: number) {
         sql`case when ${schema.attempts.isCorrect} then ${schema.attempts.taskId} end`,
       ),
     })
-    .from(schema.attempts)
-    .where(and(eq(schema.attempts.userId, userId), gte(schema.attempts.createdAt, since)))
+    .from(schema.attempts);
+
+  // Only joined when actually filtering by subject — every existing
+  // caller (no subjectId) keeps the exact same query it had before.
+  const rows = subjectId
+    ? query.innerJoin(schema.tasks, eq(schema.attempts.taskId, schema.tasks.id))
+    : query;
+
+  return rows
+    .where(and(...conditions))
     .groupBy(day)
     .orderBy(day);
 }

@@ -9,6 +9,8 @@ vi.mock('../../lib/api.js', () => ({
   getRandomTask: vi.fn(),
   listCollections: vi.fn(),
   getProgressByTopic: vi.fn(),
+  getProgressSummary: vi.fn(),
+  getTaskCountsBySubject: vi.fn(),
 }));
 
 // Every render starts on the 'topics' mode, so its effect always fires
@@ -16,6 +18,17 @@ vi.mock('../../lib/api.js', () => ({
 // default keeps unrelated tests from needing to know about topics.
 beforeEach(() => {
   vi.mocked(api.getProgressByTopic).mockResolvedValue({ items: [] });
+  vi.mocked(api.getProgressSummary).mockResolvedValue({
+    solvedTotal: 0,
+    correctTotal: 0,
+    incorrectTotal: 0,
+    accuracyPercent: 0,
+    bySubject: [],
+    byTaskNumber: [],
+    byTopic: [],
+    timeBySubject: [],
+  });
+  vi.mocked(api.getTaskCountsBySubject).mockResolvedValue({ items: [] });
 });
 
 const YASHCHENKO_COLLECTION = {

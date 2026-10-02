@@ -110,7 +110,7 @@ describe('App — mobile', () => {
     vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
     const user = userEvent.setup();
     renderApp();
-    await user.click(screen.getByRole('button', { name: /Тренировка · 15 заданий/ }));
+    await user.click(screen.getByRole('button', { name: /Тренировка · случайные задания/ }));
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: /Главная/ })).not.toBeInTheDocument();
     });

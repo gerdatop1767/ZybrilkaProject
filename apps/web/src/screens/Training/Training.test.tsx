@@ -405,6 +405,35 @@ describe('Training — "Умная тренировка" (Phase 10: real backend
     expect(screen.getByTestId('session')).toHaveTextContent('active:session-42');
   });
 
+  it('passes the 🎲/🔄 toggles through to startLearningSession, independent of each other', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.startLearningSession).mockResolvedValue({
+      sessionId: 'session-42',
+      subject: 'math',
+      status: 'active',
+      position: 1,
+      total: 5,
+      task: RANDOM_TASK,
+    });
+    renderTraining();
+
+    await user.click(screen.getByRole('button', { name: /Умная тренировка/ }));
+    await user.click(screen.getByRole('button', { name: 'Случайное' }));
+    await user.click(screen.getByRole('button', { name: 'Только нерешённые' }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+
+    await waitFor(() => {
+      expect(api.startLearningSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subjectId: 'math',
+          limit: 5,
+          randomizeTopTier: true,
+          unseenOnly: true,
+        }),
+      );
+    });
+  });
+
   it('shows an error and never fakes a session when the backend can find no candidate task', async () => {
     const user = userEvent.setup();
     vi.mocked(api.startLearningSession).mockResolvedValue(null);

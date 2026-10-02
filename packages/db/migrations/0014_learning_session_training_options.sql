@@ -1,0 +1,2 @@
+ALTER TABLE "learning_sessions" ADD COLUMN "unseen_only" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "learning_sessions" ADD COLUMN "randomize_top_tier" boolean DEFAULT false NOT NULL;
