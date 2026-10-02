@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { Toast, type ToastData, type ToastVariant } from './Toast.js';
 import styles from './Toast.module.css';
@@ -52,8 +60,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setQueue([]);
   }, []);
 
+  // Memoized for the same reason as NavigationProvider's value — show/
+  // dismiss/clear are already stable (useCallback), so this only
+  // changes identity when it actually needs to (never, in practice),
+  // instead of forcing every useToast() consumer to re-render whenever
+  // the queue changes for an unrelated toast.
+  const value = useMemo<ToastContextValue>(
+    () => ({ show, dismiss, clear }),
+    [show, dismiss, clear],
+  );
+
   return (
-    <ToastContext.Provider value={{ show, dismiss, clear }}>
+    <ToastContext.Provider value={value}>
       {children}
       {current &&
         createPortal(

@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { pathForRoute, routeFromPath } from './routes.js';
 import type { SubjectModeId } from '../data/subjectContent.js';
 
@@ -268,8 +276,18 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     }
   }, [overlay]);
 
+  // Memoized so a re-render of this provider (e.g. from a parent
+  // provider's own state changing, unrelated to navigation) doesn't
+  // hand every `useNavigation()` consumer in the tree a new object
+  // identity and force them all to re-render — only an actual
+  // tab/overlay change should do that.
+  const value = useMemo<NavigationContextValue>(
+    () => ({ tab, overlay, navigate, back }),
+    [tab, overlay, navigate, back],
+  );
+
   return (
-    <NavigationContext.Provider value={{ tab, overlay, navigate, back }}>
+    <NavigationContext.Provider value={value}>
       {children}
     </NavigationContext.Provider>
   );
