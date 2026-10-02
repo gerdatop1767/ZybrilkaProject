@@ -60,6 +60,38 @@ services:
     command: ['node', 'node_modules/@zybrilka/db/dist/migrate.js']
     restart: 'no'
 
+  # One-shot: upserts the canonical `subjects` rows (packages/db/src/
+  # canonicalSubjects.ts) and exits. Runs after `migrate` and before
+  # `sync-content`/`api`/`worker`, every deploy. Before this existed,
+  # only `migrate` (schema) and `sync-content` (which only ever upserts
+  # the single 'math' row as a side effect of importing math tasks) ran
+  # automatically — an already-provisioned production database kept
+  # whatever subjects it got the first time someone ran the full demo
+  # seed by hand (often just 'math'), so Onboarding's "какие предметы
+  # сдаёшь?" step let a user pick e.g. "Русский язык" in the UI, then
+  # failed to save with a generic error the moment they did (the PUT
+  # /me/learning-profile endpoint correctly rejects a subjectId with no
+  # matching `subjects` row — see that route's `unknown_subject` check).
+  # Safe to run unconditionally on a live database with real users:
+  # `syncSubjects` (packages/db/src/syncSubjects.ts) only ever
+  # inserts-or-updates a row by its stable `id`, never touching
+  # `tasks`/`attempts`/`user_subject_profiles`.
+  sync-subjects:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    image: zybrilka-api:latest
+    container_name: zybrilka-sync-subjects
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    networks:
+      - internal
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    command: ['node', 'node_modules/@zybrilka/db/dist/syncSubjects.js']
+    restart: 'no'
+
   # One-shot: syncs the EGE-2026 Variant 1 content (conditionMd,
   # solutionSteps, correctAnswerDisplay, ...) into the 19 existing task
   # rows and exits. Runs after `migrate` (needs the columns it adds,
@@ -84,7 +116,7 @@ services:
     networks:
       - internal
     depends_on:
-      migrate:
+      sync-subjects:
         condition: service_completed_successfully
     command: ['node', 'node_modules/@zybrilka/db/dist/importEge2026Variant1.js']
     restart: 'no'

@@ -49,47 +49,73 @@ docker compose -f infra/docker-compose.yml up -d --build
 Starts, in dependency order: `postgres` (with a persistent named
 volume, `postgres_data` — survives `down`/`up` and a container
 rebuild), a one-shot `migrate` job that applies any pending Drizzle
-**schema** migrations and exits, a one-shot `sync-content` job that
-upserts the EGE-2026 Variant 1 **content** (conditionMd, solutionSteps,
-correctAnswerDisplay, ...) into the 19 existing task rows and exits,
-`api` and `worker` (both wait for `sync-content` to finish
-successfully), `web`, and `caddy` (the only container publishing
-`80`/`443`), which reverse-proxies `/api/*` and `/health` to `api:3000`
-and everything else to `web:80`, obtaining/renewing its own TLS
-certificate automatically.
+**schema** migrations and exits, a one-shot `sync-subjects` job that
+upserts the canonical `subjects` rows and exits, a one-shot
+`sync-content` job that upserts the EGE-2026 Variant 1 **content**
+(conditionMd, solutionSteps, correctAnswerDisplay, ...) into the 19
+existing task rows and exits, `api` and `worker` (both wait for
+`sync-content` to finish successfully), `web`, and `caddy` (the only
+container publishing `80`/`443`), which reverse-proxies `/api/*` and
+`/health` to `api:3000` and everything else to `web:80`,
+obtaining/renewing its own TLS certificate automatically.
 
-`migrate` and `sync-content` solve two different problems and both run
-on every deploy: `migrate` changes the table *shape* (adding a column
-like `correct_answer_display`); `sync-content` changes the *data* in
-it. Before this pair existed, a code change to
-`packages/db/src/importEge2026Variant1.ts` (new LaTeX, a fixed
-illustration, a new `correctAnswerDisplay` value) only ever reached a
-database that had never been imported before — an already-seeded
-production database kept showing whatever content was present the
-first time someone ran the import script by hand, silently drifting
-further from the repo on every content-only deploy (this is exactly
-what happened before the EGE Fidelity: Final Polish content-migration
-fix — production kept the plain-text, pre-LaTeX task content from its
-first import indefinitely). `sync-content` is safe to run
-unconditionally on a live database with real users: it upserts each of
-the 19 tasks by its stable identity (subject + source + variant + task
-number), never by a freshly-generated id, so it never touches
-`attempts`/`mistakes`/bookmarks — see the `sync-content` service's own
-comment in `infra/docker-compose.yml` and
+`migrate`, `sync-subjects`, and `sync-content` solve different problems
+and all three run on every deploy: `migrate` changes the table *shape*
+(adding a column like `correct_answer_display`); `sync-subjects`
+ensures every subject Onboarding can offer (`packages/db/src/
+canonicalSubjects.ts`) has a real `subjects` row, since `PUT
+/me/learning-profile` rejects any `subjectId` without one; `sync-content`
+changes the task *content*. Before `sync-content` existed, a code
+change to `packages/db/src/importEge2026Variant1.ts` (new LaTeX, a
+fixed illustration, a new `correctAnswerDisplay` value) only ever
+reached a database that had never been imported before — an
+already-seeded production database kept showing whatever content was
+present the first time someone ran the import script by hand, silently
+drifting further from the repo on every content-only deploy (this is
+exactly what happened before the EGE Fidelity: Final Polish
+content-migration fix — production kept the plain-text, pre-LaTeX task
+content from its first import indefinitely). Before `sync-subjects`
+existed, the same class of bug hit Onboarding: only `migrate` and
+`sync-content` (which only ever upserts the single `'math'` subject row
+as a side effect of importing math tasks) ran automatically, so a
+production database that was never seeded with the full subject list
+only had `'math'` — a user picking any other subject in Onboarding's
+"какие предметы сдаёшь?" step got a generic "Не удалось сохранить
+профиль" the moment they tried to save. Both `sync-subjects` and
+`sync-content` are safe to run unconditionally on a live database with
+real users: `sync-subjects` only ever inserts-or-updates a `subjects`
+row by its stable `id`; `sync-content` upserts each of the 19 tasks by
+its stable identity (subject + source + variant + task number), never
+by a freshly-generated id — neither touches `attempts`/`mistakes`/
+bookmarks/`user_subject_profiles`. See each service's own comment in
+`infra/docker-compose.yml`, `packages/db/src/syncSubjects.test.ts`, and
 `packages/db/src/importEge2026Variant1.test.ts`'s "content migration"
-tests for the exact guarantee.
+tests for the exact guarantees.
 
-Always pass `--build` on a fresh `up` — `migrate`/`sync-content`/`api`
-share one image tag (`zybrilka-api:latest`); `--build` guarantees that
-tag exists before `migrate`'s container is created. `migrate` and
-`sync-content` each have their own `build:` block (identical to
-`api`'s, cached after the first build) so that a deploy workflow which
-runs an explicit `pull` step before building doesn't try to fetch
-`zybrilka-api:latest` from a registry — it only exists locally, never
-pushed anywhere.
+Always pass `--build` on a fresh `up` — `migrate`/`sync-subjects`/
+`sync-content`/`api` share one image tag (`zybrilka-api:latest`);
+`--build` guarantees that tag exists before `migrate`'s container is
+created. Each of `migrate`/`sync-subjects`/`sync-content` has its own
+`build:` block (identical to `api`'s, cached after the first build) so
+that a deploy workflow which runs an explicit `pull` step before
+building doesn't try to fetch `zybrilka-api:latest` from a registry —
+it only exists locally, never pushed anywhere.
 
 ## Troubleshooting
 
+- **Onboarding fails to save with "Не удалось сохранить профиль.
+  Попробуй ещё раз." for some (not all) subjects** — the `subjects`
+  table is missing a canonical row the frontend lets a user pick (`PUT
+  /me/learning-profile` correctly answers `400 unknown_subject` in that
+  case; Onboarding's catch-all turns any save failure into that one
+  generic message). If you're running an older `infra/docker-compose.yml`
+  without `sync-subjects`, either pull the current one or run the same
+  command it does, once, by hand: `docker compose -f
+  infra/docker-compose.yml run --rm sync-subjects` (safe on a live
+  database — see that service's comment in that file). If you're
+  already on a `docker-compose.yml` with `sync-subjects` and still see
+  this, check its logs (`docker compose -f infra/docker-compose.yml
+  logs sync-subjects`) for an error.
 - **Task content on the live site (e.g. a task's condition or solution)
   doesn't match what's in `importEge2026Variant1.ts` after a deploy**
   — before the `sync-content` service existed, this was a standing

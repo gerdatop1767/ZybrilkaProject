@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { createSeededTestDb } from '@zybrilka/db/testing';
+import { canonicalSubjects, syncSubjects } from '@zybrilka/db';
+import { createSeededTestDb, createTestDb } from '@zybrilka/db/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../../app.js';
 
@@ -291,5 +292,65 @@ describe('learning profile (Phase 1 vertical slice — real onboarding persisten
       .subjects.map((s: { subjectId: string }) => s.subjectId);
     expect(victimSubjectIds).toEqual(['math']);
     expect(victimSubjectIds).not.toContain('russian');
+  });
+});
+
+describe('learning profile — production deploy pipeline regression (no full demo seed)', () => {
+  /**
+   * Production's real `docker compose up` never runs `seed()` (the
+   * task-engine demo seed) — only `migrate` (schema) and, separately,
+   * `sync-content`/`importEge2026Variant1.ts` (which only ever upserts
+   * the single `'math'` subject row as a side effect of importing math
+   * tasks). Every other test in this file uses `createSeededTestDb()`,
+   * which calls the full `seed()` and so already has every canonical
+   * subject — that's exactly why this gap reached production
+   * undetected. This block builds a DB the same way `docker compose
+   * up` actually does (migrations + the new `sync-subjects` one-shot
+   * step only, no demo seed) to prove the real bug and its fix.
+   */
+  let testDb: Awaited<ReturnType<typeof createTestDb>>;
+  let app: ReturnType<typeof buildApp>;
+
+  beforeAll(async () => {
+    testDb = await createTestDb();
+    await syncSubjects(testDb.db);
+    app = buildApp({ version: 'test', db: testDb.db });
+  });
+
+  afterAll(async () => {
+    await app.close();
+    await testDb.close();
+  });
+
+  it('every subject Onboarding can present (apps/web/src/data/subjects.ts) saves successfully', async () => {
+    for (const subject of canonicalSubjects) {
+      const res = await app.inject({
+        method: 'PUT',
+        url: '/api/v1/me/learning-profile',
+        headers: { 'x-anon-id': randomUUID() },
+        payload: {
+          subjects: [
+            { subjectId: subject.id, selfReportedScore: 'unknown', targetScore: 'unknown' },
+          ],
+        },
+      });
+      expect(res.statusCode, `subjectId "${subject.id}" must save`).toBe(200);
+    }
+  });
+
+  it('a real multi-subject onboarding (math + russian, as every EGE student takes both) saves successfully', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/me/learning-profile',
+      headers: { 'x-anon-id': randomUUID() },
+      payload: {
+        subjects: [
+          { subjectId: 'math', selfReportedScore: '60_plus', targetScore: '80_plus' },
+          { subjectId: 'russian', selfReportedScore: '70_plus', targetScore: '90_plus' },
+        ],
+      },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().onboardingCompleted).toBe(true);
   });
 });
