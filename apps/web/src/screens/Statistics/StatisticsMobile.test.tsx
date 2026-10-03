@@ -193,6 +193,34 @@ describe('StatisticsMobile — real progress data', () => {
     await waitFor(() => expect(screen.getByText('9 верных')).toBeInTheDocument());
   });
 
+  // Regression test for the mobile page flash: `solvedTotal`/
+  // `accuracyPercent` used to collapse to a fake `0` while
+  // `getProgressSummary` was still in flight, even though the
+  // underlying `realProgress` state was already correctly
+  // null-until-loaded. Must show an honest '···' placeholder.
+  it('never shows a fake "0"/"0%" headline while /progress/summary is still loading', async () => {
+    let resolveProgress!: (value: Awaited<ReturnType<typeof api.getProgressSummary>>) => void;
+    vi.mocked(api.getProgressSummary).mockReturnValue(
+      new Promise((resolve) => {
+        resolveProgress = resolve;
+      }),
+    );
+    renderWithNav();
+    expect(screen.getAllByText('···').length).toBeGreaterThan(0);
+
+    resolveProgress({
+      solvedTotal: 20,
+      correctTotal: 15,
+      incorrectTotal: 5,
+      accuracyPercent: 75,
+      bySubject: [{ subjectId: 'math', solved: 12, correct: 9, accuracyPercent: 75 }],
+      byTaskNumber: [],
+      byTopic: [],
+      timeBySubject: [],
+    });
+    await waitFor(() => expect(screen.getByText('9 верных')).toBeInTheDocument());
+  });
+
   it('the errors donut uses real /mistakes data, never the static sample set', async () => {
     vi.mocked(api.getMistakes).mockResolvedValue([
       {

@@ -154,8 +154,12 @@ export function StatisticsMobile() {
     [taskNumberItems],
   );
   const subjectRow = realProgress?.bySubject.find((s) => s.subjectId === subject.id) ?? null;
-  const solvedTotal = subjectRow?.solved ?? 0;
-  const accuracyPercent = subjectRow ? Math.round(subjectRow.accuracyPercent) : 0;
+  // null while `realProgress` hasn't loaded yet — never a fake `0`
+  // (same mobile-flash bug fixed in Subject/Profile: `realProgress`
+  // itself is correctly null-until-loaded, but collapsing it to 0 here
+  // threw that honesty away for the UI).
+  const solvedTotal = realProgress ? (subjectRow?.solved ?? 0) : null;
+  const accuracyPercent = subjectRow ? Math.round(subjectRow.accuracyPercent) : realProgress ? 0 : null;
   // Real published-task count for this subject — same `total` the
   // by-task-number grid below is built from (never the static
   // `subject.taskCount` demo field, which no longer reflects the real
@@ -256,14 +260,14 @@ export function StatisticsMobile() {
       {subTab === 'byTask' && (
         <FadeIn className={styles.stack}>
           <Card className={styles.summaryCard}>
-            <CircularProgress value={accuracyPercent} size={72} label="Твой прогресс">
+            <CircularProgress value={accuracyPercent ?? 0} size={72} label="Твой прогресс">
               <span className="text-body" style={{ fontWeight: 700 }}>
-                {accuracyPercent}%
+                {accuracyPercent !== null ? `${accuracyPercent}%` : '···'}
               </span>
             </CircularProgress>
             <div>
               <p className="text-body" style={{ fontWeight: 700 }}>
-                {solvedTotal} из {subjectTotalTasks}
+                {solvedTotal ?? '···'} из {subjectTotalTasks}
               </p>
               <p className="text-body-sm text-secondary">заданий решено</p>
             </div>
@@ -385,15 +389,15 @@ export function StatisticsMobile() {
               icon="variant"
               iconColor="var(--color-accent-primary-end)"
               label="Решено заданий"
-              value={solvedTotal}
+              value={solvedTotal ?? '···'}
               deltaLabel={`из ${subjectTotalTasks}`}
             />
             <StatTile
               icon="progress"
               iconColor="var(--color-accent-secondary)"
               label="Точность"
-              value={accuracyPercent}
-              suffix="%"
+              value={accuracyPercent ?? '···'}
+              suffix={accuracyPercent !== null ? '%' : undefined}
               deltaLabel={`${subjectRow?.correct ?? 0} верных`}
             />
             <StatTile

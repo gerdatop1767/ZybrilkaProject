@@ -165,9 +165,11 @@ export function StatisticsDesktop() {
   // returns — no new backend query needed for accuracy/solved.
   const subjectRow = realProgress?.bySubject.find((s) => s.subjectId === subjectId) ?? null;
   const subjectTime = realProgress?.timeBySubject.find((s) => s.subjectId === subjectId) ?? null;
-  const solvedTotal = subjectRow?.solved ?? 0;
+  // null while `realProgress` hasn't loaded yet — never a fake `0`
+  // (same mobile-flash bug fixed in Subject/Profile/StatisticsMobile).
+  const solvedTotal = realProgress ? (subjectRow?.solved ?? 0) : null;
   const correctTotal = subjectRow?.correct ?? 0;
-  const correctPercent = subjectRow ? Math.round(subjectRow.accuracyPercent) : 0;
+  const correctPercent = subjectRow ? Math.round(subjectRow.accuracyPercent) : realProgress ? 0 : null;
 
   const taskNumberProgress = useMemo(
     () => toTaskNumberProgress(taskNumberItems),
@@ -216,15 +218,15 @@ export function StatisticsDesktop() {
           icon="variant"
           iconColor="var(--color-accent-primary-end)"
           label="Решено заданий"
-          value={solvedTotal}
+          value={solvedTotal ?? '···'}
         />
         <StatTile
           icon="success"
           iconColor="var(--color-success)"
           label="Правильных ответов"
-          value={correctPercent}
-          suffix="%"
-          deltaLabel={`${correctTotal} из ${solvedTotal}`}
+          value={correctPercent ?? '···'}
+          suffix={correctPercent !== null ? '%' : undefined}
+          deltaLabel={`${correctTotal} из ${solvedTotal ?? '···'}`}
         />
         <StatTile
           icon="time"

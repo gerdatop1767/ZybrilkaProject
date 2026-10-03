@@ -89,15 +89,15 @@ export function Profile() {
           icon="target"
           iconColor="var(--color-accent-primary)"
           label="Решено"
-          value={progress?.solvedTotal ?? 0}
+          value={progress ? progress.solvedTotal : '···'}
         />
         <StatTile
           className={styles.statTile}
           icon="progress"
           iconColor="var(--color-accent-secondary)"
           label="Точность"
-          value={progress ? Math.round(progress.accuracyPercent) : 0}
-          suffix="%"
+          value={progress ? Math.round(progress.accuracyPercent) : '···'}
+          suffix={progress ? '%' : undefined}
         />
       </div>
 

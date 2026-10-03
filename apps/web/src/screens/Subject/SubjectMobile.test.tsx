@@ -125,6 +125,43 @@ describe('SubjectMobile', () => {
     expect(screen.getByText('1/4')).toBeInTheDocument();
   });
 
+  // Regression test for the mobile page flash: before this fix, `solved`/
+  // `accuracyPercent` initialized to `0`, so the hero/progress-ring
+  // briefly rendered a fake "0 решено / 0% точность" (indistinguishable
+  // from a real zero) during this screen's entrance animation, before
+  // `getProgressSummary` resolved — confirmed via frame-by-frame video of
+  // exactly this screen opening. Real behavior must show an honest
+  // loading placeholder ('···'), never a fabricated zero.
+  it('never shows a fake "0 решено / 0% точность" while the real progress is still loading', async () => {
+    mockCollections();
+    let resolveProgress!: (value: Awaited<ReturnType<typeof api.getProgressSummary>>) => void;
+    vi.mocked(api.getProgressSummary).mockReturnValue(
+      new Promise((resolve) => {
+        resolveProgress = resolve;
+      }),
+    );
+    renderSubject();
+
+    // While the request is still in flight: honest placeholders, never 0.
+    expect(screen.getAllByText('···').length).toBeGreaterThan(0);
+    expect(screen.queryByText('0', { exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByText('0%')).not.toBeInTheDocument();
+
+    resolveProgress({
+      solvedTotal: 12,
+      correctTotal: 9,
+      incorrectTotal: 3,
+      accuracyPercent: 0,
+      bySubject: [{ subjectId: 'math', solved: 12, correct: 9, accuracyPercent: 75 }],
+      byTaskNumber: [],
+      byTopic: [],
+      timeBySubject: [],
+    });
+
+    await waitFor(() => expect(screen.getAllByText('12').length).toBeGreaterThan(0));
+    expect(screen.getAllByText('75%').length).toBeGreaterThan(0);
+  });
+
   it('an empty topic list shows a neutral empty state, not a fake row', async () => {
     mockCollections();
     mockProgress();

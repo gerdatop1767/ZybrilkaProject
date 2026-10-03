@@ -42,10 +42,40 @@ beforeEach(() => {
 });
 
 describe('Profile', () => {
-  it('shows 0/0% before real progress data has loaded, never a fabricated fallback', () => {
+  // Regression test for the mobile page flash: this used to show a
+  // fabricated "0" / "0%" while `getProgressSummary` was still in
+  // flight — indistinguishable from a real zero, and clearly visible
+  // during this screen's entrance animation (confirmed via frame-by-
+  // frame video). Must show an honest '···' placeholder instead, never
+  // a fake zero masquerading as real data.
+  it('shows an honest loading placeholder before real progress data has loaded, never a fabricated 0/0%', () => {
+    let resolveProgress!: (value: Awaited<ReturnType<typeof api.getProgressSummary>>) => void;
+    vi.mocked(api.getProgressSummary).mockReturnValue(
+      new Promise((resolve) => {
+        resolveProgress = resolve;
+      }),
+    );
     renderProfile();
-    expect(screen.getByText('0')).toBeInTheDocument();
-    expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(screen.getAllByText('···').length).toBeGreaterThan(0);
+    expect(screen.queryByText('0', { exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByText('0%')).not.toBeInTheDocument();
+    // Resolve so this test doesn't leak a pending promise into the next one.
+    resolveProgress({
+      solvedTotal: 0,
+      correctTotal: 0,
+      incorrectTotal: 0,
+      accuracyPercent: 0,
+      bySubject: [],
+      byTaskNumber: [],
+      byTopic: [],
+      timeBySubject: [],
+    });
+  });
+
+  it('a real solvedTotal/accuracyPercent of 0 renders as a real 0, not a placeholder', async () => {
+    renderProfile();
+    await waitFor(() => expect(screen.getByText('0')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('0%')).toBeInTheDocument());
   });
 
   it('renders real solved/accuracy numbers from /progress/summary', async () => {
