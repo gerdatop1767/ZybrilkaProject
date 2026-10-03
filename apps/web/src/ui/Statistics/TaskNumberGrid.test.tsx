@@ -28,4 +28,23 @@ describe('TaskNumberGrid', () => {
     await user.click(screen.getByText('№2'));
     expect(onSelect).toHaveBeenCalledWith(2);
   });
+
+  it('shows the real completed/total count (never just the percent) when the row carries it', () => {
+    render(
+      <TaskNumberGrid
+        rows={[{ number: 5, percent: 75, status: 'strong', completed: 3, total: 4 }]}
+      />,
+    );
+    expect(screen.getByText('3 из 4')).toBeInTheDocument();
+  });
+
+  it('omits the count line in compact mode, keeping the dense card to number+percent+bar', () => {
+    render(
+      <TaskNumberGrid
+        rows={[{ number: 5, percent: 75, status: 'strong', completed: 3, total: 4 }]}
+        compact
+      />,
+    );
+    expect(screen.queryByText('3 из 4')).not.toBeInTheDocument();
+  });
 });

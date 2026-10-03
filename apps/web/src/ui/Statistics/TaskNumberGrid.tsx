@@ -47,6 +47,11 @@ export function TaskNumberGrid({ rows, onSelect, compact = false }: TaskNumberGr
           <span className={styles.percent}>
             {row.percent !== null ? `${row.percent}%` : 'Не решалось'}
           </span>
+          {!compact && row.total !== undefined && (
+            <span className={styles.count}>
+              {row.completed ?? 0} из {row.total}
+            </span>
+          )}
           <span className={styles.track}>
             {row.percent !== null && (
               <span className={styles.fill} style={{ width: `${row.percent}%` }} />

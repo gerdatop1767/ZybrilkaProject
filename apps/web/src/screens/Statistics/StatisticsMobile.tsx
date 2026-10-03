@@ -156,6 +156,11 @@ export function StatisticsMobile() {
   const subjectRow = realProgress?.bySubject.find((s) => s.subjectId === subject.id) ?? null;
   const solvedTotal = subjectRow?.solved ?? 0;
   const accuracyPercent = subjectRow ? Math.round(subjectRow.accuracyPercent) : 0;
+  // Real published-task count for this subject — same `total` the
+  // by-task-number grid below is built from (never the static
+  // `subject.taskCount` demo field, which no longer reflects the real
+  // catalog). 0 while the by-task-number request hasn't resolved yet.
+  const subjectTotalTasks = taskNumberItems.reduce((sum, row) => sum + row.total, 0);
 
   function selectSubject(id: string) {
     setSubjectId(id);
@@ -258,7 +263,7 @@ export function StatisticsMobile() {
             </CircularProgress>
             <div>
               <p className="text-body" style={{ fontWeight: 700 }}>
-                {solvedTotal} из {subject.taskCount}
+                {solvedTotal} из {subjectTotalTasks}
               </p>
               <p className="text-body-sm text-secondary">заданий решено</p>
             </div>
@@ -381,7 +386,7 @@ export function StatisticsMobile() {
               iconColor="var(--color-accent-primary-end)"
               label="Решено заданий"
               value={solvedTotal}
-              deltaLabel={`из ${subject.taskCount}`}
+              deltaLabel={`из ${subjectTotalTasks}`}
             />
             <StatTile
               icon="progress"

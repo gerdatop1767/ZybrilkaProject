@@ -24,7 +24,15 @@
   border: none;
   color: var(--color-text-secondary);
   min-height: var(--touch-target-min);
-  transition: color var(--duration-fast) var(--easing-standard);
+  /* No color transition here, deliberately: only one item can be
+     aria-current at a time, and a CSS color crossfade on this property
+     runs independently on the outgoing AND incoming item, so for the
+     full transition both sit at some intermediate shade of the accent
+     color at once — visually reading as "two active tabs" for ~120ms
+     on every tap. A tab bar's selection should switch atomically, the
+     same way native iOS/Android tab bars do; this is the actual
+     mechanism behind the mobile bottom-nav flash, not a rendering/
+     remount bug. Every other transition in the app is untouched. */
 }
 
 .item[aria-current='page'] {
