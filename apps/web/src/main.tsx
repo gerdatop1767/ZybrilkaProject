@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App.js';
 import { NavigationProvider } from './lib/navigation.js';
 import { LearningSessionProvider } from './lib/learningSessionContext.js';
+import { StreakProvider } from './lib/streakContext.js';
 import { ToastProvider } from './ui/Toast/ToastProvider.js';
 import { DesignExploration } from './design-exploration/DesignExploration.js';
 import 'katex/dist/katex.min.css';
@@ -26,9 +27,11 @@ createRoot(root).render(
     ) : (
       <NavigationProvider>
         <LearningSessionProvider>
-          <ToastProvider>
-            <App />
-          </ToastProvider>
+          <StreakProvider>
+            <ToastProvider>
+              <App />
+            </ToastProvider>
+          </StreakProvider>
         </LearningSessionProvider>
       </NavigationProvider>
     )}

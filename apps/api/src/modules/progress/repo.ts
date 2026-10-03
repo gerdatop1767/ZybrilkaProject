@@ -463,3 +463,17 @@ export async function getDominantTopicNameForTaskNumber(
     .orderBy(desc(count()), asc(schema.topics.name));
   return rows[0]?.topicName ?? null;
 }
+
+/**
+ * Every Europe/Moscow calendar day this user has real recorded
+ * activity on — see `tasks/repo.ts`'s `recordDailyActivity` for where
+ * rows here are written (one per user per day, enforced by the
+ * table's own unique constraint, never computed/deduped here).
+ */
+export async function getActivityDates(db: Database, userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ activityDate: schema.userDailyActivity.activityDate })
+    .from(schema.userDailyActivity)
+    .where(eq(schema.userDailyActivity.userId, userId));
+  return rows.map((r) => r.activityDate);
+}

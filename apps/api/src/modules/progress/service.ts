@@ -2,7 +2,9 @@ import type { Database } from '@zybrilka/db';
 import {
   calculateMedian,
   calculateSpeedSignal,
+  computeCurrentStreak,
   detectErrorSignatures,
+  toMoscowDateString,
   type ProgressByTaskNumberQuery,
   type ProgressByTaskNumberResponse,
   type ProgressByTopicQuery,
@@ -10,6 +12,7 @@ import {
   type ProgressDailyResponse,
   type ProgressSummary,
   type SpeedBaselineSource,
+  type StreakResponse,
   type TaskNumberStatisticsDetail,
 } from '@zybrilka/shared';
 import { buildDetectionInput } from '../learning/errorSignatures/service.js';
@@ -287,5 +290,24 @@ export async function getTaskNumberStatisticsDetail(
     accuracyTrend,
     timeTrend,
     speedSignal,
+  };
+}
+
+/**
+ * The real streak state — see `packages/shared/src/learning/streak.ts`
+ * for the deterministic algorithm and why "today" is always resolved
+ * server-side (Europe/Moscow), never trusted from the client. Frontend
+ * only ever displays whatever this returns; it never computes a
+ * streak number itself.
+ */
+export async function getStreak(db: Database, userId: string): Promise<StreakResponse> {
+  const activityDates = await repo.getActivityDates(db, userId);
+  const today = toMoscowDateString(new Date());
+  const currentStreak = computeCurrentStreak(activityDates, today);
+  const lastActiveDate = activityDates.length === 0 ? null : activityDates.sort().at(-1)!;
+  return {
+    currentStreak,
+    lastActiveDate,
+    isActiveToday: lastActiveDate === today,
   };
 }

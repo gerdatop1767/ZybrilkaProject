@@ -1,5 +1,6 @@
 import {
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -612,4 +613,44 @@ export const learningSessions = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index('learning_sessions_user_idx').on(table.userId)],
+);
+
+/**
+ * Streak system — one real row per (user, Europe/Moscow calendar day)
+ * the user submitted at least one real task attempt (correct or not —
+ * finishing the attempt is what counts, never just opening/viewing a
+ * task). The `date` mode stores a pure calendar day with no time/zone
+ * component; the service layer is the single place that resolves an
+ * attempt's UTC `createdAt` to its Moscow calendar date before writing
+ * here — this table itself holds no timezone logic.
+ *
+ * `UNIQUE(user_id, activity_date)` is the whole mechanism for both of
+ * the two invariants the project asked for: several attempts in one
+ * Moscow day only ever produce one row (an `ON CONFLICT DO NOTHING`
+ * upsert — see `recordDailyActivity`), and two concurrent submissions
+ * on the same day can't race into two rows (the unique constraint is
+ * enforced by Postgres itself, not application-level locking).
+ *
+ * The current streak is NOT stored as a separate counter on this table
+ * or on `users` — it's computed on demand from these rows (today's
+ * Moscow date walking backward through consecutive days), the same
+ * "deterministic, on-demand, never a second place to drift out of
+ * sync" precedent `taskSimilarity` already set for this codebase.
+ */
+export const userDailyActivity = pgTable(
+  'user_daily_activity',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    /** Europe/Moscow calendar date (YYYY-MM-DD), resolved server-side
+     * from the attempt's real `createdAt` — never the client's own
+     * timezone or clock. */
+    activityDate: date('activity_date', { mode: 'string' }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('user_daily_activity_user_date_idx').on(table.userId, table.activityDate),
+  ],
 );

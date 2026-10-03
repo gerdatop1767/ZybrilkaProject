@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { TaskDesktop } from './TaskDesktop.js';
 import { subjects } from '../../data/subjects.js';
 import { NavigationProvider, useNavigation } from '../../lib/navigation.js';
+import { StreakProvider } from '../../lib/streakContext.js';
 import * as api from '../../lib/api.js';
 import { resetFavoritesCacheForTests } from '../../lib/useFavorite.js';
 import { getCanvasState, resetCanvasStoreForTests } from '../../lib/canvasSessionStore.js';
@@ -18,6 +19,9 @@ vi.mock('../../lib/api.js', () => ({
   listFavoriteTaskIds: vi.fn(() => Promise.resolve({ taskIds: [] })),
   addFavorite: vi.fn(() => Promise.resolve()),
   removeFavorite: vi.fn(() => Promise.resolve()),
+  getStreak: vi.fn(() =>
+    Promise.resolve({ currentStreak: 0, lastActiveDate: null, isActiveToday: false }),
+  ),
 }));
 
 const TASK_ID = '11111111-1111-1111-1111-111111111111';
@@ -205,6 +209,22 @@ describe('TaskDesktop', () => {
       expect(screen.getByTestId('overlay')).toHaveTextContent('result:correct');
     });
     expect(api.submitAttempt).toHaveBeenCalledWith(TASK_ID, { answer: CORRECT_ANSWER });
+  });
+
+  it('refreshes the real streak (GET /progress/streak) after a submitted attempt, never on its own', async () => {
+    const user = userEvent.setup();
+    render(
+      <NavigationProvider>
+        <StreakProvider>
+          <TaskDesktop subjectId={baseTask.subjectId} taskNumber={baseTask.taskNumber} taskId={TASK_ID} />
+        </StreakProvider>
+        <OverlayMarker />
+      </NavigationProvider>,
+    );
+    await waitFor(() => expect(api.getStreak).toHaveBeenCalledTimes(1)); // StreakProvider's own initial load
+    await pasteAnswer(user, CORRECT_ANSWER);
+    await user.click(screen.getByRole('button', { name: /Проверить ответ/ }));
+    await waitFor(() => expect(api.getStreak).toHaveBeenCalledTimes(2));
   });
 
   it('navigates to an incorrect Result for the wrong answer, per the server response', async () => {

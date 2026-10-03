@@ -128,13 +128,47 @@ describe('StatisticsMobile', () => {
     expect(screen.getByText('50%')).toBeInTheDocument();
   });
 
-  it('Пробники tab shows a neutral empty state, never fabricated exams', async () => {
+  it('Пробники tab shows the real Статистика вариантов empty state, never a fabricated "0 пробников решено"', async () => {
     const user = userEvent.setup();
     renderWithNav();
     await user.click(screen.getByRole('tab', { name: 'Пробники' }));
     expect(screen.queryByText('Экран в разработке — следующий блок.')).not.toBeInTheDocument();
-    expect(screen.getByText('0 пробников решено')).toBeInTheDocument();
-    expect(screen.getByText('Новый пробник')).toBeInTheDocument();
+    expect(screen.queryByText('0 пробников решено')).not.toBeInTheDocument();
+    expect(screen.queryByText('пробные варианты ещё не поддерживаются')).not.toBeInTheDocument();
+    expect(screen.getByText('Ты ещё не решал варианты')).toBeInTheDocument();
+    expect(
+      screen.getByText('Пройди полный вариант ЕГЭ — его результаты появятся здесь.'),
+    ).toBeInTheDocument();
+  });
+
+  it('Пробники tab shows real completed variant sessions (same VariantHistoryCard/data as Общая)', async () => {
+    vi.mocked(api.getVariantProgress).mockResolvedValue({
+      items: [
+        {
+          sessionId: 'vs-1',
+          variantId: 'v1',
+          variantNumber: 3,
+          variantTitle: 'Вариант 3',
+          subjectId: 'math',
+          status: 'completed',
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          plannedCount: 19,
+          solvedCount: 19,
+          correctCount: 17,
+          incorrectCount: 2,
+          accuracyPercent: 89,
+          totalTimeMs: 3600000,
+          keyErrors: [],
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    renderWithNav();
+    await user.click(screen.getByRole('tab', { name: 'Пробники' }));
+    expect(await screen.findByText('Вариант 3')).toBeInTheDocument();
+    expect(screen.getByText('19 / 19 заданий')).toBeInTheDocument();
+    expect(screen.queryByText('Ты ещё не решал варианты')).not.toBeInTheDocument();
   });
 
   it('every task-number card is a real tappable button', async () => {
@@ -355,5 +389,16 @@ describe('StatisticsMobile — Статистика вариантов', () => {
     expect(screen.getByText('12 / 19 заданий')).toBeInTheDocument();
     expect(screen.getByText('67%')).toBeInTheDocument();
     expect(screen.getByText(/в процессе/)).toBeInTheDocument();
+  });
+});
+
+describe('StatisticsMobile — Общая tab cleanup (no navigational clutter)', () => {
+  it('never shows the "Решённые пробники"/"Мои ошибки"/"О проекте" cards on the main Общая tab', async () => {
+    renderWithNav();
+    await waitFor(() => expect(screen.getByText('Статистика вариантов')).toBeInTheDocument());
+    expect(screen.queryByText('Решённые пробники')).not.toBeInTheDocument();
+    expect(screen.queryByText('Мои ошибки')).not.toBeInTheDocument();
+    expect(screen.queryByText('О проекте')).not.toBeInTheDocument();
+    expect(screen.queryByText('0 пробников решено')).not.toBeInTheDocument();
   });
 });

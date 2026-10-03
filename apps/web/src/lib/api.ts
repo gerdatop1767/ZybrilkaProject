@@ -11,6 +11,8 @@ import type {
   ProgressDailyResponse,
   ProgressSummary,
   SaveLearningProfileRequest,
+  SimilarTaskEntry,
+  StreakResponse,
   TaskCountsBySubjectResponse,
   TaskNumberStatisticsDetail,
   TaskPublic,
@@ -150,6 +152,30 @@ export function listTasksByNumber(subject: string, taskNumber: number): Promise<
  */
 export function getTaskCountsBySubject(): Promise<TaskCountsBySubjectResponse> {
   return apiFetch('/tasks/counts');
+}
+
+/**
+ * Mistakes' "Решить похожее" — the existing deterministic Phase 6
+ * similarity engine (`calculateTaskSimilarity`, never AI/ML), scored
+ * against every other published task in the same subject. An empty
+ * `items` array (small catalog today, or a task with no close match
+ * yet) is a real, honest result — callers must show an empty state,
+ * never fabricate a candidate.
+ */
+export function getSimilarTasks(taskId: string, limit?: number): Promise<SimilarTaskEntry[]> {
+  const qs = limit ? `?limit=${limit}` : '';
+  return apiFetch<{ items: SimilarTaskEntry[] }>(`/tasks/${taskId}/similar${qs}`).then(
+    (r) => r.items,
+  );
+}
+
+/**
+ * The real streak state (currentStreak/lastActiveDate/isActiveToday),
+ * computed server-side in Europe/Moscow — see
+ * packages/shared/src/learning/streak.ts. Never computed here.
+ */
+export function getStreak(): Promise<StreakResponse> {
+  return apiFetch('/progress/streak');
 }
 
 export function submitAttempt(taskId: string, request: AttemptRequest): Promise<AttemptResult> {

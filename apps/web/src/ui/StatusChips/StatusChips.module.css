@@ -74,3 +74,46 @@
     display: none;
   }
 }
+
+/* A single, short pulse the moment the real streak increases — never
+   a looping/idle animation, never triggered on ordinary re-renders
+   (see StatusChips.tsx's justIncreased guard: only a genuine increase
+   over the previously known value fires this). */
+.chipStreakUp {
+  animation: streakGlow 900ms var(--easing-standard);
+}
+
+.flameIconUp {
+  animation: streakFlamePop 900ms var(--easing-standard);
+}
+
+@keyframes streakGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 149, 0, 0);
+  }
+  30% {
+    box-shadow: 0 0 0 4px rgba(255, 149, 0, 0.35);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 149, 0, 0);
+  }
+}
+
+@keyframes streakFlamePop {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chipStreakUp,
+  .flameIconUp {
+    animation: none;
+  }
+}

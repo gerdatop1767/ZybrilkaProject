@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AppMobile } from './AppMobile.js';
 import { NavigationProvider, useNavigation } from './lib/navigation.js';
+import { ToastProvider } from './ui/Toast/ToastProvider.js';
 import * as api from './lib/api.js';
 
 vi.mock('./lib/api.js', () => ({
@@ -16,6 +17,7 @@ vi.mock('./lib/api.js', () => ({
   getProgressByTopic: vi.fn(() => new Promise(() => {})),
   getTaskNumberStatisticsDetail: vi.fn(() => new Promise(() => {})),
   getMistakes: vi.fn(() => new Promise(() => {})),
+  getSimilarTasks: vi.fn(() => Promise.resolve([])),
   getLearningProfile: vi.fn(() => new Promise(() => {})),
   listFavoriteTaskIds: vi.fn(() => Promise.resolve({ taskIds: [] })),
   addFavorite: vi.fn(() => Promise.resolve()),
@@ -38,8 +40,10 @@ function OverlayMarker() {
 function renderApp() {
   return render(
     <NavigationProvider>
-      <AppMobile />
-      <OverlayMarker />
+      <ToastProvider>
+        <AppMobile />
+        <OverlayMarker />
+      </ToastProvider>
     </NavigationProvider>,
   );
 }

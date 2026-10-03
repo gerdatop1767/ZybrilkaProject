@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import { subjects } from '../../data/subjects.js';
 import { computeMistakesSummary, type Mistake } from '../../data/sampleMistakes.js';
-import { getMistakes } from '../../lib/api.js';
+import { getMistakes, getSimilarTasks } from '../../lib/api.js';
 import { toSampleMistake } from '../../lib/mistakeAdapter.js';
 import { Tabs } from '../../ui/Tabs/Tabs.js';
 import { Button } from '../../ui/Button/Button.js';
@@ -12,6 +12,7 @@ import { StatTile } from '../../ui/Statistics/StatTile.js';
 import { MistakeCardMobile } from '../../ui/Mistakes/MistakeCardMobile.js';
 import { MistakeNumberGroup } from '../../ui/Mistakes/MistakeNumberGroup.js';
 import { FeedbackState } from '../../ui/FeedbackState/FeedbackState.js';
+import { useToast } from '../../ui/Toast/ToastProvider.js';
 import { SlideUp } from '../../ui/motion/motion.js';
 import styles from './MistakesMobile.module.css';
 
@@ -31,12 +32,17 @@ const viewTabs = [
  */
 export function MistakesMobile() {
   const { navigate, back } = useNavigation();
+  const { show: showToast } = useToast();
   const subject = subjects.find((s) => s.id === 'math') ?? subjects[0]!;
   const [view, setView] = useState('all');
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [mistakes, setMistakes] = useState<readonly Mistake[]>([]);
   const [loading, setLoading] = useState(true);
+  // Only one card's "Решить похожее" can be in flight at a time — the
+  // button's own `loading`/disabled state (via Button) is the double-
+  // tap guard, this id is just which card to show it on.
+  const [solvingSimilarId, setSolvingSimilarId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,6 +87,46 @@ export function MistakesMobile() {
     const firstId = [...selected][0];
     const target = unsolved.find((m) => m.id === firstId) ?? unsolved[0];
     if (target) openMistake(target);
+  }
+
+  /**
+   * "Решить похожее" — the existing deterministic Phase 6 similarity
+   * engine (`GET /tasks/:taskId/similar`), never a new AI/ML system.
+   * On a real candidate list, this is the exact same
+   * `customOrderedTasks` ad-hoc training-list mechanism
+   * startCustomVariant/Training's "По номерам" already use — not a
+   * second parallel session system. An empty result is real (small
+   * catalog today, or genuinely nothing close yet) and must never
+   * silently open an empty/fake session — only a toast telling the
+   * user why.
+   */
+  function solveSimilar(mistake: Mistake) {
+    if (solvingSimilarId) return; // one in-flight request at a time
+    setSolvingSimilarId(mistake.id);
+    void getSimilarTasks(mistake.taskId)
+      .then((items) => {
+        if (items.length === 0) {
+          showToast({
+            variant: 'info',
+            message:
+              'Похожих заданий пока нет — когда в базе появятся задания этого типа, мы подберём их автоматически.',
+          });
+          return;
+        }
+        const first = items[0]!;
+        navigate({
+          screen: 'task',
+          subjectId: mistake.subjectId,
+          taskNumber: first.taskNumber,
+          taskId: first.taskId,
+          customOrderedTasks: items.map((i) => ({ taskId: i.taskId, taskNumber: i.taskNumber })),
+          returnTo: { screen: 'mistakes' },
+        });
+      })
+      .catch(() => {
+        showToast({ variant: 'error', message: 'Не удалось подобрать похожие задания.' });
+      })
+      .finally(() => setSolvingSimilarId(null));
   }
 
   return (
@@ -163,6 +209,8 @@ export function MistakesMobile() {
                   onToggleSelect={() => toggleSelect(m.id)}
                   onRetry={() => openMistake(m)}
                   onOpen={() => openMistake(m)}
+                  onSolveSimilar={() => solveSimilar(m)}
+                  solvingSimilar={solvingSimilarId === m.id}
                 />
               ));
               if (group.taskNumber !== null) {

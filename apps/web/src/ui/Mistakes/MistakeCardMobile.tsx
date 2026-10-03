@@ -1,4 +1,5 @@
 import { Icon } from '../Icon/Icon.js';
+import { Button } from '../Button/Button.js';
 import { DifficultyTag } from '../Training/DifficultyTag.js';
 import type { Mistake } from '../../data/sampleMistakes.js';
 import { getTopicColor } from '../../data/sampleMistakes.js';
@@ -12,6 +13,11 @@ export interface MistakeCardMobileProps {
   onToggleSelect: () => void;
   onRetry: () => void;
   onOpen: () => void;
+  /** "Решить похожее" — omitted entirely (not just hidden) while the
+   * deterministic similarity lookup is unavailable for some reason, so
+   * the card never shows a button with nothing real behind it. */
+  onSolveSimilar?: () => void;
+  solvingSimilar?: boolean;
 }
 
 /**
@@ -27,6 +33,8 @@ export function MistakeCardMobile({
   onToggleSelect,
   onRetry,
   onOpen,
+  onSolveSimilar,
+  solvingSimilar = false,
 }: MistakeCardMobileProps) {
   const color = getTopicColor(mistake.topic);
 
@@ -57,6 +65,16 @@ export function MistakeCardMobile({
       </button>
 
       <div className={styles.bottomRow}>
+        {onSolveSimilar && (
+          <Button
+            variant="secondary"
+            className={styles.solveSimilarButton}
+            loading={solvingSimilar}
+            onClick={onSolveSimilar}
+          >
+            Решить похожее
+          </Button>
+        )}
         <button
           type="button"
           className={styles.retryButton}

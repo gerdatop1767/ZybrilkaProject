@@ -7,6 +7,7 @@ import { toSampleTask } from '../../lib/taskAdapter.js';
 import { useFavorite } from '../../lib/useFavorite.js';
 import { useTaskNavigation } from '../../lib/useTaskNavigation.js';
 import { useActiveLearningSessionForTask } from '../../lib/learningSessionContext.js';
+import { useStreakContext } from '../../lib/streakContext.js';
 import { useSolvingTimer } from '../../lib/useSolvingTimer.js';
 import { SolvingTimer } from '../../ui/Timer/SolvingTimer.js';
 import { LearningSessionBadge } from '../../ui/LearningSession/LearningSessionBadge.js';
@@ -71,6 +72,7 @@ export function TaskDesktop({
   const goBack = returnTo ? () => navigate(returnTo) : back;
   const favorite = useFavorite(taskId);
   const learningSession = useActiveLearningSessionForTask(taskId);
+  const { refreshStreak } = useStreakContext();
   const timer = useSolvingTimer();
 
   // The router remounts this component (key={taskId}) on every task
@@ -140,6 +142,10 @@ export function TaskDesktop({
     void submitAttempt(task.id, { answer: submittedAnswer, timeSpentMs })
       .then((result) => {
         clearCanvasState(task.id);
+        // Streak system: the attempt the backend just recorded as real
+        // daily activity — refetch the server-computed state so the
+        // header's "Серия" chip reflects it without a full reload.
+        refreshStreak();
         navigate({
           screen: 'result',
           subjectId: task.subjectId,

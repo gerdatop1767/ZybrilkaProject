@@ -370,5 +370,74 @@ describe('tasks routes', () => {
       });
       expect(res.statusCode).toBe(400);
     });
+
+    // Streak system (CLAUDE.md): a submitted attempt is real daily
+    // activity regardless of correctness — these prove the service's
+    // same-transaction `recordDailyActivity` call actually runs, not
+    // just that it typechecks.
+    describe('streak — daily activity recording', () => {
+      it('a submitted attempt (correct or not) records one activity row for today', async () => {
+        const [task] = await testDb.db.select().from(schema.tasks).limit(1);
+        const anonId = randomUUID();
+
+        await app.inject({
+          method: 'POST',
+          url: `/api/v1/tasks/${task!.id}/attempt`,
+          headers: { 'x-anon-id': anonId },
+          // Deliberately wrong — activity must be recorded either way.
+          payload: { answer: 'definitely wrong' },
+        });
+
+        const rows = await testDb.db
+          .select()
+          .from(schema.userDailyActivity)
+          .where(eq(schema.userDailyActivity.userId, anonId));
+        expect(rows).toHaveLength(1);
+      });
+
+      it('two attempts the same day never create two activity rows (idempotent upsert)', async () => {
+        const [taskA, taskB] = await testDb.db.select().from(schema.tasks).limit(2);
+        const anonId = randomUUID();
+
+        await app.inject({
+          method: 'POST',
+          url: `/api/v1/tasks/${taskA!.id}/attempt`,
+          headers: { 'x-anon-id': anonId },
+          payload: { answer: 'wrong-1' },
+        });
+        await app.inject({
+          method: 'POST',
+          url: `/api/v1/tasks/${taskB!.id}/attempt`,
+          headers: { 'x-anon-id': anonId },
+          payload: { answer: 'wrong-2' },
+        });
+
+        const rows = await testDb.db
+          .select()
+          .from(schema.userDailyActivity)
+          .where(eq(schema.userDailyActivity.userId, anonId));
+        expect(rows).toHaveLength(1);
+      });
+
+      it('GET /progress/streak reflects a streak of 1 right after the first-ever attempt', async () => {
+        const [task] = await testDb.db.select().from(schema.tasks).limit(1);
+        const anonId = randomUUID();
+
+        await app.inject({
+          method: 'POST',
+          url: `/api/v1/tasks/${task!.id}/attempt`,
+          headers: { 'x-anon-id': anonId },
+          payload: { answer: 'wrong' },
+        });
+
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/progress/streak',
+          headers: { 'x-anon-id': anonId },
+        });
+        expect(res.statusCode).toBe(200);
+        expect(res.json()).toMatchObject({ currentStreak: 1, isActiveToday: true });
+      });
+    });
   });
 });
