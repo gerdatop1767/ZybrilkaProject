@@ -9,12 +9,18 @@ import {
   getProgressDaily,
   getProgressSummary,
   getTaskNumberStatisticsDetail,
+  getVariantProgress,
 } from '../../lib/api.js';
 import { toSampleMistake } from '../../lib/mistakeAdapter.js';
 import { toDailyPoints, toTaskNumberProgress } from '../../lib/progressAdapter.js';
 import { formatDuration } from '../../lib/statisticsDetailFormat.js';
-import type { ProgressSummary, TaskNumberStatisticsDetail } from '@zybrilka/shared';
+import type {
+  ProgressSummary,
+  TaskNumberStatisticsDetail,
+  VariantProgressItem,
+} from '@zybrilka/shared';
 import { Card } from '../../ui/Card/Card.js';
+import { VariantHistoryCard } from '../../ui/Statistics/VariantHistoryCard.js';
 import { Select } from '../../ui/Select/Select.js';
 import { Tabs } from '../../ui/Tabs/Tabs.js';
 import { Button } from '../../ui/Button/Button.js';
@@ -62,6 +68,7 @@ export function StatisticsDesktop() {
   >([]);
   const [selectedTaskNumber, setSelectedTaskNumber] = useState<number | null>(null);
   const [detail, setDetail] = useState<TaskNumberStatisticsDetail | null | undefined>(undefined);
+  const [variantHistory, setVariantHistory] = useState<readonly VariantProgressItem[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,6 +86,16 @@ export function StatisticsDesktop() {
       })
       .catch(() => {
         if (!cancelled) setMistakes([]);
+      });
+    // "Статистика вариантов" — every real variant session the user has
+    // ever started, across all subjects, never scoped to the selected
+    // subject selector above.
+    void getVariantProgress()
+      .then((res) => {
+        if (!cancelled) setVariantHistory(res.items);
+      })
+      .catch(() => {
+        if (!cancelled) setVariantHistory([]);
       });
     return () => {
       cancelled = true;
@@ -343,6 +360,23 @@ export function StatisticsDesktop() {
           )}
         </Card>
       )}
+
+      <Card>
+        <div className={styles.cardHeaderRow}>
+          <p className="text-h3">Статистика вариантов</p>
+        </div>
+        {variantHistory.length === 0 ? (
+          <p className="text-body-sm text-secondary">
+            Реши свой первый вариант в Тренировке — он появится здесь.
+          </p>
+        ) : (
+          <div className={styles.variantGrid}>
+            {variantHistory.map((item) => (
+              <VariantHistoryCard key={item.sessionId} item={item} />
+            ))}
+          </div>
+        )}
+      </Card>
     </FadeIn>
   );
 }

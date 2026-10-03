@@ -1,7 +1,7 @@
 import type { Database } from '@zybrilka/db';
 import { schema } from '@zybrilka/db';
 import type { LearningSessionStatus } from '@zybrilka/shared';
-import { and, eq, gte, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, sql } from 'drizzle-orm';
 
 export interface LearningSessionRow {
   readonly id: string;
@@ -11,6 +11,10 @@ export interface LearningSessionRow {
   readonly consumedTaskIds: readonly string[];
   readonly unseenOnly: boolean;
   readonly randomizeTopTier: boolean;
+  /** Non-null means this is a VARIANT session — see schema.ts's doc
+   * comment. `plannedTaskIds` is also non-null exactly when this is. */
+  readonly variantId: string | null;
+  readonly plannedTaskIds: readonly string[] | null;
   readonly status: LearningSessionStatus;
   readonly startedAt: Date;
   readonly completedAt: Date | null;
@@ -25,6 +29,8 @@ function toRow(row: typeof schema.learningSessions.$inferSelect): LearningSessio
     consumedTaskIds: row.consumedTaskIds,
     unseenOnly: row.unseenOnly,
     randomizeTopTier: row.randomizeTopTier,
+    variantId: row.variantId,
+    plannedTaskIds: row.plannedTaskIds ?? null,
     status: row.status as LearningSessionStatus,
     startedAt: row.startedAt,
     completedAt: row.completedAt,
@@ -43,6 +49,8 @@ export async function createSession(
     firstTaskId: string;
     unseenOnly?: boolean;
     randomizeTopTier?: boolean;
+    variantId?: string;
+    plannedTaskIds?: readonly string[];
   },
 ): Promise<LearningSessionRow> {
   const [row] = await db
@@ -54,9 +62,67 @@ export async function createSession(
       consumedTaskIds: [input.firstTaskId],
       unseenOnly: input.unseenOnly ?? false,
       randomizeTopTier: input.randomizeTopTier ?? false,
+      variantId: input.variantId,
+      plannedTaskIds: input.plannedTaskIds,
     })
     .returning();
   return toRow(row!);
+}
+
+/** Minimal variant identity lookup (number + title) for stamping an
+ * active/completed response with `variant` — never the full task list
+ * `getVariantDetail` loads, which `advanceLearningSession`/snapshot
+ * reads don't need. */
+export async function getVariantIdentity(
+  db: Database,
+  variantId: string,
+): Promise<{ variantNumber: number; title: string } | undefined> {
+  const [row] = await db
+    .select({ variantNumber: schema.variants.variantNumber, title: schema.variants.title })
+    .from(schema.variants)
+    .where(eq(schema.variants.id, variantId));
+  return row;
+}
+
+export interface VariantSessionRow extends LearningSessionRow {
+  readonly variantId: string;
+  readonly plannedTaskIds: readonly string[];
+  readonly variantNumber: number;
+  readonly variantTitle: string;
+}
+
+/**
+ * Every VARIANT session (Training's "Вариант" mode) this user has ever
+ * started, regardless of status — Statistics' "Статистика вариантов"
+ * shows a still-active (abandoned) one too, with its real partial
+ * progress, never hiding it or faking it as finished (see
+ * `getVariantProgress` in service.ts for how `status` is used instead
+ * of a filter). Newest first.
+ */
+export async function getVariantSessionsForUser(
+  db: Database,
+  userId: string,
+): Promise<VariantSessionRow[]> {
+  const rows = await db
+    .select({
+      session: schema.learningSessions,
+      variantNumber: schema.variants.variantNumber,
+      variantTitle: schema.variants.title,
+    })
+    .from(schema.learningSessions)
+    .innerJoin(schema.variants, eq(schema.learningSessions.variantId, schema.variants.id))
+    .where(
+      and(eq(schema.learningSessions.userId, userId), isNotNull(schema.learningSessions.variantId)),
+    )
+    .orderBy(desc(schema.learningSessions.startedAt));
+
+  return rows.map((row) => ({
+    ...toRow(row.session),
+    variantId: row.session.variantId!,
+    plannedTaskIds: row.session.plannedTaskIds!,
+    variantNumber: row.variantNumber,
+    variantTitle: row.variantTitle,
+  }));
 }
 
 export async function getSessionById(
@@ -124,6 +190,52 @@ export async function getSessionAttempts(
         gte(schema.attempts.createdAt, since),
       ),
     );
+}
+
+export interface SessionAttemptFullRow {
+  readonly taskId: string;
+  readonly isCorrect: boolean;
+  readonly createdAt: Date;
+  readonly timeSpentMs: number | null;
+  readonly answerRaw: string;
+  readonly answerType: (typeof schema.taskAnswerTypes)[number];
+  readonly correctAnswer: string;
+}
+
+/**
+ * Same join/shape as progress/repo.ts's `getAttemptsForTaskNumberDetail`
+ * (full attempt rows, ready for `detectErrorSignatures`/`buildDetection
+ * Input` and time aggregation) but scoped by an explicit task id list
+ * instead of one task number — what a variant session's real "key
+ * errors" and "total time" are built from (`getVariantProgress`).
+ */
+export async function getAttemptsForTaskIds(
+  db: Database,
+  userId: string,
+  taskIds: readonly string[],
+  since: Date,
+): Promise<SessionAttemptFullRow[]> {
+  if (taskIds.length === 0) return [];
+  return db
+    .select({
+      taskId: schema.attempts.taskId,
+      isCorrect: schema.attempts.isCorrect,
+      createdAt: schema.attempts.createdAt,
+      timeSpentMs: schema.attempts.timeSpentMs,
+      answerRaw: schema.attempts.answerRaw,
+      answerType: schema.tasks.answerType,
+      correctAnswer: schema.tasks.correctAnswer,
+    })
+    .from(schema.attempts)
+    .innerJoin(schema.tasks, eq(schema.attempts.taskId, schema.tasks.id))
+    .where(
+      and(
+        eq(schema.attempts.userId, userId),
+        inArray(schema.attempts.taskId, taskIds as string[]),
+        gte(schema.attempts.createdAt, since),
+      ),
+    )
+    .orderBy(schema.attempts.createdAt);
 }
 
 export async function getSkillIdsForTasks(

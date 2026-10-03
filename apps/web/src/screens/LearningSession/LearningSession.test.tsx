@@ -133,6 +133,36 @@ describe('LearningSession — refresh/direct-link recovery (Phase 10)', () => {
     expect(screen.getByTestId('overlay')).toHaveTextContent('none');
   });
 
+  it('shows the Variant Completion heading and planned/solved count for a variant session, never the Smart Training heading', async () => {
+    vi.mocked(api.getLearningSession).mockResolvedValue({
+      sessionId: 'session-variant',
+      subject: 'math',
+      status: 'completed',
+      position: 19,
+      total: 19,
+      summary: {
+        attempted: 19,
+        correct: 17,
+        incorrect: 2,
+        accuracy: 89,
+        skillsPracticed: 5,
+        mistakesCreated: 2,
+      },
+      variant: { variantId: 'v1', variantNumber: 1, variantTitle: 'Вариант 1' },
+    });
+    renderLearningSession('session-variant');
+
+    expect(await screen.findByText('Вариант 1 завершён')).toBeInTheDocument();
+    expect(screen.queryByText('Тренировка завершена')).not.toBeInTheDocument();
+    expect(screen.getByText('19 / 19')).toBeInTheDocument();
+    expect(screen.getByText('17')).toBeInTheDocument();
+    expect(screen.getByText('89%')).toBeInTheDocument();
+    // Variant completion shows only real attempt-based stats — never
+    // the Smart Training-only "Навыков затронуто"/"Новых ошибок" rows.
+    expect(screen.queryByText('Навыков затронуто')).not.toBeInTheDocument();
+    expect(screen.queryByText('Новых ошибок')).not.toBeInTheDocument();
+  });
+
   it('skips the extra fetch and redirects immediately when the context already holds this exact active session', async () => {
     // Mirrors the real flow: Training's "Умная тренировка" start already
     // primed the context (in an earlier commit, via an event handler,

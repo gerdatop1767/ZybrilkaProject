@@ -21,9 +21,9 @@ vi.mock('../../lib/api.js', () => {
   return {
     listCollections: vi.fn(),
     getRandomTask: vi.fn(),
-    getVariant: vi.fn(),
     getProgressByTopic: vi.fn(),
     startLearningSession: vi.fn(),
+    startVariantSession: vi.fn(),
     ApiError: MockApiError,
   };
 });
@@ -283,15 +283,23 @@ describe('Training — "По теме" (real topics, independent 🎲/🔄, numb
   });
 });
 
+function variantSessionResponse(variantId: string, variantNumber: number) {
+  return {
+    sessionId: `session-${variantId}`,
+    subject: 'math',
+    status: 'active' as const,
+    position: 1,
+    total: 1,
+    task: RANDOM_TASK,
+    variant: { variantId, variantNumber, variantTitle: `Вариант ${variantNumber}` },
+  };
+}
+
 describe('Training — "Вариант" (compact independent 🎲/🔄)', () => {
-  it('starts a manually picked variant when both toggles are off', async () => {
+  it('starts a manually picked variant as a real backend session when both toggles are off', async () => {
     const user = userEvent.setup();
     vi.mocked(api.listCollections).mockResolvedValue([COLLECTION]);
-    vi.mocked(api.getVariant).mockResolvedValue({
-      variant: COLLECTION.variants[0]!,
-      collection: COLLECTION.collection,
-      tasks: [{ position: 1, task: RANDOM_TASK }],
-    });
+    vi.mocked(api.startVariantSession).mockResolvedValue(variantSessionResponse('v1', 1));
     renderTraining();
 
     await user.click(screen.getByRole('button', { name: /^Вариант/ }));
@@ -304,7 +312,8 @@ describe('Training — "Вариант" (compact independent 🎲/🔄)', () => 
     await waitFor(() => {
       expect(screen.getByTestId('overlay')).toHaveTextContent('task:5');
     });
-    expect(api.getVariant).toHaveBeenCalledWith('v1');
+    expect(api.startVariantSession).toHaveBeenCalledWith('v1');
+    expect(screen.getByTestId('session')).toHaveTextContent('active:session-v1');
   });
 
   it('requires a manual pick when both 🎲 and 🔄 are off', async () => {
@@ -322,11 +331,7 @@ describe('Training — "Вариант" (compact independent 🎲/🔄)', () => 
   it('🎲 "Случайный вариант" picks one of the real variants automatically', async () => {
     const user = userEvent.setup();
     vi.mocked(api.listCollections).mockResolvedValue([COLLECTION]);
-    vi.mocked(api.getVariant).mockResolvedValue({
-      variant: COLLECTION.variants[0]!,
-      collection: COLLECTION.collection,
-      tasks: [{ position: 1, task: RANDOM_TASK }],
-    });
+    vi.mocked(api.startVariantSession).mockResolvedValue(variantSessionResponse('v1', 1));
     renderTraining();
     await user.click(screen.getByRole('button', { name: /^Вариант/ }));
     const collectionTrigger = await screen.findByRole('button', { name: /Все источники/ });
@@ -334,7 +339,7 @@ describe('Training — "Вариант" (compact independent 🎲/🔄)', () => 
     await user.click(await screen.findByRole('option', { name: 'ЕГЭ 2026 Ященко' }));
     await user.click(screen.getByRole('button', { name: 'Случайный вариант' }));
     await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
-    await waitFor(() => expect(api.getVariant).toHaveBeenCalled());
+    await waitFor(() => expect(api.startVariantSession).toHaveBeenCalled());
   });
 
   it('🔄 "Только нерешённые" skips a variant whose tasks are all already attempted', async () => {
@@ -345,11 +350,7 @@ describe('Training — "Вариант" (compact independent 🎲/🔄)', () => 
         ? Promise.reject(new api.ApiError(404, { error: 'no_unseen_tasks' }))
         : Promise.resolve(RANDOM_TASK),
     );
-    vi.mocked(api.getVariant).mockResolvedValue({
-      variant: COLLECTION.variants[1]!,
-      collection: COLLECTION.collection,
-      tasks: [{ position: 1, task: RANDOM_TASK }],
-    });
+    vi.mocked(api.startVariantSession).mockResolvedValue(variantSessionResponse('v2', 2));
     renderTraining();
     await user.click(screen.getByRole('button', { name: /^Вариант/ }));
     const collectionTrigger = await screen.findByRole('button', { name: /Все источники/ });
@@ -357,7 +358,7 @@ describe('Training — "Вариант" (compact independent 🎲/🔄)', () => 
     await user.click(await screen.findByRole('option', { name: 'ЕГЭ 2026 Ященко' }));
     await user.click(screen.getByRole('button', { name: 'Только нерешённые' }));
     await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
-    await waitFor(() => expect(api.getVariant).toHaveBeenCalledWith('v2'));
+    await waitFor(() => expect(api.startVariantSession).toHaveBeenCalledWith('v2'));
   });
 
   it('shows an honest message when every variant is fully solved', async () => {
@@ -374,7 +375,7 @@ describe('Training — "Вариант" (compact independent 🎲/🔄)', () => 
     await user.click(screen.getByRole('button', { name: 'Только нерешённые' }));
     await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
     expect(await screen.findByText(/Нет вариантов с нерешёнными заданиями/)).toBeInTheDocument();
-    expect(api.getVariant).not.toHaveBeenCalled();
+    expect(api.startVariantSession).not.toHaveBeenCalled();
   });
 });
 

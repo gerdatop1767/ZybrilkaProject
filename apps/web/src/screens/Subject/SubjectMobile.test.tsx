@@ -56,6 +56,9 @@ function aggregateProgress() {
       taskNumber: i + 1,
       total: 3,
       completed: 0,
+      correct: 0,
+      incorrect: 0,
+      accuracyPercent: null,
     })),
   };
 }

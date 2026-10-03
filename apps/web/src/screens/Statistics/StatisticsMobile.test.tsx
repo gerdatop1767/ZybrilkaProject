@@ -12,6 +12,7 @@ vi.mock('../../lib/api.js', () => ({
   getMistakes: vi.fn(),
   getRandomTask: vi.fn(() => new Promise(() => {})),
   getTaskNumberStatisticsDetail: vi.fn(() => new Promise(() => {})),
+  getVariantProgress: vi.fn(() => Promise.resolve({ items: [] })),
 }));
 
 function renderWithNav() {
@@ -93,6 +94,9 @@ describe('StatisticsMobile', () => {
         taskNumber: i + 1,
         total: 1,
         completed: 0,
+        correct: 0,
+        incorrect: 0,
+        accuracyPercent: null,
       })),
     });
     const user = userEvent.setup();
@@ -135,7 +139,7 @@ describe('StatisticsMobile', () => {
 
   it('every task-number card is a real tappable button', async () => {
     vi.mocked(api.getProgressByTaskNumber).mockResolvedValue({
-      items: [{ subjectId: 'math', taskNumber: 1, total: 4, completed: 3 }],
+      items: [{ subjectId: 'math', taskNumber: 1, total: 4, completed: 3, correct: 0, incorrect: 0, accuracyPercent: null }],
     });
     const user = userEvent.setup();
     renderWithNav();
@@ -158,8 +162,8 @@ describe('StatisticsMobile — real progress data', () => {
   it('shows real per-task-number completion once the API responds, including untried numbers', async () => {
     vi.mocked(api.getProgressByTaskNumber).mockResolvedValue({
       items: [
-        { subjectId: 'math', taskNumber: 1, total: 4, completed: 3 },
-        { subjectId: 'math', taskNumber: 2, total: 5, completed: 0 },
+        { subjectId: 'math', taskNumber: 1, total: 4, completed: 3, correct: 0, incorrect: 0, accuracyPercent: null },
+        { subjectId: 'math', taskNumber: 2, total: 5, completed: 0, correct: 0, incorrect: 0, accuracyPercent: null },
       ],
     });
     const user = userEvent.setup();
@@ -218,7 +222,7 @@ describe('StatisticsMobile — real progress data', () => {
 describe('StatisticsMobile — По номерам detail (Statistics 2.0)', () => {
   it('tapping a task number opens a full-screen detail with real data and a working back button', async () => {
     vi.mocked(api.getProgressByTaskNumber).mockResolvedValue({
-      items: [{ subjectId: 'math', taskNumber: 5, total: 4, completed: 3 }],
+      items: [{ subjectId: 'math', taskNumber: 5, total: 4, completed: 3, correct: 0, incorrect: 0, accuracyPercent: null }],
     });
     vi.mocked(api.getTaskNumberStatisticsDetail).mockResolvedValue({
       subjectId: 'math',
@@ -255,5 +259,69 @@ describe('StatisticsMobile — По номерам detail (Statistics 2.0)', () 
     await user.click(screen.getByText('Статистика'));
     expect(screen.queryByText('3 из 4')).not.toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'По заданиям' })).toBeInTheDocument();
+  });
+});
+
+describe('StatisticsMobile — Статистика вариантов', () => {
+  it('shows an honest empty state when no variant has been started yet', async () => {
+    vi.mocked(api.getVariantProgress).mockResolvedValue({ items: [] });
+    renderWithNav();
+    expect(
+      await screen.findByText('Реши свой первый вариант в Тренировке — он появится здесь.'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows real variant history — completed and still-in-progress, never fabricated', async () => {
+    vi.mocked(api.getVariantProgress).mockResolvedValue({
+      items: [
+        {
+          sessionId: 's1',
+          variantId: 'v1',
+          variantNumber: 1,
+          variantTitle: 'Вариант 1',
+          subjectId: 'math',
+          status: 'completed',
+          startedAt: '2026-10-02T10:00:00.000Z',
+          completedAt: '2026-10-02T11:42:00.000Z',
+          plannedCount: 19,
+          solvedCount: 19,
+          correctCount: 17,
+          incorrectCount: 2,
+          accuracyPercent: 89,
+          totalTimeMs: 6120000,
+          keyErrors: [{ signature: 'incorrect_answer', count: 2 }],
+        },
+        {
+          sessionId: 's2',
+          variantId: 'v3',
+          variantNumber: 3,
+          variantTitle: 'Вариант 3',
+          subjectId: 'math',
+          status: 'active',
+          startedAt: '2026-10-01T10:00:00.000Z',
+          completedAt: null,
+          plannedCount: 19,
+          solvedCount: 12,
+          correctCount: 8,
+          incorrectCount: 4,
+          accuracyPercent: 67,
+          totalTimeMs: null,
+          keyErrors: [],
+        },
+      ],
+    });
+    renderWithNav();
+
+    expect(await screen.findByText('19 / 19 заданий')).toBeInTheDocument();
+    expect(screen.getByText('17 правильных')).toBeInTheDocument();
+    expect(screen.getByText('89%')).toBeInTheDocument();
+    expect(screen.getByText('Время: 1 ч 42 мин')).toBeInTheDocument();
+    expect(screen.getByText('Неверный ответ — 2')).toBeInTheDocument();
+
+    // The still-active (abandoned) one shows its real partial progress,
+    // never faked as finished.
+    expect(screen.getByText('12 / 19 заданий')).toBeInTheDocument();
+    expect(screen.getByText('67%')).toBeInTheDocument();
+    expect(screen.getByText(/в процессе/)).toBeInTheDocument();
   });
 });

@@ -118,12 +118,43 @@ export async function getByTaskNumberWithTotals(
     completed.map((row) => [`${row.subjectId}:${row.taskNumber}`, row.completed]),
   );
 
-  return totals.map((row) => ({
-    subjectId: row.subjectId,
-    taskNumber: row.taskNumber,
-    total: row.total,
-    completed: completedByKey.get(`${row.subjectId}:${row.taskNumber}`) ?? 0,
-  }));
+  // Accuracy — real correct/total ATTEMPTS for this number (same
+  // attempts-based convention as every other accuracy in the app, e.g.
+  // ProgressSummary's own `accuracyPercent`), never conflated with
+  // `completed` above (which counts unique SOLVED tasks, not attempts).
+  const attemptStats = await db
+    .select({
+      subjectId: schema.tasks.subjectId,
+      taskNumber: schema.tasks.taskNumber,
+      attempts: count(),
+      correct: count(sql`case when ${schema.attempts.isCorrect} then 1 end`),
+    })
+    .from(schema.attempts)
+    .innerJoin(schema.tasks, eq(schema.attempts.taskId, schema.tasks.id))
+    .where(and(eq(schema.attempts.userId, userId), where))
+    .groupBy(schema.tasks.subjectId, schema.tasks.taskNumber);
+  const attemptStatsByKey = new Map(
+    attemptStats.map((row) => [
+      `${row.subjectId}:${row.taskNumber}`,
+      { attempts: row.attempts, correct: row.correct },
+    ]),
+  );
+
+  return totals.map((row) => {
+    const key = `${row.subjectId}:${row.taskNumber}`;
+    const stats = attemptStatsByKey.get(key);
+    const attempts = stats?.attempts ?? 0;
+    const correct = stats?.correct ?? 0;
+    return {
+      subjectId: row.subjectId,
+      taskNumber: row.taskNumber,
+      total: row.total,
+      completed: completedByKey.get(key) ?? 0,
+      correct,
+      incorrect: attempts - correct,
+      accuracyPercent: attempts === 0 ? null : Math.round((correct / attempts) * 100),
+    };
+  });
 }
 
 /**

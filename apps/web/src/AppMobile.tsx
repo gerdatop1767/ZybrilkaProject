@@ -34,6 +34,18 @@ import { LearningSession } from './screens/LearningSession/LearningSession.js';
  * the approved screenshot shows it as a drawer over whatever screen
  * is currently showing, so it renders as a portal on top of the
  * normal tab/overlay content instead (see `isMenuOpen` below).
+ *
+ * Exactly one `<MobileShell>` in exactly one place in the returned
+ * tree: this used to be three separate `return` statements with
+ * `{menu}` placed inconsistently relative to `<MobileShell>` across
+ * them. That inconsistency was investigated as a possible cause of
+ * the mobile-only visual flash (a hypothesis that the differing root
+ * element shape forced React to unmount/remount the shell on certain
+ * transitions), but a mount-counter instrumentation test proved the
+ * shell does NOT remount across that boundary even in the old code —
+ * so that was not the actual cause, and this restructuring is kept
+ * purely as a readability simplification (one shell instance, props
+ * vary), not as the flash fix. The real cause is tracked separately.
  */
 export function AppMobile() {
   const { tab, overlay, navigate, back } = useNavigation();
@@ -65,127 +77,131 @@ export function AppMobile() {
   // MainTabIds) so Desktop's own routing/BackRow keeps working
   // untouched; this is a mobile-only rendering choice, not a routing
   // change.
-  if (
-    contentOverlay &&
-    (contentOverlay.screen === 'profile' || contentOverlay.screen === 'mistakes')
-  ) {
-    return (
-      <>
-        <MobileShell
-          nav={
-            <BottomNav
-              items={defaultBottomNavItems}
-              activeId={contentOverlay.screen}
-              onSelect={selectTab}
-            />
-          }
-        >
-          {contentOverlay.screen === 'profile' && <Profile />}
-          {contentOverlay.screen === 'mistakes' && <MistakesMobile />}
-        </MobileShell>
-        {menu}
-      </>
-    );
-  }
+  const showsBottomNavOverlay =
+    contentOverlay !== null &&
+    (contentOverlay.screen === 'profile' || contentOverlay.screen === 'mistakes');
 
-  if (contentOverlay) {
-    return (
-      <MobileShell>
-        {contentOverlay.screen === 'subjectCatalog' && <SubjectCatalogMobile />}
-        {contentOverlay.screen === 'subject' && (
-          <SubjectMobile
-            subjectId={contentOverlay.subjectId}
-            from={contentOverlay.from}
-            collectionSlug={contentOverlay.collectionSlug}
-            initialMode={contentOverlay.initialMode}
-          />
-        )}
-        {contentOverlay.screen === 'task' && (
-          <TaskMobile
-            key={contentOverlay.taskId}
-            subjectId={contentOverlay.subjectId}
-            taskNumber={contentOverlay.taskNumber}
-            taskId={contentOverlay.taskId}
-            collectionSlug={contentOverlay.collectionSlug}
-            variantId={contentOverlay.variantId}
-            customOrderedTasks={contentOverlay.customOrderedTasks}
-            returnTo={contentOverlay.returnTo}
-          />
-        )}
-        {contentOverlay.screen === 'result' && (
-          <ResultMobile
-            key={`${contentOverlay.taskId}-${contentOverlay.correct}`}
-            subjectId={contentOverlay.subjectId}
-            taskNumber={contentOverlay.taskNumber}
-            taskId={contentOverlay.taskId}
-            correct={contentOverlay.correct}
-            userAnswer={contentOverlay.userAnswer}
-            collectionSlug={contentOverlay.collectionSlug}
-            variantId={contentOverlay.variantId}
-            customOrderedTasks={contentOverlay.customOrderedTasks}
-            returnTo={contentOverlay.returnTo}
-            timeSpentMs={contentOverlay.timeSpentMs}
-          />
-        )}
-        {contentOverlay.screen === 'learningSession' && (
-          <LearningSession key={contentOverlay.sessionId} sessionId={contentOverlay.sessionId} />
-        )}
-        {contentOverlay.screen === 'trainingTopic' && (
-          <WipPlaceholder title="Тренировка по теме" note="Экран в разработке — следующий блок." />
-        )}
-        {contentOverlay.screen === 'trainingRandom' && (
-          <WipPlaceholder title="Случайные задания" note="Экран в разработке — следующий блок." />
-        )}
-        {contentOverlay.screen === 'trainingVariants' && (
-          <WipPlaceholder title="Варианты" note="Экран в разработке — следующий блок." />
-        )}
-        {contentOverlay.screen === 'trainingByNumber' && (
-          <TrainingByNumber
-            subjectId={contentOverlay.subjectId}
-            collectionSlug={contentOverlay.collectionSlug}
-            from={contentOverlay.from}
-          />
-        )}
-        {contentOverlay.screen === 'rating' && <RatingMobile />}
-        {contentOverlay.screen === 'about' && <AboutMobile />}
-        {contentOverlay.screen === 'learningCenter' && (
-          <WipPlaceholder
-            title="Учебный центр"
-            note="Утверждённый референс для этого экрана ещё не получен."
-          />
-        )}
-        {contentOverlay.screen === 'onboarding' && <Onboarding />}
-        {contentOverlay.screen === 'favorites' && (
-          <WipPlaceholder title="Избранное" note="Экран в разработке — следующий блок." />
-        )}
-        {contentOverlay.screen === 'mockExams' && (
-          <WipPlaceholder title="Пробники" note="Экран в разработке — следующий блок." />
-        )}
-        {contentOverlay.screen === 'topics' && (
-          <WipPlaceholder title="Темы" note="Экран в разработке — следующий блок." />
-        )}
-        {contentOverlay.screen === 'friends' && <FriendsMobile />}
-        {contentOverlay.screen === 'friendProfile' && (
-          <FriendProfileMobile friendId={contentOverlay.friendId} />
-        )}
-        {contentOverlay.screen === 'settings' && (
-          <WipPlaceholder title="Настройки" note="Экран в разработке — следующий блок." />
-        )}
-        {contentOverlay.screen === 'help' && <HelpMobile />}
-        {menu}
-      </MobileShell>
-    );
-  }
+  const nav = !contentOverlay ? (
+    <BottomNav items={defaultBottomNavItems} activeId={tab} onSelect={selectTab} />
+  ) : showsBottomNavOverlay ? (
+    <BottomNav
+      items={defaultBottomNavItems}
+      activeId={contentOverlay.screen}
+      onSelect={selectTab}
+    />
+  ) : undefined;
 
   return (
     <>
-      <MobileShell
-        nav={<BottomNav items={defaultBottomNavItems} activeId={tab} onSelect={selectTab} />}
-      >
-        {tab === 'home' && <HomeMobile />}
-        {tab === 'training' && <Training />}
-        {tab === 'statistics' && <StatisticsMobile />}
-        {tab === 'achievements' && <AchievementsMobile />}
+      <MobileShell nav={nav}>
+        {!contentOverlay && (
+          <>
+            {tab === 'home' && <HomeMobile />}
+            {tab === 'training' && <Training />}
+            {tab === 'statistics' && <StatisticsMobile />}
+            {tab === 'achievements' && <AchievementsMobile />}
+          </>
+        )}
+        {showsBottomNavOverlay && (
+          <>
+            {contentOverlay.screen === 'profile' && <Profile />}
+            {contentOverlay.screen === 'mistakes' && <MistakesMobile />}
+          </>
+        )}
+        {contentOverlay && !showsBottomNavOverlay && (
+          <>
+            {contentOverlay.screen === 'subjectCatalog' && <SubjectCatalogMobile />}
+            {contentOverlay.screen === 'subject' && (
+              <SubjectMobile
+                subjectId={contentOverlay.subjectId}
+                from={contentOverlay.from}
+                collectionSlug={contentOverlay.collectionSlug}
+                initialMode={contentOverlay.initialMode}
+              />
+            )}
+            {contentOverlay.screen === 'task' && (
+              <TaskMobile
+                key={contentOverlay.taskId}
+                subjectId={contentOverlay.subjectId}
+                taskNumber={contentOverlay.taskNumber}
+                taskId={contentOverlay.taskId}
+                collectionSlug={contentOverlay.collectionSlug}
+                variantId={contentOverlay.variantId}
+                customOrderedTasks={contentOverlay.customOrderedTasks}
+                returnTo={contentOverlay.returnTo}
+              />
+            )}
+            {contentOverlay.screen === 'result' && (
+              <ResultMobile
+                key={`${contentOverlay.taskId}-${contentOverlay.correct}`}
+                subjectId={contentOverlay.subjectId}
+                taskNumber={contentOverlay.taskNumber}
+                taskId={contentOverlay.taskId}
+                correct={contentOverlay.correct}
+                userAnswer={contentOverlay.userAnswer}
+                collectionSlug={contentOverlay.collectionSlug}
+                variantId={contentOverlay.variantId}
+                customOrderedTasks={contentOverlay.customOrderedTasks}
+                returnTo={contentOverlay.returnTo}
+                timeSpentMs={contentOverlay.timeSpentMs}
+              />
+            )}
+            {contentOverlay.screen === 'learningSession' && (
+              <LearningSession
+                key={contentOverlay.sessionId}
+                sessionId={contentOverlay.sessionId}
+              />
+            )}
+            {contentOverlay.screen === 'trainingTopic' && (
+              <WipPlaceholder
+                title="Тренировка по теме"
+                note="Экран в разработке — следующий блок."
+              />
+            )}
+            {contentOverlay.screen === 'trainingRandom' && (
+              <WipPlaceholder
+                title="Случайные задания"
+                note="Экран в разработке — следующий блок."
+              />
+            )}
+            {contentOverlay.screen === 'trainingVariants' && (
+              <WipPlaceholder title="Варианты" note="Экран в разработке — следующий блок." />
+            )}
+            {contentOverlay.screen === 'trainingByNumber' && (
+              <TrainingByNumber
+                subjectId={contentOverlay.subjectId}
+                collectionSlug={contentOverlay.collectionSlug}
+                from={contentOverlay.from}
+              />
+            )}
+            {contentOverlay.screen === 'rating' && <RatingMobile />}
+            {contentOverlay.screen === 'about' && <AboutMobile />}
+            {contentOverlay.screen === 'learningCenter' && (
+              <WipPlaceholder
+                title="Учебный центр"
+                note="Утверждённый референс для этого экрана ещё не получен."
+              />
+            )}
+            {contentOverlay.screen === 'onboarding' && <Onboarding />}
+            {contentOverlay.screen === 'favorites' && (
+              <WipPlaceholder title="Избранное" note="Экран в разработке — следующий блок." />
+            )}
+            {contentOverlay.screen === 'mockExams' && (
+              <WipPlaceholder title="Пробники" note="Экран в разработке — следующий блок." />
+            )}
+            {contentOverlay.screen === 'topics' && (
+              <WipPlaceholder title="Темы" note="Экран в разработке — следующий блок." />
+            )}
+            {contentOverlay.screen === 'friends' && <FriendsMobile />}
+            {contentOverlay.screen === 'friendProfile' && (
+              <FriendProfileMobile friendId={contentOverlay.friendId} />
+            )}
+            {contentOverlay.screen === 'settings' && (
+              <WipPlaceholder title="Настройки" note="Экран в разработке — следующий блок." />
+            )}
+            {contentOverlay.screen === 'help' && <HelpMobile />}
+          </>
+        )}
       </MobileShell>
       {menu}
     </>

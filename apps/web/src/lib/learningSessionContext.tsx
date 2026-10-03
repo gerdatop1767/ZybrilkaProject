@@ -1,5 +1,9 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import type { LearningSessionResponse, LearningSessionSummary } from '@zybrilka/shared';
+import type {
+  LearningSessionResponse,
+  LearningSessionSummary,
+  LearningSessionVariantInfo,
+} from '@zybrilka/shared';
 import type { Route } from './navigation.js';
 
 /**
@@ -31,6 +35,9 @@ export type LearningSessionState =
       readonly currentTaskNumber: number;
       readonly position: number;
       readonly total: number;
+      /** Present only for a VARIANT session (Training's "Вариант" mode) —
+       * absent for Smart Training. */
+      readonly variant?: LearningSessionVariantInfo;
     }
   | {
       readonly status: 'completed';
@@ -39,6 +46,7 @@ export type LearningSessionState =
       readonly position: number;
       readonly total: number;
       readonly summary: LearningSessionSummary;
+      readonly variant?: LearningSessionVariantInfo;
     };
 
 interface LearningSessionContextValue {
@@ -123,6 +131,7 @@ export function applyLearningSessionResponse(
       position: response.position,
       total: response.total,
       summary: response.summary,
+      variant: response.variant,
     });
     navigate({ screen: 'learningSession', sessionId: response.sessionId });
     return 'completed';
@@ -136,6 +145,7 @@ export function applyLearningSessionResponse(
     currentTaskNumber: response.task.taskNumber,
     position: response.position,
     total: response.total,
+    variant: response.variant,
   });
   navigate({
     screen: 'task',

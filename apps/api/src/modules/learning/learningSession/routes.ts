@@ -4,7 +4,9 @@ import { z } from 'zod';
 import {
   advanceLearningSession,
   getLearningSessionSnapshot,
+  getVariantProgress,
   startLearningSession,
+  startVariantSession,
 } from './service.js';
 
 export interface LearningSessionRoutesOptions {
@@ -26,6 +28,8 @@ const startSessionBodySchema = z.object({
 });
 
 const sessionParamsSchema = z.object({ sessionId: z.uuid() });
+
+const startVariantSessionBodySchema = z.object({ variantId: z.uuid() });
 
 /**
  * ZUBRILKA LEARNING INTELLIGENCE, Phase 9/10. Three endpoints: start,
@@ -56,6 +60,31 @@ export const learningSessionRoutes: FastifyPluginAsync<LearningSessionRoutesOpti
     });
     if (!session) return reply.code(404).send({ error: 'no_candidate_subject' });
     return session;
+  });
+
+  // Training's "Вариант" mode — starts a VARIANT session over one real
+  // published exam variant's own task order (never scored). Registered
+  // as its own path (not nested under :sessionId) so it's never
+  // ambiguous with the GET-by-id routes below.
+  app.post('/me/learning/sessions/variant', async (request, reply) => {
+    if (!request.userId) return reply.code(400).send({ error: 'missing_anon_id' });
+
+    const body = startVariantSessionBodySchema.safeParse(request.body);
+    if (!body.success) {
+      return reply.code(400).send({ error: 'invalid_body', issues: body.error.issues });
+    }
+
+    const session = await startVariantSession(db, request.userId, body.data.variantId);
+    if (!session) return reply.code(404).send({ error: 'variant_not_found' });
+    return session;
+  });
+
+  // Statistics' "Статистика вариантов" — every real variant session
+  // this user has ever started, any status (see getVariantProgress's
+  // doc comment for why abandoned ones are included, not hidden).
+  app.get('/progress/variants', async (request, reply) => {
+    if (!request.userId) return reply.code(400).send({ error: 'missing_anon_id' });
+    return getVariantProgress(db, request.userId);
   });
 
   app.get('/me/learning/sessions/:sessionId/next', async (request, reply) => {

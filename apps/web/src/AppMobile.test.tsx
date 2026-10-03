@@ -10,6 +10,7 @@ vi.mock('./lib/api.js', () => ({
   getTask: vi.fn(),
   listTasksByNumber: vi.fn(),
   getProgressSummary: vi.fn(() => new Promise(() => {})),
+  getVariantProgress: vi.fn(() => new Promise(() => {})),
   getTaskCountsBySubject: vi.fn(() => new Promise(() => {})),
   getProgressByTaskNumber: vi.fn(() => new Promise(() => {})),
   getProgressByTopic: vi.fn(() => new Promise(() => {})),
@@ -88,6 +89,98 @@ describe('AppMobile — bottom nav (Главная/Задания/Статист
     const mistakesTab = screen.getByRole('button', { name: 'Мои ошибки' });
     expect(mistakesTab).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: 'Главная' })).toBeInTheDocument();
+  });
+});
+
+describe('AppMobile — MobileShell stays mounted across tab/overlay transitions (mobile visual-flash fix)', () => {
+  // Регрессионный тест на баг: раньше ветка профиля/ошибок (bottom-nav
+  // overlay) и обычная вкладка возвращали ОДИНАКОВУЮ форму дерева
+  // (Fragment с MobileShell+menu как соседями), так что переход между
+  // ними уже не ломался — реальный баг был именно на границе с
+  // "обычным" полноэкранным overlay (Subject/Task/LearningSession и
+  // т.д.), где `{menu}` раньше рендерился ВНУТРИ `<MobileShell>`, меняя
+  // тип корневого элемента. Тест должен пересекать именно эту границу.
+  it('never remounts the header/BottomNav when crossing from a plain tab into a full-screen overlay (Задания → Умная тренировка session)', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.listCollections).mockResolvedValue([]);
+    vi.mocked(api.getProgressByTopic).mockResolvedValue({ items: [] });
+    vi.mocked(api.startLearningSession).mockResolvedValue({
+      sessionId: 'session-1',
+      subject: 'math',
+      status: 'active',
+      position: 1,
+      total: 5,
+      task: {
+        id: 'task-1',
+        subjectId: 'math',
+        taskNumber: 5,
+        topicId: null,
+        topicName: null,
+        difficulty: 2,
+        conditionMd: 'Условие',
+        imageUrl: null,
+        hintMd: null,
+        answerType: 'short_answer',
+        answerOptions: null,
+        answerParts: null,
+        source: 'ФИПИ',
+        sourceUrl: null,
+        sourceYear: 2026,
+        tags: [],
+        status: 'published',
+      },
+    });
+    const { container } = renderApp();
+
+    // Training is a plain tab (no overlay) — header/nav render via the
+    // tab branch.
+    await user.click(screen.getByRole('button', { name: 'Задания' }));
+    const headerBefore = container.querySelector('header');
+    const navBefore = container.querySelector('nav[aria-label="Zybrilka"]');
+    const shellBefore = container.querySelector('[class*="_shell_"]');
+    expect(headerBefore).toBeTruthy();
+    expect(navBefore).toBeTruthy();
+    expect(shellBefore).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: /Умная тренировка/ }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+    // Starting the session navigates into the `task` overlay (a
+    // full-screen, chrome-less takeover) — exactly the branch that used
+    // to nest `{menu}` inside `<MobileShell>` and force a remount.
+    await waitFor(() => {
+      expect(screen.getByTestId('overlay')).toHaveTextContent('task:5');
+    });
+
+    const headerAfter = container.querySelector('header');
+    const navAfter = container.querySelector('nav[aria-label="Zybrilka"]');
+    // The header/nav disappear for this chrome-less screen (expected —
+    // Task hides navigation), but the SAME `<MobileShell>` instance
+    // (its root `.shell` div) must still be the one doing it — proven
+    // by DOM node identity, not just "a shell exists somewhere". A
+    // mount-counter experiment confirmed this transition never
+    // actually remounted the shell even before the AppMobile
+    // restructuring; this assertion is kept as a standing invariant,
+    // not as proof of a fix.
+    const shellAfter = container.querySelector('[class*="_shell_"]');
+    expect(shellAfter).toBe(shellBefore);
+    expect(headerAfter).toBeNull();
+    expect(navAfter).toBeNull();
+  });
+
+  it('never remounts the header/BottomNav when crossing between a plain tab and the Профиль bottom-nav overlay', async () => {
+    const user = userEvent.setup();
+    const { container } = renderApp();
+
+    const headerBefore = container.querySelector('header');
+    const navBefore = container.querySelector('nav[aria-label="Zybrilka"]');
+    expect(headerBefore).toBeTruthy();
+    expect(navBefore).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Профиль' }));
+    expect(screen.getByTestId('overlay')).toHaveTextContent('profile');
+
+    expect(container.querySelector('header')).toBe(headerBefore);
+    expect(container.querySelector('nav[aria-label="Zybrilka"]')).toBe(navBefore);
   });
 });
 
@@ -171,6 +264,35 @@ describe('AppMobile — Subject → Задания по номерам → task 
     const backButton = screen.getByRole('button', { name: /Назад|Математика/ });
     await user.click(backButton);
     await waitFor(() => expect(screen.getByRole('button', { name: '№5' })).toBeInTheDocument());
+  });
+
+  it('never remounts MobileShell across Профиль ↔ Subject ↔ По номерам (the full chrome-less chain)', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.listCollections).mockResolvedValue([MATH_COLLECTION]);
+    vi.mocked(api.getProgressByTopic).mockResolvedValue({ items: [] });
+    vi.mocked(api.getRandomTask).mockResolvedValue(RANDOM_TASK);
+
+    const { container } = renderApp();
+    const shell = container.querySelector('[class*="_shell_"]');
+    expect(shell).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Профиль' }));
+    expect(container.querySelector('[class*="_shell_"]')).toBe(shell);
+
+    await user.click(screen.getByRole('button', { name: 'Меню' }));
+    await user.click(screen.getByRole('button', { name: 'Все задания' }));
+    expect(container.querySelector('[class*="_shell_"]')).toBe(shell);
+
+    await user.click(await screen.findByText('Математика'));
+    expect(container.querySelector('[class*="_shell_"]')).toBe(shell);
+
+    await user.click(await screen.findByRole('button', { name: 'По номерам' }));
+    expect(container.querySelector('[class*="_shell_"]')).toBe(shell);
+
+    await user.click(await screen.findByRole('button', { name: '№5' }));
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+    await waitFor(() => expect(screen.getByTestId('overlay')).toHaveTextContent('task:5'));
+    expect(container.querySelector('[class*="_shell_"]')).toBe(shell);
   });
 });
 
