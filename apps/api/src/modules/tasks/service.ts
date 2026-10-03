@@ -5,6 +5,7 @@ import {
   gradeMultiPart,
   parseMultiPartSpec,
   serializeMultiPartUserAnswer,
+  toMoscowDateString,
   type AttemptRequest,
   type AttemptResult,
   type RandomTaskQuery,
@@ -148,6 +149,11 @@ export async function submitAttempt(
       isCorrect: correct,
       wrongParts: null,
     });
+    // Streak system: a submitted/graded attempt is real daily activity
+    // regardless of correctness — see repo.recordDailyActivity's doc
+    // comment. Same transaction as the attempt itself, never a
+    // separate request the client could skip or race.
+    await repo.recordDailyActivity(tx, userId, toMoscowDateString(attempt.createdAt));
     await updateSkillStatisticsForTaskAttempt(tx, userId, taskId);
     await updateTaskStatistics(tx, taskId);
     await recordErrorSignaturesForAttempt(
@@ -204,6 +210,7 @@ async function submitMultiPartAttempt(
       isCorrect: grading.status === 'all_correct',
       wrongParts: wrongParts.length > 0 ? wrongParts : null,
     });
+    await repo.recordDailyActivity(tx, userId, toMoscowDateString(attempt.createdAt));
     await updateSkillStatisticsForTaskAttempt(tx, userId, row.task.id);
     await updateTaskStatistics(tx, row.task.id);
     await recordErrorSignaturesForAttempt(

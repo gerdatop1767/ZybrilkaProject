@@ -31,7 +31,6 @@ import { TaskNumberBars } from '../../ui/Statistics/TaskNumberBars.js';
 import { TaskNumberGrid } from '../../ui/Statistics/TaskNumberGrid.js';
 import { TaskNumberDetailPanel } from '../../ui/Statistics/TaskNumberDetailPanel.js';
 import { TopicProgressRow } from '../../ui/Statistics/TopicProgressRow.js';
-import { NewMockExamCard } from '../../ui/Statistics/MockExamCard.js';
 import { WipPlaceholder } from '../../ui/WipPlaceholder/WipPlaceholder.js';
 import { CircularProgress } from '../../ui/Progress/CircularProgress.js';
 import { DonutChart } from '../../ui/Charts/DonutChart.js';
@@ -339,27 +338,20 @@ export function StatisticsMobile() {
 
       {subTab === 'exams' && (
         <FadeIn className={styles.stack}>
-          <Card className={styles.summaryCard}>
-            <CircularProgress value={0} size={72} label="Средний результат">
-              <span className="text-body" style={{ fontWeight: 700 }}>
-                —
-              </span>
-            </CircularProgress>
-            <div>
-              <p className="text-body" style={{ fontWeight: 700 }}>
-                0 пробников решено
+          {variantHistory.length === 0 ? (
+            <Card>
+              <p className="text-h3">Ты ещё не решал варианты</p>
+              <p className="text-body-sm text-secondary">
+                Пройди полный вариант ЕГЭ — его результаты появятся здесь.
               </p>
-              <p className="text-body-sm text-secondary">пробные варианты ещё не поддерживаются</p>
+            </Card>
+          ) : (
+            <div className={styles.variantList}>
+              {variantHistory.map((item) => (
+                <VariantHistoryCard key={item.sessionId} item={item} />
+              ))}
             </div>
-          </Card>
-          <Card>
-            <div className={styles.cardHeaderRow}>
-              <p className="text-h3">Решённые пробники</p>
-            </div>
-            <div className={styles.examGrid}>
-              <NewMockExamCard />
-            </div>
-          </Card>
+          )}
         </FadeIn>
       )}
 
@@ -453,38 +445,6 @@ export function StatisticsMobile() {
               })}
             </div>
           </Card>
-
-          <Card>
-            <div className={styles.cardHeaderRow}>
-              <p className="text-h3">Решённые пробники</p>
-              <span className={styles.linkButton}>
-                Все пробники <Icon name="chevronRight" size={14} />
-              </span>
-            </div>
-            <div className={styles.examScroller}>
-              <NewMockExamCard />
-            </div>
-          </Card>
-
-          <button
-            type="button"
-            className={styles.mistakesLink}
-            onClick={() => navigate({ screen: 'mistakes' })}
-          >
-            <Icon name="mistakes" size={20} />
-            <span className={styles.mistakesLinkLabel}>Мои ошибки</span>
-            <Icon name="chevronRight" size={18} />
-          </button>
-
-          <button
-            type="button"
-            className={styles.mistakesLink}
-            onClick={() => navigate({ screen: 'about' })}
-          >
-            <Icon name="info" size={20} />
-            <span className={styles.mistakesLinkLabel}>О проекте</span>
-            <Icon name="chevronRight" size={18} />
-          </button>
 
           <div>
             <div className={styles.cardHeaderRow}>

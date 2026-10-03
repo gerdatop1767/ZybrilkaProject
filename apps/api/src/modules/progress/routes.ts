@@ -74,6 +74,16 @@ export const progressRoutes: FastifyPluginAsync<ProgressRoutesOptions> = async (
     );
   });
 
+  // Streak system — real server-computed state, see
+  // packages/shared/src/learning/streak.ts. Frontend (mobile + desktop
+  // header chips) only ever reads this; it never computes its own.
+  app.get('/progress/streak', async (request, reply) => {
+    if (!request.userId) {
+      return reply.code(400).send({ error: 'missing_anon_id' });
+    }
+    return service.getStreak(db, request.userId);
+  });
+
   // Statistics 2.0 — the "По номерам → №N" detail (Step 15). `subject`
   // is required (unlike the coverage endpoints above) since a detail
   // view only ever makes sense for one chosen subject.

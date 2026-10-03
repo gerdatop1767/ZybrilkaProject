@@ -18,6 +18,7 @@ export * from './learning/speedSignal.js';
 export * from './learning/userErrorStatistics.js';
 export * from './learning/taskSimilarity.js';
 export * from './learning/similarTasks.js';
+export * from './learning/streak.js';
 export * from './learning/recommendation.js';
 export * from './learning/nextTaskRecommendation.js';
 export * from './learning/learningPath.js';

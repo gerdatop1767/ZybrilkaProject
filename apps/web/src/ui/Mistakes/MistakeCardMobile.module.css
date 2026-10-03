@@ -86,6 +86,12 @@
   gap: var(--space-1);
 }
 
+.solveSimilarButton {
+  margin-right: auto;
+  padding: 6px var(--space-3);
+  font-size: 13px;
+}
+
 .retryButton {
   width: var(--touch-target-min);
   height: var(--touch-target-min);

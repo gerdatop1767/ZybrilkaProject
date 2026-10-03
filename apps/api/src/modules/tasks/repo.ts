@@ -194,6 +194,31 @@ export async function createAttempt(
 }
 
 /**
+ * Streak system — the single point an attempt becomes "real daily
+ * activity" (see CLAUDE.md: a submitted/graded attempt, correct or
+ * not, never a view/open). `activityDate` must already be the real
+ * Europe/Moscow calendar date (`toMoscowDateString`), resolved by the
+ * caller from the attempt's own `createdAt` — this function does no
+ * timezone logic itself. `onConflictDoNothing` on the table's
+ * `UNIQUE(user_id, activity_date)` is what makes several attempts in
+ * one Moscow day, and two concurrent submissions racing on the same
+ * day, both collapse to exactly one row — enforced by Postgres, not
+ * app-level locking.
+ */
+export async function recordDailyActivity(
+  db: Database,
+  userId: string,
+  activityDate: string,
+): Promise<void> {
+  await db
+    .insert(schema.userDailyActivity)
+    .values({ userId, activityDate })
+    .onConflictDoNothing({
+      target: [schema.userDailyActivity.userId, schema.userDailyActivity.activityDate],
+    });
+}
+
+/**
  * Applies the attempt result to `mistakes`: creates or reopens the row
  * on a wrong answer (incrementing `timesWrong`), resolves it on a
  * correct one. Never deletes a mistake row or its attempt history.
