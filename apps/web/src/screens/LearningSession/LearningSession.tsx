@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { useNavigation } from '../../lib/navigation.js';
 import { getLearningSession } from '../../lib/api.js';
 import {
@@ -64,7 +64,16 @@ export function LearningSession({ sessionId }: LearningSessionProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, primed]);
 
-  useEffect(() => {
+  // On the normal path (session already primed and active — just
+  // started or just advanced), this screen is a pure redirect with
+  // nothing to show: it never actually has to load anything. Using
+  // useLayoutEffect (not useEffect) runs the navigate() before the
+  // browser paints the commit below, so the "Загрузка тренировки…"
+  // placeholder further down never becomes visible — without it, that
+  // placeholder paints for one frame and then disappears, which is
+  // exactly the kind of wrong-intermediate-content flash a real fix
+  // (not a delay/animation mask) needs to prevent at the source.
+  useLayoutEffect(() => {
     if (!primed || primed.status !== 'active') return;
     navigate({
       screen: 'task',
