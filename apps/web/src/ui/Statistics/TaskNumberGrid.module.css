@@ -54,6 +54,11 @@
   color: var(--color-text-secondary);
 }
 
+.count {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
 .strong .percent {
   color: var(--color-success);
 }

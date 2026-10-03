@@ -30,6 +30,13 @@ describe('toTaskNumberProgress', () => {
     expect(rows[0]).toMatchObject({ number: 1, percent: 75 });
   });
 
+  it('passes through the real completed/total counts (never invented, for the by-number card UI)', () => {
+    const rows = toTaskNumberProgress([
+      { subjectId: 'math', taskNumber: 1, total: 4, completed: 3, correct: 0, incorrect: 0, accuracyPercent: null },
+    ]);
+    expect(rows[0]).toMatchObject({ completed: 3, total: 4 });
+  });
+
   it('bands percent into strong/medium/weak', () => {
     const strong = toTaskNumberProgress([
       { subjectId: 'math', taskNumber: 1, total: 10, completed: 8, correct: 0, incorrect: 0, accuracyPercent: null },

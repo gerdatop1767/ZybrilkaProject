@@ -81,6 +81,11 @@ export interface TaskNumberProgress {
   number: number;
   percent: number | null;
   status: 'strong' | 'medium' | 'weak' | 'current' | 'untried';
+  /** Real unique-tasks-solved / published-tasks counts for this number
+   * (same source as `percent` = completed/total) — optional since the
+   * sample/mock data above has no such counts behind it. */
+  completed?: number;
+  total?: number;
 }
 
 /** "Прогресс по заданиям (1–19)" (mobile) — per official EGE task

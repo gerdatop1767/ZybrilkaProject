@@ -24,12 +24,12 @@ export function toTaskNumberProgress(
     .map((row) => {
       const { taskNumber: number, completed, total } = row;
       if (completed === 0) {
-        return { number, percent: null, status: 'untried' as const };
+        return { number, percent: null, status: 'untried' as const, completed, total };
       }
       const percent = Math.round((completed / total) * 100);
       const status: TaskNumberProgress['status'] =
         percent >= 70 ? 'strong' : percent >= 40 ? 'medium' : 'weak';
-      return { number, percent, status };
+      return { number, percent, status, completed, total };
     });
 }
 

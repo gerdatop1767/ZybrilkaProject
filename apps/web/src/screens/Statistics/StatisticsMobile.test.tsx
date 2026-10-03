@@ -253,12 +253,16 @@ describe('StatisticsMobile — По номерам detail (Statistics 2.0)', () 
 
     // The percent itself animates in (useCountUp) — assert the static,
     // non-animated delta label instead of racing the animation.
-    expect(await screen.findByText('3 из 4')).toBeInTheDocument();
+    expect(await screen.findByText('Тригонометрические уравнения')).toBeInTheDocument();
     expect(api.getTaskNumberStatisticsDetail).toHaveBeenCalledWith('math', 5);
 
     await user.click(screen.getByText('Статистика'));
-    expect(screen.queryByText('3 из 4')).not.toBeInTheDocument();
+    expect(screen.queryByText('Тригонометрические уравнения')).not.toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'По заданиям' })).toBeInTheDocument();
+    // The grid card itself keeps showing the real completed/total count
+    // (Block 3: "Всего заданий"/"Решено" must be real, not hidden) —
+    // this is the same "3 из 4" the detail panel showed, now on the card.
+    expect(screen.getByText('3 из 4')).toBeInTheDocument();
   });
 });
 
