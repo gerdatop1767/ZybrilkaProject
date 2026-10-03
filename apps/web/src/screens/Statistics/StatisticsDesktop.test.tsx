@@ -96,6 +96,33 @@ describe('StatisticsDesktop — real progress data', () => {
     expect(await screen.findByText('2 из 3')).toBeInTheDocument();
   });
 
+  // Regression test for the mobile page flash (the same bug reached
+  // desktop too): `solvedTotal`/`correctPercent` used to collapse to a
+  // fake `0` while `getProgressSummary` was still in flight. Must show
+  // an honest '···' placeholder instead.
+  it('never shows a fake "0"/"0%" headline while /progress/summary is still loading', async () => {
+    let resolveProgress!: (value: Awaited<ReturnType<typeof api.getProgressSummary>>) => void;
+    vi.mocked(api.getProgressSummary).mockReturnValue(
+      new Promise((resolve) => {
+        resolveProgress = resolve;
+      }),
+    );
+    renderStatistics();
+    expect(screen.getAllByText('···').length).toBeGreaterThan(0);
+
+    resolveProgress({
+      solvedTotal: 3,
+      correctTotal: 2,
+      incorrectTotal: 1,
+      accuracyPercent: 66.7,
+      bySubject: [{ subjectId: 'math', solved: 3, correct: 2, accuracyPercent: 66.7 }],
+      byTaskNumber: [],
+      byTopic: [],
+      timeBySubject: [],
+    });
+    expect(await screen.findByText('2 из 3')).toBeInTheDocument();
+  });
+
   it('shows a neutral dash for average time/level, never a fabricated number', () => {
     renderStatistics();
     expect(screen.getByText('Среднее время')).toBeInTheDocument();

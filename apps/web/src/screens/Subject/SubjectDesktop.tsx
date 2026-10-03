@@ -94,9 +94,11 @@ export function SubjectDesktop({
   const [topics, setTopics] = useState<readonly TopicProgressItem[]>([]);
   // Real solved count + accuracy for this subject/user (Block D's
   // `bySubject`), and real published-task count — replaces the static
-  // `subject.taskCount`/`mastery` demo fields. null until loaded.
-  const [solved, setSolved] = useState(0);
-  const [accuracyPercent, setAccuracyPercent] = useState(0);
+  // `subject.taskCount`/`mastery` demo fields. null until loaded — never
+  // a `0` placeholder masquerading as a real "0 solved / 0% accuracy"
+  // (see SubjectMobile.tsx for why: same component shape, same bug).
+  const [solved, setSolved] = useState<number | null>(null);
+  const [accuracyPercent, setAccuracyPercent] = useState<number | null>(null);
   const [totalTasks, setTotalTasks] = useState<number | null>(null);
 
   useEffect(() => {
@@ -251,11 +253,11 @@ export function SubjectDesktop({
           <div className={styles.heroStats}>
             <span className={styles.heroStat}>
               <Icon name="target" size={16} />
-              <strong>{solved}</strong> заданий решено
+              <strong>{solved ?? '···'}</strong> заданий решено
             </span>
             <span className={styles.heroStat}>
               <Icon name="progress" size={16} />
-              <strong>{accuracyPercent}%</strong> средняя точность
+              <strong>{accuracyPercent !== null ? `${accuracyPercent}%` : '···'}</strong> средняя точность
             </span>
           </div>
         </div>
@@ -329,12 +331,12 @@ export function SubjectDesktop({
           <Card>
             <p className="text-h3">Твой прогресс</p>
             <div className={styles.progressRing}>
-              <CircularProgress value={accuracyPercent} size={110} strokeWidth={10}>
-                <span className="text-h2">{accuracyPercent}%</span>
+              <CircularProgress value={accuracyPercent ?? 0} size={110} strokeWidth={10}>
+                <span className="text-h2">{accuracyPercent !== null ? `${accuracyPercent}%` : '···'}</span>
               </CircularProgress>
             </div>
             <p className="text-body-sm text-secondary" style={{ textAlign: 'center' }}>
-              {solved} из {totalTasks ?? '—'} заданий решено
+              {solved ?? '···'} из {totalTasks ?? '—'} заданий решено
             </p>
           </Card>
 

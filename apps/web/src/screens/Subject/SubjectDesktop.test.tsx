@@ -74,6 +74,41 @@ describe('SubjectDesktop — hero icon and glow', () => {
   });
 });
 
+describe('SubjectDesktop — honest loading state (mobile page flash regression)', () => {
+  // Same bug/fix as SubjectMobile.test.tsx: `solved`/`accuracyPercent`
+  // used to initialize to `0`, rendering a fake "0 решено / 0% точность"
+  // indistinguishable from a real zero while `getProgressSummary` was
+  // still in flight. Must show an honest '···' placeholder instead.
+  it('never shows a fake "0 решено / 0% точность" while the real progress is still loading', async () => {
+    mockCollections();
+    let resolveProgress!: (value: Awaited<ReturnType<typeof api.getProgressSummary>>) => void;
+    vi.mocked(api.getProgressSummary).mockReturnValue(
+      new Promise((resolve) => {
+        resolveProgress = resolve;
+      }),
+    );
+    renderSubject();
+
+    expect(screen.getAllByText('···').length).toBeGreaterThan(0);
+    expect(screen.queryByText('0', { exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByText('0%')).not.toBeInTheDocument();
+
+    resolveProgress({
+      solvedTotal: 12,
+      correctTotal: 9,
+      incorrectTotal: 3,
+      accuracyPercent: 0,
+      bySubject: [{ subjectId: 'math', solved: 12, correct: 9, accuracyPercent: 75 }],
+      byTaskNumber: [],
+      byTopic: [],
+      timeBySubject: [],
+    });
+
+    await waitFor(() => expect(screen.getAllByText('12').length).toBeGreaterThan(0));
+    expect(screen.getAllByText('75%').length).toBeGreaterThan(0);
+  });
+});
+
 describe('SubjectDesktop — Темы (real API, no fake hash)', () => {
   function mockTopics(
     items: { topicId: string; topicName: string; total: number; completed: number }[],

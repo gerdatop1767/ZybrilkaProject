@@ -75,9 +75,14 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
   const [topics, setTopics] = useState<readonly TopicProgressItem[]>([]);
   // Real solved count + accuracy for this subject/user (Block D's
   // `bySubject`), and real published-task count — replaces the static
-  // `subject.taskCount`/`mastery` demo fields. null until loaded.
-  const [solved, setSolved] = useState(0);
-  const [accuracyPercent, setAccuracyPercent] = useState(0);
+  // `subject.taskCount`/`mastery` demo fields. null until loaded — never
+  // a `0` placeholder masquerading as a real "0 solved / 0% accuracy":
+  // this screen's entrance animation (SlideUp, 250ms) is long enough
+  // for that fake zero to be clearly visible as a wrong intermediate
+  // state before the real number replaces it (confirmed via frame-by-
+  // frame video of exactly this screen opening).
+  const [solved, setSolved] = useState<number | null>(null);
+  const [accuracyPercent, setAccuracyPercent] = useState<number | null>(null);
   const [totalTasks, setTotalTasks] = useState<number | null>(null);
 
   useEffect(() => {
@@ -246,11 +251,11 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
             <div className={styles.heroStats}>
               <span className={styles.heroStat}>
                 <Icon name="target" size={14} />
-                <strong>{solved}</strong> решено
+                <strong>{solved ?? '···'}</strong> решено
               </span>
               <span className={styles.heroStat}>
                 <Icon name="progress" size={14} />
-                <strong>{accuracyPercent}%</strong> точность
+                <strong>{accuracyPercent !== null ? `${accuracyPercent}%` : '···'}</strong> точность
               </span>
             </div>
           </Card>
@@ -307,12 +312,12 @@ export function SubjectMobile({ subjectId, collectionSlug, initialMode }: Subjec
           <Card>
             <p className="text-h3">Твой прогресс</p>
             <div className={styles.progressRing}>
-              <CircularProgress value={accuracyPercent} size={96} strokeWidth={9}>
-                <span className="text-h2">{accuracyPercent}%</span>
+              <CircularProgress value={accuracyPercent ?? 0} size={96} strokeWidth={9}>
+                <span className="text-h2">{accuracyPercent !== null ? `${accuracyPercent}%` : '···'}</span>
               </CircularProgress>
             </div>
             <p className="text-body-sm text-secondary" style={{ textAlign: 'center' }}>
-              {solved} из {totalTasks ?? '—'} заданий решено
+              {solved ?? '···'} из {totalTasks ?? '—'} заданий решено
             </p>
           </Card>
 
