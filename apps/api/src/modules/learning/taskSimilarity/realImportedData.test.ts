@@ -7,15 +7,15 @@ import { getSimilarTasks } from './service.js';
 /**
  * Block D (import EGE 2026 variants 2-5): proves the taskNumber hard
  * filter (commit 7b311ca, apps/api/src/modules/learning/taskSimilarity/
- * repo.ts) still holds on REAL imported rows spanning two real exam
- * variants (Вариант 1 and Вариант 2 of the same Ященко collection),
- * not just the synthetic adversarial fixture in sameTaskNumber.test.ts.
- * Вариант 1's task №7 and Вариант 2's task №7 are both real, genuinely
- * different tasks (different topic/skills/condition) — Similar Tasks
- * for one must only ever surface the other same-numbered task, never
- * a different-numbered one from either variant.
+ * repo.ts) still holds on REAL imported rows spanning three real exam
+ * variants (Вариант 1, 2 and 3 of the same Ященко collection), not
+ * just the synthetic adversarial fixture in sameTaskNumber.test.ts.
+ * Each variant's task №7 is a genuinely different task (different
+ * topic/skills/condition) — Similar Tasks for one must only ever
+ * surface same-numbered tasks from the other variants, never a
+ * different-numbered one from any variant.
  */
-describe('getSimilarTasks — real imported data (Вариант 1 + Вариант 2), same taskNumber only', () => {
+describe('getSimilarTasks — real imported data (Вариант 1 + 2 + 3), same taskNumber only', () => {
   let testDb: Awaited<ReturnType<typeof createImportedVariantsTestDb>>;
 
   beforeAll(async () => {
@@ -46,7 +46,7 @@ describe('getSimilarTasks — real imported data (Вариант 1 + Вариа�
     expect(similar.every((r) => r.taskId !== v1task7!.id)).toBe(true);
   });
 
-  it('Вариант 2 task №7 surfaces Вариант 1 task №7 as a candidate', async () => {
+  it('Вариант 2 task №7 surfaces both Вариант 1 and Вариант 3 task №7 as candidates, never a different number', async () => {
     const { db } = testDb;
     const [v1task7] = await db
       .select()
@@ -68,9 +68,21 @@ describe('getSimilarTasks — real imported data (Вариант 1 + Вариа�
           eq(schema.tasks.sourceVariant, 2),
         ),
       );
+    const [v3task7] = await db
+      .select()
+      .from(schema.tasks)
+      .where(
+        and(
+          eq(schema.tasks.subjectId, 'math'),
+          eq(schema.tasks.taskNumber, 7),
+          eq(schema.tasks.sourceVariant, 3),
+        ),
+      );
 
     const similar = await getSimilarTasks(db, v2task7!.id, 20);
-    expect(similar.map((r) => r.taskId)).toContain(v1task7!.id);
+    const ids = similar.map((r) => r.taskId);
+    expect(ids).toContain(v1task7!.id);
+    expect(ids).toContain(v3task7!.id);
     expect(similar.every((r) => r.taskNumber === 7)).toBe(true);
   });
 
